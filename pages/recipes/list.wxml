@@ -1,0 +1,19 @@
+<view class="page-recipes">
+  <view class="search-bar">
+    <input class="search-input" placeholder="搜索菜谱" value="{{keyword}}" bindinput="onInput" bindconfirm="onSearch" confirm-type="search" focus="{{focus}}" />
+  </view>
+
+  <view class="filter-row">
+    <scroll-view scroll-x class="filter-scroll">
+      <view class="tag {{activeCategory === '' ? 'active' : ''}}" bindtap="clearCategory">全部</view>
+      <view class="tag {{activeCategory === item.key ? 'active' : ''}}" wx:for="{{categories}}" wx:key="key" bindtap="setCategory" data-key="{{item.key}}">{{item.name}}</view>
+    </scroll-view>
+  </view>
+
+  <view class="sort-row">
+    <view class="sort-item {{sortBy === item.key ? 'active' : ''}}" wx:for="{{sortOptions}}" wx:key="key" bindtap="setSort" data-key="{{item.key}}">{{item.name}}</view>
+  </view>
+
+  <recipe-card wx:for="{{filteredRecipes}}" wx:key="id" recipe="{{item}}" bind:tap="goDetail" bind:favorite="toggleFavorite" />
+  <empty-state wx:if="{{!filteredRecipes.length}}" text="暂无菜谱" actionText="换个关键词试试" />
+</view>

@@ -1,0 +1,59 @@
+.page-shopping { padding: 20rpx 30rpx; }
+
+.cat-title {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 12rpx;
+  margin-top: 16rpx;
+}
+
+.shop-item {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 12rpx 0;
+  border-bottom: 1px solid rgba(255,255,255,.15);
+}
+
+.shop-item:last-child { border-bottom: none; }
+
+.shop-check {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  border: 2px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22rpx;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.shop-check.checked {
+  background: var(--primary-deep);
+  border-color: var(--primary-deep);
+}
+
+.shop-name { flex: 1; font-size: 28rpx; color: var(--text); }
+.shop-name.done { text-decoration: line-through; color: var(--text-placeholder); }
+.shop-amount { font-size: 24rpx; color: var(--text-secondary); }
+.shop-del { font-size: 32rpx; color: var(--text-placeholder); padding: 8rpx; }
+
+.add-row { margin-top: 20rpx; }
+.add-input {
+  padding: 18rpx 28rpx;
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-md);
+  font-size: 28rpx;
+}
+
+.clear-btn {
+  text-align: center;
+  color: var(--accent-deep);
+  font-size: 26rpx;
+  padding: 20rpx;
+  margin-top: 10rpx;
+}

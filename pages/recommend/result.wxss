@@ -1,0 +1,50 @@
+.page-result { padding: 20rpx 30rpx; }
+
+.result-header { text-align: center; margin-bottom: 30rpx; }
+.result-name { font-size: 36rpx; font-weight: 800; color: var(--text); margin-bottom: 8rpx; }
+.result-reason { font-size: 24rpx; color: var(--text-secondary); }
+
+.dish-card { display: flex; gap: 20rpx; align-items: center; }
+.dish-cover { width: 100rpx; height: 100rpx; border-radius: var(--r-md); flex-shrink: 0; }
+.dish-name { font-size: 30rpx; font-weight: 700; color: var(--text); }
+.dish-meta { font-size: 24rpx; color: var(--text-secondary); margin-top: 4rpx; }
+
+.ing-item {
+  display: inline-block;
+  padding: 8rpx 24rpx;
+  background: var(--mint-bg);
+  color: var(--primary-deep);
+  border-radius: var(--r-pill);
+  font-size: 24rpx;
+  margin: 6rpx;
+  font-weight: 600;
+}
+
+.result-actions {
+  margin-top: 30rpx;
+  display: flex;
+  gap: 20rpx;
+}
+
+.btn-primary {
+  flex: 1;
+  text-align: center;
+  background: linear-gradient(135deg, var(--mint), var(--primary-deep));
+  color: #fff;
+  border-radius: var(--r-md);
+  padding: 24rpx;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.btn-secondary {
+  flex: 1;
+  text-align: center;
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-md);
+  padding: 24rpx;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: var(--text);
+}

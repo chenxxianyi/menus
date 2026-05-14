@@ -1,0 +1,14 @@
+<view class="page-feedback">
+  <view class="section-title">反馈内容</view>
+  <view class="glass-card">
+    <textarea class="fb-textarea" placeholder="请描述你的建议或遇到的问题" value="{{content}}" bindinput="onInput" maxlength="500" />
+    <view class="fb-count">{{content.length}}/500</view>
+  </view>
+
+  <view class="section-title">联系方式（选填）</view>
+  <view class="glass-card">
+    <input class="fb-input" placeholder="手机号或微信号" value="{{contact}}" bindinput="onContactInput" />
+  </view>
+
+  <view class="btn-primary submit-btn" bindtap="submit">提交反馈</view>
+</view>

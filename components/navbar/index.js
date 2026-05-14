@@ -1,0 +1,24 @@
+Component({
+  properties: {
+    title: { type: String, value: '' },
+    showBack: { type: Boolean, value: true }
+  },
+
+  data: {
+    statusBarHeight: 20
+  },
+
+  lifetimes: {
+    attached() {
+      const sysInfo = wx.getSystemInfoSync()
+      this.setData({ statusBarHeight: sysInfo.statusBarHeight || 20 })
+    }
+  },
+
+  methods: {
+    onBack() {
+      wx.navigateBack({ delta: 1 })
+      this.triggerEvent('back')
+    }
+  }
+})

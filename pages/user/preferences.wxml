@@ -1,0 +1,26 @@
+<view class="page-pref">
+  <view class="section-title">常用口味</view>
+  <view class="tag-group">
+    <view class="tag {{taste === item ? 'active' : ''}}" wx:for="{{tastes}}" wx:key="*this" bindtap="setTaste" data-val="{{item}}">{{item}}</view>
+  </view>
+
+  <view class="section-title">饮食目标</view>
+  <view class="tag-group">
+    <view class="tag {{goal === item.key ? 'active' : ''}}" wx:for="{{goals}}" wx:key="key" bindtap="setGoal" data-val="{{item.key}}">{{item.name}}</view>
+  </view>
+
+  <view class="section-title">常见忌口</view>
+  <view class="tag-group">
+    <view class="tag {{avoid.includes(item) ? 'active' : ''}}" wx:for="{{avoidOptions}}" wx:key="*this" bindtap="toggleAvoid" data-val="{{item}}">{{item}}</view>
+  </view>
+
+  <view class="section-title">家庭人数</view>
+  <view class="number-row">
+    <view class="num-btn" bindtap="changeFamily" data-delta="-1">-</view>
+    <text class="num-val">{{familySize}}</text>
+    <view class="num-btn" bindtap="changeFamily" data-delta="1">+</view>
+    <text class="num-unit">人</text>
+  </view>
+
+  <view class="btn-primary save-btn" bindtap="save">保存偏好</view>
+</view>

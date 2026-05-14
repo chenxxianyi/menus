@@ -1,0 +1,61 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/recipes/list",
+    "pages/recipes/detail",
+    "pages/recommend/index",
+    "pages/recommend/result",
+    "pages/week-menu/index",
+    "pages/shopping/index",
+    "pages/favorite/index",
+    "pages/user/index",
+    "pages/user/preferences",
+    "pages/feedback/index"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#F8F0FF",
+    "navigationBarTitleText": "菜单推荐",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F8F0FF"
+  },
+  "tabBar": {
+    "color": "#8E82A0",
+    "selectedColor": "#6BAF82",
+    "backgroundColor": "rgba(255,255,255,0.85)",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "assets/icons/home.png",
+        "selectedIconPath": "assets/icons/home-active.png"
+      },
+      {
+        "pagePath": "pages/recipes/list",
+        "text": "菜谱",
+        "iconPath": "assets/icons/book.png",
+        "selectedIconPath": "assets/icons/book-active.png"
+      },
+      {
+        "pagePath": "pages/recommend/index",
+        "text": "推荐",
+        "iconPath": "assets/icons/sparkles.png",
+        "selectedIconPath": "assets/icons/sparkles-active.png"
+      },
+      {
+        "pagePath": "pages/favorite/index",
+        "text": "收藏",
+        "iconPath": "assets/icons/heart.png",
+        "selectedIconPath": "assets/icons/heart-active.png"
+      },
+      {
+        "pagePath": "pages/user/index",
+        "text": "我的",
+        "iconPath": "assets/icons/user.png",
+        "selectedIconPath": "assets/icons/user-active.png"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json"
+}

@@ -1,0 +1,5 @@
+<view class="empty-state" wx:if="{{text}}">
+  <view class="empty-icon">{{icon || '~'}}</view>
+  <view class="empty-text">{{text}}</view>
+  <view class="empty-action" wx:if="{{actionText}}" bindtap="onAction">{{actionText}}</view>
+</view>

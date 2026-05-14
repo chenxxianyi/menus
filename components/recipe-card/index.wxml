@@ -1,0 +1,17 @@
+<view class="recipe-card" bindtap="onTap">
+  <image class="recipe-cover" src="{{recipe.cover || '/assets/images/placeholder.png'}}" mode="aspectFill" />
+  <view class="recipe-info">
+    <view class="recipe-name">{{recipe.name}}</view>
+    <view class="recipe-meta">
+      <text class="meta-item">{{recipe.time}}分钟</text>
+      <text class="meta-dot">·</text>
+      <text class="meta-item">{{recipe.difficulty}}</text>
+    </view>
+    <view class="recipe-tags" wx:if="{{recipe.tags && recipe.tags.length}}">
+      <text class="recipe-tag" wx:for="{{recipe.tags}}" wx:key="*this">{{item}}</text>
+    </view>
+  </view>
+  <view class="recipe-fav" wx:if="{{showFavorite}}" catchtap="onFavorite">
+    <text class="fav-icon {{recipe.isFavorite ? 'active' : ''}}">&#9829;</text>
+  </view>
+</view>

@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "一周菜单",
+  "usingComponents": {
+    "navbar": "/components/navbar/index"
+  }
+}

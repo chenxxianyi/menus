@@ -1,0 +1,25 @@
+<view class="page-fav">
+  <view class="tab-row">
+    <view class="tab {{tab === 'recipes' ? 'active' : ''}}" bindtap="setTab" data-val="recipes">收藏菜谱</view>
+    <view class="tab {{tab === 'menus' ? 'active' : ''}}" bindtap="setTab" data-val="menus">收藏菜单</view>
+    <view class="tab {{tab === 'history' ? 'active' : ''}}" bindtap="setTab" data-val="history">浏览历史</view>
+  </view>
+
+  <view wx:if="{{tab === 'recipes'}}">
+    <recipe-card wx:for="{{favRecipes}}" wx:key="id" recipe="{{item}}" bind:tap="goDetail" bind:favorite="removeFav" />
+    <empty-state wx:if="{{!favRecipes.length}}" text="还没有收藏菜谱" actionText="去发现好菜" bind:action="goExplore" />
+  </view>
+
+  <view wx:if="{{tab === 'menus'}}">
+    <view class="glass-card" wx:for="{{favMenus}}" wx:key="id">
+      <view class="menu-name">{{item.name}}</view>
+      <view class="menu-meta">{{item.dishes}} 道菜 · {{item.createdAt}}</view>
+    </view>
+    <empty-state wx:if="{{!favMenus.length}}" text="还没有收藏菜单" />
+  </view>
+
+  <view wx:if="{{tab === 'history'}}">
+    <recipe-card wx:for="{{history}}" wx:key="id" recipe="{{item}}" showFavorite="{{false}}" bind:tap="goDetail" />
+    <empty-state wx:if="{{!history.length}}" text="暂无浏览记录" />
+  </view>
+</view>

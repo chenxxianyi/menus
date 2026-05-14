@@ -1,0 +1,52 @@
+<view class="page-recommend">
+  <view class="section-title">用餐时间</view>
+  <view class="tag-group">
+    <view class="tag {{meal === item ? 'active' : ''}}" wx:for="{{meals}}" wx:key="*this" bindtap="setMeal" data-val="{{item}}">{{item}}</view>
+  </view>
+
+  <view class="section-title">用餐人数</view>
+  <view class="number-row">
+    <view class="num-btn" bindtap="changePeople" data-delta="-1">-</view>
+    <text class="num-val">{{people}}</text>
+    <view class="num-btn" bindtap="changePeople" data-delta="1">+</view>
+    <text class="num-unit">人</text>
+  </view>
+
+  <view class="section-title">口味偏好</view>
+  <view class="tag-group">
+    <view class="tag {{taste === item ? 'active' : ''}}" wx:for="{{tastes}}" wx:key="*this" bindtap="setTaste" data-val="{{item}}">{{item}}</view>
+  </view>
+
+  <view class="section-title">饮食目标</view>
+  <view class="tag-group">
+    <view class="tag {{goal === item.key ? 'active' : ''}}" wx:for="{{goals}}" wx:key="key" bindtap="setGoal" data-val="{{item.key}}">{{item.name}}</view>
+  </view>
+
+  <view class="section-title">已有食材</view>
+  <view class="tag-input-area glass-card">
+    <view class="tag-list">
+      <view class="tag active" wx:for="{{haveIngredients}}" wx:key="*this">
+        {{item}}
+        <text class="tag-close" bindtap="removeHave" data-val="{{item}}">×</text>
+      </view>
+    </view>
+    <input class="tag-input" placeholder="输入食材后回车添加" bindconfirm="addHave" />
+  </view>
+
+  <view class="section-title">忌口食材</view>
+  <view class="tag-input-area glass-card">
+    <view class="tag-list">
+      <view class="tag" wx:for="{{avoidIngredients}}" wx:key="*this" style="background:var(--rose-bg);color:var(--accent-deep)">
+        {{item}}
+        <text class="tag-close" bindtap="removeAvoid" data-val="{{item}}">×</text>
+      </view>
+    </view>
+    <input class="tag-input" placeholder="输入忌口食材后回车" bindconfirm="addAvoid" />
+  </view>
+
+  <view style="height: 140rpx"></view>
+  <view class="bottom-btn" bindtap="generate">
+    <loading show="{{generating}}" text="AI 生成中..." />
+    <text wx:if="{{!generating}}">生成推荐菜单</text>
+  </view>
+</view>

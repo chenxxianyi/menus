@@ -1,0 +1,24 @@
+.page-feedback { padding: 20rpx 30rpx; }
+
+.fb-textarea {
+  width: 100%;
+  min-height: 200rpx;
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+.fb-count {
+  text-align: right;
+  font-size: 22rpx;
+  color: var(--text-placeholder);
+  margin-top: 8rpx;
+}
+
+.fb-input {
+  font-size: 28rpx;
+}
+
+.submit-btn {
+  margin-top: 40rpx;
+  text-align: center;
+}

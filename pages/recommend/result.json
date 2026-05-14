@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "推荐结果",
+  "usingComponents": {
+    "navbar": "/components/navbar/index"
+  }
+}
