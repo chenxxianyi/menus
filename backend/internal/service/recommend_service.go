@@ -1,0 +1,209 @@
+package service
+
+import (
+	"encoding/json"
+	"sort"
+
+	"menu-recommend/internal/model"
+	"menu-recommend/internal/repository"
+)
+
+type RecommendService struct {
+	recipeRepo     *repository.RecipeRepo
+	ingredientRepo *repository.IngredientRepo
+}
+
+func NewRecommendService(recipeRepo *repository.RecipeRepo, ingredientRepo *repository.IngredientRepo) *RecommendService {
+	return &RecommendService{recipeRepo: recipeRepo, ingredientRepo: ingredientRepo}
+}
+
+type RecommendParams struct {
+	PeopleCount         int      `json:"people_count"`
+	MealType            string   `json:"meal_type"`
+	TastePreference     []string `json:"taste_preference"`
+	HealthGoal          string   `json:"health_goal"`
+	AvoidIngredients    []string `json:"avoid_ingredients"`
+	ExistingIngredients []string `json:"existing_ingredients"`
+	CookTimePreference  string   `json:"cook_time_preference"`
+}
+
+type DishResult struct {
+	RecipeID      uint     `json:"recipe_id"`
+	Name          string   `json:"name"`
+	Type          string   `json:"type"`
+	CookTime      int      `json:"cook_time"`
+	Difficulty    string   `json:"difficulty"`
+	Ingredients   []string `json:"ingredients"`
+	StepsSummary  string   `json:"steps_summary"`
+}
+
+type RecommendResult struct {
+	MenuName     string       `json:"menu_name"`
+	Reason       string       `json:"reason"`
+	Dishes       []DishResult `json:"dishes"`
+	ShoppingList []string     `json:"shopping_list"`
+}
+
+type scoredRecipe struct {
+	recipe *model.Recipe
+	score  float64
+}
+
+func (s *RecommendService) RecommendMenu(params *RecommendParams) (*RecommendResult, error) {
+	recipes, err := s.recipeRepo.FindHot(100)
+	if err != nil {
+		return nil, err
+	}
+
+	var scored []scoredRecipe
+	for _, r := range recipes {
+		score := s.calcScore(r, params)
+		scored = append(scored, scoredRecipe{recipe: &r, score: score})
+	}
+
+	sort.Slice(scored, func(i, j int) bool {
+		return scored[i].score > scored[j].score
+	})
+
+	result := &RecommendResult{
+		MenuName: params.MealType + "推荐菜单",
+		Reason:   "根据您的口味偏好和饮食目标智能推荐",
+	}
+
+	dishTypes := []string{"主菜", "配菜", "汤"}
+	usedIDs := make(map[uint]bool)
+	shoppingSet := make(map[string]bool)
+
+	for i, dishType := range dishTypes {
+		if i >= len(scored) {
+			break
+		}
+		for _, sr := range scored {
+			if usedIDs[sr.recipe.ID] {
+				continue
+			}
+			usedIDs[sr.recipe.ID] = true
+
+			var ingredients []string
+			if raw, err := json.Marshal(sr.recipe.Ingredients); err == nil {
+				var items []struct {
+					Name string `json:"name"`
+				}
+				json.Unmarshal(raw, &items)
+				for _, item := range items {
+					ingredients = append(ingredients, item.Name)
+					shoppingSet[item.Name] = true
+				}
+			}
+
+			result.Dishes = append(result.Dishes, DishResult{
+				RecipeID:    sr.recipe.ID,
+				Name:        sr.recipe.Title,
+				Type:        dishType,
+				CookTime:    sr.recipe.CookTime,
+				Difficulty:  sr.recipe.Difficulty,
+				Ingredients: ingredients,
+			})
+			break
+		}
+	}
+
+	for item := range shoppingSet {
+		result.ShoppingList = append(result.ShoppingList, item)
+	}
+
+	return result, nil
+}
+
+func (s *RecommendService) calcScore(r model.Recipe, params *RecommendParams) float64 {
+	var score float64
+
+	if len(params.TastePreference) > 0 {
+		for _, t := range params.TastePreference {
+			if r.Taste == t {
+				score += 20
+				break
+			}
+		}
+	}
+
+	if r.CookTime <= 15 {
+		score += 15
+	} else if r.CookTime <= 30 {
+		score += 10
+	}
+
+	score += float64(r.FavoriteCount) * 0.01
+	score += float64(r.ViewCount) * 0.001
+
+	return score
+}
+
+func (s *RecommendService) RecommendByIngredients(ingredients []string) ([]map[string]interface{}, error) {
+	recipes, err := s.recipeRepo.FindHot(50)
+	if err != nil {
+		return nil, err
+	}
+
+	var results []map[string]interface{}
+	ingredientSet := make(map[string]bool)
+	for _, ing := range ingredients {
+		ingredientSet[ing] = true
+	}
+
+	for _, r := range recipes {
+		var recipeIngredients []struct {
+			Name string `json:"name"`
+		}
+		if raw, err := json.Marshal(r.Ingredients); err == nil {
+			json.Unmarshal(raw, &recipeIngredients)
+		}
+
+		matchCount := 0
+		for _, ri := range recipeIngredients {
+			if ingredientSet[ri.Name] {
+				matchCount++
+			}
+		}
+
+		if matchCount > 0 {
+			matchRate := float64(matchCount) / float64(len(recipeIngredients))
+			results = append(results, map[string]interface{}{
+				"recipe":     r,
+				"match_rate": matchRate,
+			})
+		}
+	}
+
+	sort.Slice(results, func(i, j int) bool {
+		return results[i]["match_rate"].(float64) > results[j]["match_rate"].(float64)
+	})
+
+	return results, nil
+}
+
+func (s *RecommendService) GenerateWeekMenu(params *RecommendParams) ([]map[string]interface{}, error) {
+	var weekMenu []map[string]interface{}
+	mealTypes := []string{"breakfast", "lunch", "dinner"}
+
+	for day := 1; day <= 7; day++ {
+		dayMenu := map[string]interface{}{
+			"day":   day,
+			"meals": []interface{}{},
+		}
+
+		for _, mealType := range mealTypes {
+			p := *params
+			p.MealType = mealType
+			result, err := s.RecommendMenu(&p)
+			if err != nil {
+				continue
+			}
+			dayMenu["meals"] = append(dayMenu["meals"].([]interface{}), result)
+		}
+
+		weekMenu = append(weekMenu, dayMenu)
+	}
+
+	return weekMenu, nil
+}
