@@ -3,6 +3,12 @@ import type { RouteRecordRaw } from 'vue-router'
 
 const routes: RouteRecordRaw[] = [
   {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/Login.vue'),
+    meta: { guest: true },
+  },
+  {
     path: '/',
     component: () => import('@/components/AppLayout.vue'),
     children: [
@@ -22,6 +28,13 @@ const router = createRouter({
   scrollBehavior() {
     return { top: 0 }
   },
+})
+
+router.beforeEach((to) => {
+  const token = localStorage.getItem('token')
+  if (!token && !to.meta.guest) {
+    return { name: 'Login' }
+  }
 })
 
 export default router

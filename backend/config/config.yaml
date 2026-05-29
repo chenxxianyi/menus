@@ -9,9 +9,9 @@ server:
 
 database:
   host: "localhost"
-  port: 3306
-  user: "root"
-  password: "your_password"
+  port: 3310
+  user: "xxladmin"
+  password: "XXLadmin_2021!"
   dbname: "menu_recommend"
   charset: "utf8mb4"
   max_idle_conns: 10

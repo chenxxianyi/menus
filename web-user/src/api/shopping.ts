@@ -1,29 +1,32 @@
 import api from './index'
 
 export interface ShoppingItem {
-  id: number
   name: string
   amount: string
-  unit: string
   emoji: string
   category: string
   price: number
   checked: boolean
-  recipe_id?: number
 }
 
-export function getShoppingList() {
+export interface ShoppingList {
+  id: number
+  name: string
+  items: ShoppingItem[]
+}
+
+export function getShoppingLists() {
   return api.get('/shopping-list')
 }
 
-export function addShoppingItem(data: Partial<ShoppingItem>) {
-  return api.post('/shopping-list', data)
+export function createShoppingList(data: { name: string; items: ShoppingItem[] }) {
+  return api.post('/shopping-list', { name: data.name, items_json: data.items })
 }
 
-export function updateShoppingItem(id: number, data: Partial<ShoppingItem>) {
-  return api.put(`/shopping-list/${id}`, data)
+export function updateShoppingList(id: number, data: { name: string; items: ShoppingItem[] }) {
+  return api.put(`/shopping-list/${id}`, { name: data.name, items_json: data.items })
 }
 
-export function deleteShoppingItem(id: number) {
+export function deleteShoppingList(id: number) {
   return api.delete(`/shopping-list/${id}`)
 }

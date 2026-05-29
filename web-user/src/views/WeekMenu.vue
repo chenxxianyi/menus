@@ -1,351 +1,356 @@
 <template>
-  <div class="page-container">
+  <div class="page">
     <!-- Header -->
-    <header class="app-header animate-fade-up">
-      <button class="btn-icon" aria-label="返回" @click="$router.back()">
+    <header class="header anim-delay-1">
+      <button class="btn-ghost" aria-label="返回" @click="$router.back()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
       </button>
-      <div class="app-header-center">
-        <div class="app-header-title">一周菜单</div>
+      <div style="flex:1;text-align:center;">
+        <div class="header-title">一周菜单</div>
       </div>
-      <button class="btn-icon" aria-label="生成菜单">
+      <button class="btn-ghost" aria-label="生成" @click="generateWeekMenu">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
       </button>
     </header>
 
-    <!-- Week Tabs -->
-    <div class="week-tabs animate-fade-up anim-delay-1">
-      <div
-        v-for="day in weekDays"
-        :key="day.date"
-        class="week-tab"
-        :class="{ active: activeDay === day.date }"
-        @click="activeDay = day.date"
+    <!-- Week Selector -->
+    <div class="week-strip anim-delay-2">
+      <button
+        v-for="(day, idx) in weekDays"
+        :key="idx"
+        class="week-day"
+        :class="{ active: activeDayIdx === idx }"
+        @click="activeDayIdx = idx"
       >
-        <span class="week-day">{{ day.label }}</span>
-        <span class="week-date">{{ day.date }}</span>
-        <div v-if="day.hasPlan" class="week-dot"></div>
-      </div>
+        <span class="week-day-label">{{ day.label }}</span>
+        <span class="week-day-num">{{ day.date }}</span>
+        <span v-if="weekMenuData[idx]" class="week-day-dot"></span>
+      </button>
     </div>
 
-    <!-- Daily Summary -->
-    <div class="summary-bar animate-fade-up anim-delay-2">
-      <div class="summary-item orange">
-        <div class="summary-value">1,850</div>
-        <div class="summary-label">总热量 kcal</div>
-      </div>
-      <div class="summary-item blue">
-        <div class="summary-value">3 餐</div>
-        <div class="summary-label">已规划</div>
-      </div>
-      <div class="summary-item green">
-        <div class="summary-value">92%</div>
-        <div class="summary-label">营养达标</div>
-      </div>
+    <!-- Loading / Empty -->
+    <div v-if="loading" class="empty-hint anim-delay-3">生成中...</div>
+    <div v-else-if="!weekMenuData.length" class="empty-hint anim-delay-3">
+      <p>点击右上角 + 生成一周菜单</p>
     </div>
 
     <!-- Meal Timeline -->
-    <div class="timeline animate-fade-up anim-delay-3">
-      <div v-for="(meal, idx) in dayMeals" :key="idx" class="timeline-item">
-        <div class="timeline-dot-wrap">
-          <div class="timeline-time">{{ meal.time }}</div>
-          <div class="timeline-dot" :class="meal.type"></div>
-          <div v-if="idx < dayMeals.length - 1" class="timeline-line"></div>
-        </div>
-        <div class="timeline-card glass-card" @click="$router.push(`/recipes/${meal.recipeId}`)">
-          <div class="timeline-card-header">
-            <span class="timeline-card-type" :class="meal.type">{{ meal.typeLabel }}</span>
-            <span class="timeline-card-kcal">{{ meal.kcal }} kcal</span>
+    <div v-else class="timeline anim-delay-3">
+      <template v-if="currentDayMeals.length">
+        <div v-for="(meal, idx) in currentDayMeals" :key="idx" class="tl-item">
+          <div class="tl-left">
+            <span class="tl-time">{{ mealTime(meal.type) }}</span>
+            <span class="tl-dot" :class="meal.type"></span>
+            <span v-if="Number(idx) < currentDayMeals.length - 1" class="tl-line"></span>
           </div>
-          <div class="timeline-card-name">{{ meal.name }}</div>
-          <div class="timeline-card-desc">{{ meal.desc }}</div>
-          <div class="timeline-card-tags">
-            <span v-for="(tag, tagIdx) in meal.tags" :key="tagIdx" class="timeline-card-tag glass-tag" :class="tag.color">{{ tag.text }}</span>
-          </div>
-          <div class="timeline-card-images">
-            <div v-for="(emoji, emojiIdx) in meal.emojis" :key="emojiIdx" class="timeline-card-img-placeholder" :style="{ background: emoji.bg }">{{ emoji.icon }}</div>
+          <div class="tl-card">
+            <div class="tl-card-top">
+              <span class="tl-card-type" :class="meal.type">{{ mealTypeLabel(meal.type) }}</span>
+            </div>
+            <div v-for="(dish, di) in meal.dishes" :key="di" style="margin-bottom:var(--sp-2);">
+              <h3 class="tl-card-name">{{ dish.name }}</h3>
+              <p class="tl-card-desc">{{ dish.cook_time }}分钟 · {{ dish.difficulty }}</p>
+            </div>
           </div>
         </div>
-      </div>
-
-      <!-- Add Meal -->
-      <div class="timeline-item">
-        <div class="timeline-dot-wrap">
-          <div class="timeline-line" style="background:transparent;"></div>
-        </div>
-        <button class="add-meal-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-          添加加餐
-        </button>
-      </div>
+      </template>
+      <div v-else class="empty-hint">今日暂无推荐</div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import api from '@/api/index'
 
-const activeDay = ref(14)
+const activeDayIdx = ref(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1)
+const loading = ref(false)
+const weekMenuData = ref<any[]>([])
 
 const weekDays = [
-  { label: '一', date: 12, hasPlan: false },
-  { label: '二', date: 13, hasPlan: false },
-  { label: '三', date: 14, hasPlan: true },
-  { label: '四', date: 15, hasPlan: false },
-  { label: '五', date: 16, hasPlan: false },
-  { label: '六', date: 17, hasPlan: false },
-  { label: '日', date: 18, hasPlan: false },
+  { label: '一', date: '' },
+  { label: '二', date: '' },
+  { label: '三', date: '' },
+  { label: '四', date: '' },
+  { label: '五', date: '' },
+  { label: '六', date: '' },
+  { label: '日', date: '' },
 ]
 
-const dayMeals = [
-  {
-    time: '07:30',
-    type: 'breakfast',
-    typeLabel: '早餐',
-    kcal: 420,
-    name: '鸡蛋三明治 + 牛奶',
-    desc: '全麦面包搭配煎蛋、生菜、番茄，配一杯温牛奶',
-    recipeId: 1,
-    tags: [
-      { text: '高蛋白', color: 'glass-tag-orange' },
-      { text: '低脂', color: 'glass-tag-green' },
-    ],
-    emojis: [
-      { icon: '🥪', bg: 'rgba(255,224,168,0.4)' },
-      { icon: '🥛', bg: 'rgba(168,216,234,0.4)' },
-    ],
-  },
-  {
-    time: '12:00',
-    type: 'lunch',
-    typeLabel: '午餐',
-    kcal: 680,
-    name: '红烧排骨 + 清炒时蔬',
-    desc: '经典家常菜搭配，荤素均衡，软烂入味',
-    recipeId: 2,
-    tags: [
-      { text: '荤素搭配', color: 'glass-tag-blue' },
-      { text: '30分钟', color: 'glass-tag-orange' },
-    ],
-    emojis: [
-      { icon: '🍖', bg: 'rgba(252,165,165,0.4)' },
-      { icon: '🥬', bg: 'rgba(184,230,200,0.4)' },
-    ],
-  },
-  {
-    time: '18:30',
-    type: 'dinner',
-    typeLabel: '晚餐',
-    kcal: 520,
-    name: '番茄鸡蛋面',
-    desc: '酸甜开胃，简单快手，适合晚餐轻食',
-    recipeId: 3,
-    tags: [
-      { text: '快手菜', color: 'glass-tag-purple' },
-      { text: '清淡', color: 'glass-tag-green' },
-    ],
-    emojis: [
-      { icon: '🍅', bg: 'rgba(252,165,165,0.4)' },
-      { icon: '🍜', bg: 'rgba(255,243,205,0.4)' },
-    ],
-  },
-]
+// Fill in actual dates for this week
+;(() => {
+  const now = new Date()
+  const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay()
+  const monday = new Date(now)
+  monday.setDate(now.getDate() - dayOfWeek + 1)
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    weekDays[i].date = String(d.getDate())
+  }
+})()
+
+const currentDayMeals = computed(() => {
+  const day = weekMenuData.value[activeDayIdx.value]
+  if (!day?.meals) return []
+  return day.meals
+})
+
+function mealTime(type: string) {
+  const map: Record<string, string> = { breakfast: '07:30', lunch: '12:00', dinner: '18:30' }
+  return map[type] || ''
+}
+
+function mealTypeLabel(type: string) {
+  const map: Record<string, string> = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐' }
+  return map[type] || type
+}
+
+async function generateWeekMenu() {
+  loading.value = true
+  try {
+    const res: any = await api.post('/recommend/week-menu', {
+      people_count: 2,
+      meal_type: 'lunch',
+      taste_preference: [],
+      health_goal: '',
+      avoid_ingredients: [],
+      existing_ingredients: [],
+      cook_time_preference: '',
+    })
+    weekMenuData.value = Array.isArray(res) ? res : []
+  } catch {
+    // ignore
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  // Auto-load if data exists, otherwise show empty state
+})
 </script>
 
 <style scoped>
-/* Week Tabs */
-.week-tabs {
+/* ── Week selector ── */
+.week-strip {
   display: flex;
-  gap: 6px;
-  margin-bottom: 20px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding-bottom: 4px;
+  gap: var(--sp-1);
+  margin-bottom: var(--sp-5);
 }
 
-.week-tabs::-webkit-scrollbar { display: none; }
-
-.week-tab {
-  flex-shrink: 0;
+.week-day {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 10px 14px;
-  border-radius: 16px;
+  gap: 2px;
+  padding: var(--sp-2) 0;
+  border-radius: var(--r-md);
+  border: none;
+  background: transparent;
   cursor: pointer;
-  transition: all 0.2s ease;
-  min-width: 52px;
-  background: rgba(255,255,255,0.65);
-  backdrop-filter: blur(16px) saturate(1.3);
-  border: 1px solid rgba(255,255,255,0.45);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  transition: all var(--dur-base) var(--ease-out);
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.week-tab.active {
-  background: #1e1e2e;
-  color: white;
-  border-color: transparent;
-  box-shadow: 0 6px 20px rgba(30,30,46,0.25);
+.week-day.active {
+  background: var(--color-dark);
 }
 
-.week-tab:active { transform: scale(0.93); }
+.week-day:active { transform: scale(0.93); }
 
-.week-day { font-size: 11px; font-weight: 600; color: #a0a0a0; }
-.week-tab.active .week-day { color: rgba(255,255,255,0.7); }
-.week-date { font-size: 16px; font-weight: 700; color: #1a1a1a; }
-.week-tab.active .week-date { color: white; }
-.week-dot { width: 4px; height: 4px; border-radius: 50%; background: #ffb347; }
-
-/* Summary Bar */
-.summary-bar {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 24px;
-}
-
-.summary-item {
-  flex: 1;
-  background: rgba(255,255,255,0.65);
-  backdrop-filter: blur(16px) saturate(1.3);
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.45);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6);
-  padding: 12px 10px;
-  text-align: center;
-}
-
-.summary-value {
-  font-size: 20px;
-  font-weight: 800;
-  color: #1a1a1a;
-  letter-spacing: -0.5px;
-}
-
-.summary-label {
+.week-day-label {
   font-size: 11px;
-  color: #a0a0a0;
   font-weight: 500;
-  margin-top: 2px;
+  color: var(--color-ink-3);
 }
 
-.summary-item.orange .summary-value { color: #f59e0b; }
-.summary-item.blue .summary-value { color: #0284c7; }
-.summary-item.green .summary-value { color: #16a34a; }
-
-/* Timeline */
-.timeline { margin-bottom: 24px; }
-
-.timeline-item {
-  display: flex;
-  gap: 14px;
-  margin-bottom: 20px;
+.week-day.active .week-day-label {
+  color: var(--color-ink-3);
 }
 
-.timeline-dot-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-  width: 52px;
-}
-
-.timeline-time {
-  font-size: 11px;
-  font-weight: 600;
-  color: #a0a0a0;
-  white-space: nowrap;
-}
-
-.timeline-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.timeline-dot.breakfast { background: #ffb347; box-shadow: 0 2px 8px rgba(255,179,71,0.3); }
-.timeline-dot.lunch { background: #a8d8ea; box-shadow: 0 2px 8px rgba(168,216,234,0.3); }
-.timeline-dot.dinner { background: #b8a9e8; box-shadow: 0 2px 8px rgba(184,169,232,0.3); }
-
-.timeline-line {
-  width: 2px;
-  flex: 1;
-  background: linear-gradient(180deg, rgba(0,0,0,0.08) 0%, transparent 100%);
-  min-height: 20px;
-}
-
-.timeline-card {
-  flex: 1;
-  border-radius: 18px;
-  padding: 14px 16px;
-  cursor: pointer;
-  transition: transform 0.15s ease;
-}
-
-.timeline-card:active { transform: scale(0.97); }
-
-.timeline-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.timeline-card-type { font-size: 12px; font-weight: 600; }
-.timeline-card-type.breakfast { color: #f59e0b; }
-.timeline-card-type.lunch { color: #0284c7; }
-.timeline-card-type.dinner { color: #8b7bc6; }
-
-.timeline-card-kcal { font-size: 12px; color: #a0a0a0; font-weight: 500; }
-
-.timeline-card-name {
-  font-size: 17px;
+.week-day-num {
+  font-size: var(--text-md);
   font-weight: 700;
-  color: #1a1a1a;
-  letter-spacing: -0.3px;
-  margin-bottom: 4px;
+  color: var(--color-ink);
+  line-height: 1.2;
 }
 
-.timeline-card-desc { font-size: 13px; color: #a0a0a0; line-height: 1.5; }
+.week-day.active .week-day-num {
+  color: var(--color-ink);
+}
 
-.timeline-card-tags { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.week-day-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  position: absolute;
+  bottom: 4px;
+}
 
-.timeline-card-tag { font-size: 11px; padding: 3px 10px; }
-
-.timeline-card-images { display: flex; gap: 8px; margin-top: 10px; }
-
-.timeline-card-img-placeholder {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+/* ── Stats ── */
+.stats-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
-  border: 2px solid rgba(255,255,255,0.6);
+  gap: var(--sp-5);
+  padding: var(--sp-4) 0;
+  margin-bottom: var(--sp-6);
+  border-bottom: 0.5px solid var(--color-rule);
 }
 
-/* Add Button */
-.add-meal-btn {
-  width: 100%;
-  padding: 14px;
-  border-radius: 16px;
-  border: 2px dashed rgba(0,0,0,0.1);
+.stat {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-1);
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.stat-value--accent { color: var(--color-accent); }
+.stat-value--green { color: var(--color-green); }
+
+.stat-label {
+  font-size: var(--text-xs);
+  color: var(--color-ink-3);
+  font-weight: 500;
+}
+
+.stat-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--color-rule);
+}
+
+/* ── Timeline ── */
+.tl-item {
+  display: flex;
+  gap: var(--sp-4);
+  min-height: 80px;
+}
+
+.tl-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 44px;
+  flex-shrink: 0;
+  gap: var(--sp-1);
+}
+
+.tl-time {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-ink-3);
+  white-space: nowrap;
+}
+
+.tl-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin: var(--sp-1) 0;
+}
+
+.tl-dot.breakfast { background: var(--color-orange); }
+.tl-dot.lunch { background: var(--color-blue); }
+.tl-dot.dinner { background: var(--color-purple); }
+
+.tl-line {
+  width: 1.5px;
+  flex: 1;
+  background: var(--color-rule);
+  min-height: 16px;
+}
+
+.tl-card {
+  flex: 1;
+  padding: var(--sp-3) 0 var(--sp-5);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity var(--dur-fast);
+}
+
+.tl-card:active { opacity: 0.7; }
+
+.tl-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-1);
+}
+
+.tl-card-type {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.tl-card-type.breakfast { color: var(--color-orange); }
+.tl-card-type.lunch { color: var(--color-blue); }
+.tl-card-type.dinner { color: var(--color-purple); }
+
+.tl-card-kcal {
+  font-size: 11px;
+  color: var(--color-ink-3);
+  font-weight: 500;
+}
+
+.tl-card-name {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--color-ink);
+  letter-spacing: 0;
+  line-height: 1.3;
+  margin-bottom: 2px;
+}
+
+.tl-card-desc {
+  font-size: var(--text-xs);
+  color: var(--color-ink-3);
+  line-height: 1.5;
+}
+
+.tl-card-tags {
+  display: flex;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.tl-add {
+  flex: 1;
+  padding: var(--sp-4);
+  border-radius: var(--r-lg);
+  border: 1.5px dashed var(--color-rule);
   background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--sp-2);
   cursor: pointer;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: 600;
-  color: #a0a0a0;
-  transition: all 0.2s ease;
+  color: var(--color-ink-3);
+  transition: border-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
+  margin-bottom: var(--sp-4);
 }
 
-.add-meal-btn:active { background: rgba(0,0,0,0.03); }
-.add-meal-btn svg { width: 20px; height: 20px; }
+.tl-add:active { border-color: var(--color-accent); color: var(--color-accent); }
+
+.empty-hint {
+  text-align: center;
+  padding: var(--sp-8) 0;
+  font-size: var(--text-sm);
+  color: var(--color-ink-3);
+}
 </style>

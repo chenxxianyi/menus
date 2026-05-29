@@ -44,7 +44,7 @@ const displayText = computed(() => props.text || defaultTexts[props.type])
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  color: #a0a0a0;
+  color: var(--color-ink-3);
 }
 .empty-state-icon {
   width: 64px;
@@ -57,7 +57,7 @@ const displayText = computed(() => props.text || defaultTexts[props.type])
   height: 100%;
 }
 .empty-state-text {
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: 500;
 }
 </style>

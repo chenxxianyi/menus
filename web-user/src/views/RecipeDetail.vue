@@ -1,432 +1,466 @@
 <template>
-  <div class="page-container">
-    <!-- Hero Banner -->
-    <div class="recipe-hero animate-fade-up">
-      <div class="recipe-hero-badge">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z"/>
+  <div class="page recipe-page">
+    <div class="hero anim-delay-1">
+      <button class="hero-back btn-ghost" @click="$router.back()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="m15 18-6-6 6-6" />
         </svg>
-        今日推荐
-      </div>
-      <button class="recipe-hero-back" @click="$router.back()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
       </button>
-      <div class="recipe-hero-emoji">🍖</div>
+      <img :src="recipe?.cover || heroArt" :alt="recipe?.title || 'recipe cover'" class="hero-image" />
+      <div class="hero-wash"></div>
+      <span v-if="recipe" class="hero-badge chip chip--orange">{{ recipe.difficulty }}</span>
     </div>
 
-    <!-- Title -->
-    <div class="anim-delay-1" style="margin-bottom: 4px;">
-      <h1 style="font-size: 26px; font-weight: 800; letter-spacing: -0.8px; color: #1a1a1a;">红烧排骨</h1>
-      <p style="font-size: 14px; color: #a0a0a0; margin-top: 4px;">经典家常菜，软烂入味，色泽红亮</p>
-    </div>
+    <template v-if="recipe">
+      <div class="title-block anim-delay-2">
+        <p class="title-eyebrow">Editorial recipe</p>
+        <h1 class="recipe-title">{{ recipe.title }}</h1>
+        <p class="recipe-sub">{{ recipe.description }}</p>
+      </div>
 
-    <!-- Info Row -->
-    <div class="recipe-info anim-delay-2">
-      <div class="recipe-info-item glass-card-sm">
-        <div class="recipe-info-icon glass-icon-orange">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <div class="inline-stats anim-delay-2 surface">
+        <div class="inline-stat">
+          <span class="inline-stat-label">时间</span>
+          <span class="inline-stat-value">{{ recipe.cook_time }} 分钟</span>
         </div>
-        <div class="recipe-info-value">40 分钟</div>
-        <div class="recipe-info-label">烹饪时间</div>
-      </div>
-      <div class="recipe-info-item glass-card-sm">
-        <div class="recipe-info-icon glass-icon-blue">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
+        <div class="inline-stat">
+          <span class="inline-stat-label">份量</span>
+          <span class="inline-stat-value">{{ recipe.people_count }} 人份</span>
         </div>
-        <div class="recipe-info-value">3 人份</div>
-        <div class="recipe-info-label">份量</div>
-      </div>
-      <div class="recipe-info-item glass-card-sm">
-        <div class="recipe-info-icon glass-icon-green">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+        <div class="inline-stat">
+          <span class="inline-stat-label">风味</span>
+          <span class="inline-stat-value">{{ recipe.taste }}</span>
         </div>
-        <div class="recipe-info-value">简单</div>
-        <div class="recipe-info-label">难度</div>
-      </div>
-      <div class="recipe-info-item glass-card-sm">
-        <div class="recipe-info-icon glass-icon-purple">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/>
-            <path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93"/>
-          </svg>
+        <div class="inline-stat">
+          <span class="inline-stat-label">热量</span>
+          <span class="inline-stat-value">{{ recipe.nutrition?.calories ?? '--' }}</span>
         </div>
-        <div class="recipe-info-value">520 kcal</div>
-        <div class="recipe-info-label">每份热量</div>
       </div>
-    </div>
 
-    <!-- Nutrition -->
-    <div class="anim-delay-3" style="margin-bottom: 20px;">
-      <div class="section-title">营养成分</div>
-      <div class="nutrition-bar glass-card">
-        <div class="nutrition-item">
-          <div class="nutrition-circle">
-            <svg><circle class="track" cx="28" cy="28" r="25"/><circle class="fill-orange" cx="28" cy="28" r="25"/></svg>
-            <span class="nutrition-value">35g</span>
+      <div v-if="recipe.nutrition" class="nutrition anim-delay-3">
+        <h2 class="section-heading">营养成分</h2>
+        <div class="nutri-bars">
+          <div class="nutri-row">
+            <span class="nutri-label">蛋白质</span>
+            <div class="nutri-track">
+              <div class="nutri-fill" :style="{ width: nutriPct(recipe.nutrition.protein, 60) + '%' }"></div>
+            </div>
+            <span class="nutri-val">{{ recipe.nutrition.protein }}g</span>
           </div>
-          <div class="nutrition-label">蛋白质</div>
-        </div>
-        <div class="nutrition-item">
-          <div class="nutrition-circle">
-            <svg><circle class="track" cx="28" cy="28" r="25"/><circle class="fill-blue" cx="28" cy="28" r="25"/></svg>
-            <span class="nutrition-value">28g</span>
+          <div class="nutri-row">
+            <span class="nutri-label">脂肪</span>
+            <div class="nutri-track">
+              <div class="nutri-fill nutri-fill--blue" :style="{ width: nutriPct(recipe.nutrition.fat, 60) + '%' }"></div>
+            </div>
+            <span class="nutri-val">{{ recipe.nutrition.fat }}g</span>
           </div>
-          <div class="nutrition-label">脂肪</div>
-        </div>
-        <div class="nutrition-item">
-          <div class="nutrition-circle">
-            <svg><circle class="track" cx="28" cy="28" r="25"/><circle class="fill-green" cx="28" cy="28" r="25"/></svg>
-            <span class="nutrition-value">42g</span>
+          <div class="nutri-row">
+            <span class="nutri-label">碳水</span>
+            <div class="nutri-track">
+              <div class="nutri-fill nutri-fill--green" :style="{ width: nutriPct(recipe.nutrition.carbs, 80) + '%' }"></div>
+            </div>
+            <span class="nutri-val">{{ recipe.nutrition.carbs }}g</span>
           </div>
-          <div class="nutrition-label">碳水</div>
-        </div>
-        <div class="nutrition-item">
-          <div class="nutrition-circle">
-            <svg><circle class="track" cx="28" cy="28" r="25"/><circle class="fill-purple" cx="28" cy="28" r="25"/></svg>
-            <span class="nutrition-value">8g</span>
-          </div>
-          <div class="nutrition-label">膳食纤维</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Ingredients -->
-    <div class="anim-delay-3" style="margin-bottom: 24px;">
-      <div class="section-title">食材清单</div>
-      <div class="glass-list">
-        <div v-for="ing in ingredients" :key="ing.name" class="glass-list-item" @click="ing.checked = !ing.checked">
-          <div class="glass-list-icon" :class="`glass-icon-${ing.color}`">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path v-if="ing.icon === 'leaf'" d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/>
-              <path v-if="ing.icon === 'leaf'" d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93"/>
-              <circle v-if="ing.icon === 'circle'" cx="12" cy="12" r="10"/>
-              <rect v-if="ing.icon === 'rect'" x="3" y="11" width="18" height="11" rx="2"/>
-              <path v-if="ing.icon === 'rect'" d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              <path v-if="ing.icon === 'cup'" d="M18 8h1a4 4 0 0 1 0 8h-1"/>
-              <path v-if="ing.icon === 'cup'" d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
-              <path v-if="ing.icon === 'layers'" d="M12 2L2 7l10 5 10-5-10-5z"/>
-              <path v-if="ing.icon === 'layers'" d="M2 17l10 5 10-5"/>
-            </svg>
-          </div>
-          <div class="glass-list-text">
-            <div class="glass-list-title">{{ ing.name }}</div>
-            <div class="glass-list-desc">{{ ing.desc }}</div>
-          </div>
-          <div class="glass-list-check" :class="{ checked: ing.checked }">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+          <div class="nutri-row">
+            <span class="nutri-label">纤维</span>
+            <div class="nutri-track">
+              <div class="nutri-fill nutri-fill--purple" :style="{ width: nutriPct(recipe.nutrition.fiber, 30) + '%' }"></div>
+            </div>
+            <span class="nutri-val">{{ recipe.nutrition.fiber }}g</span>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Steps -->
-    <div class="anim-delay-4" style="margin-bottom: 24px;">
-      <div class="section-title">烹饪步骤</div>
-      <div class="step-list">
-        <div v-for="(step, idx) in steps" :key="idx" class="step-item">
-          <div class="step-num">{{ idx + 1 }}</div>
-          <div class="step-content glass-card-sm">
-            <div class="step-title">{{ step.title }}</div>
-            <div class="step-desc">{{ step.desc }}</div>
-            <div v-if="step.tip" class="step-tip">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-              {{ step.tip }}
+      <div v-if="ingredients.length" class="ingredients anim-delay-3">
+        <h2 class="section-heading">食材清单</h2>
+        <div class="list-group">
+          <div
+            v-for="ing in ingredients"
+            :key="ing.name"
+            class="list-row ingredient-row"
+            @click="ing.checked = !ing.checked"
+          >
+            <div class="ing-check" :class="{ checked: ing.checked }">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="12" height="12">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+            </div>
+            <div class="list-row-body">
+              <div class="list-row-title" :class="{ 'is-done': ing.checked }">{{ ing.name }}</div>
+              <div class="list-row-sub">{{ ing.amount }} {{ ing.unit }}</div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Actions -->
-    <div class="recipe-actions anim-delay-5">
-      <button class="btn-primary">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-        加入今日菜单
-      </button>
-      <button class="btn-secondary" :class="{ liked: isLiked }" @click="isLiked = !isLiked">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-        </svg>
-      </button>
-      <button class="btn-secondary">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-        </svg>
-      </button>
-    </div>
+      <div v-if="steps.length" class="steps anim-delay-4">
+        <h2 class="section-heading">烹饪步骤</h2>
+        <div v-for="(step, idx) in steps" :key="idx" class="step">
+          <div class="step-num">{{ idx + 1 }}</div>
+          <div class="step-body">
+            <h3 class="step-title">第 {{ idx + 1 }} 步</h3>
+            <p class="step-desc">{{ step.description }}</p>
+            <p v-if="step.tip" class="step-tip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4M12 8h.01" />
+              </svg>
+              {{ step.tip }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions anim-delay-5">
+        <button class="btn-solid action-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          加入今日菜单
+        </button>
+        <button class="btn-outline" :class="{ liked: recipe.is_favorited }" @click="handleFavorite">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+        </button>
+      </div>
+    </template>
+
+    <div v-else class="empty-hint anim-delay-2">加载中...</div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { getRecipeDetail, toggleFavorite, removeFavorite } from '@/api/recipe'
+import heroArt from '@/assets/hero.png'
 
-const isLiked = ref(false)
+const route = useRoute()
+const recipe = ref<any>(null)
 
-const ingredients = ref([
-  { name: '排骨', desc: '500g，选肋排口感更佳', color: 'orange', icon: 'leaf', checked: true },
-  { name: '冰糖', desc: '30g，用于炒糖色', color: 'green', icon: 'circle', checked: true },
-  { name: '生抽 + 老抽', desc: '生抽 2 勺，老抽 1 勺', color: 'blue', icon: 'rect', checked: false },
-  { name: '料酒', desc: '1 勺，去腥提鲜', color: 'purple', icon: 'cup', checked: false },
-  { name: '姜片 + 八角 + 桂皮', desc: '各适量', color: 'yellow', icon: 'layers', checked: true },
-])
+const ingredients = computed(() => {
+  const raw = recipe.value?.ingredients
+  if (!raw) return []
+  return Array.isArray(raw) ? raw.map((i: any) => ({ ...i, checked: false })) : []
+})
 
-const steps = [
-  { title: '焯水去腥', desc: '排骨冷水下锅，加姜片和料酒，大火煮开后撇去浮沫，捞出沥干备用。', tip: '冷水下锅能更好去除血水' },
-  { title: '炒糖色', desc: '锅中放少许油，加入冰糖小火慢炒，待糖色变成琥珀色时下排骨翻炒均匀。', tip: '' },
-  { title: '调味炖煮', desc: '加入生抽、老抽、料酒、八角、桂皮，倒入没过排骨的热水，大火烧开后转小火炖 30 分钟。', tip: '一定要加热水，冷水会让肉质收紧' },
-  { title: '收汁装盘', desc: '大火收汁至浓稠，翻炒均匀让每块排骨都裹上酱汁，撒上葱花即可出锅。', tip: '' },
-]
+const steps = computed(() => {
+  const raw = recipe.value?.steps
+  if (!raw) return []
+  return Array.isArray(raw) ? raw : []
+})
+
+function nutriPct(val: number, max: number) {
+  return Math.min(100, Math.round((val / max) * 100))
+}
+
+async function handleFavorite() {
+  if (!recipe.value) return
+  try {
+    if (recipe.value.is_favorited) {
+      await removeFavorite(recipe.value.id)
+      recipe.value.is_favorited = false
+    } else {
+      await toggleFavorite(recipe.value.id)
+      recipe.value.is_favorited = true
+    }
+  } catch {
+    // ignore
+  }
+}
+
+onMounted(async () => {
+  const id = Number(route.params.id)
+  if (!id) return
+  try {
+    const res: any = await getRecipeDetail(id)
+    recipe.value = res
+  } catch {
+    // ignore
+  }
+})
 </script>
 
 <style scoped>
-/* Hero Banner */
-.recipe-hero {
-  position: relative;
-  border-radius: 24px;
-  overflow: hidden;
-  height: 220px;
-  margin-bottom: 20px;
-  background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 50%, #f48fb1 100%);
+.recipe-page {
+  padding-bottom: var(--sp-8);
 }
 
-.recipe-hero::after {
-  content: '';
+.hero {
+  position: relative;
+  min-height: 320px;
+  margin: 0 calc(var(--sp-6) * -1) var(--sp-5);
+  overflow: hidden;
+}
+
+.hero-image {
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  object-fit: cover;
+  display: block;
+}
+
+.hero-wash {
   position: absolute;
   inset: 0;
-  z-index: 1;
-  background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.25) 100%);
-  pointer-events: none;
+  background: linear-gradient(180deg, transparent 25%, var(--color-photo-wash) 100%);
 }
 
-.recipe-hero-emoji {
+.hero-back {
   position: absolute;
-  right: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 80px;
+  left: var(--sp-4);
+  top: var(--sp-4);
   z-index: 2;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.1));
 }
 
-.recipe-hero-badge {
+.hero-badge {
   position: absolute;
-  top: 16px;
-  left: 16px;
+  left: var(--sp-4);
+  bottom: var(--sp-4);
   z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  background: rgba(255,255,255,0.2);
-  backdrop-filter: blur(12px) saturate(1.3);
-  border-radius: 9999px;
-  font-size: 12px;
+}
+
+.title-block {
+  margin-bottom: var(--sp-4);
+}
+
+.title-eyebrow {
+  color: var(--color-ink-3);
+  font-size: var(--text-xs);
   font-weight: 600;
-  color: white;
-  border: 1px solid rgba(255,255,255,0.25);
+  margin-bottom: var(--sp-1);
 }
 
-.recipe-hero-back {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 2;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.2);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.25);
+.recipe-title {
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 650;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.recipe-sub {
+  margin-top: var(--sp-2);
+  color: var(--color-ink-3);
+  font-size: var(--text-sm);
+  line-height: 1.65;
+}
+
+.inline-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  padding: 1px;
+  margin-bottom: var(--sp-6);
+  background: var(--color-rule);
+}
+
+.inline-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--sp-4);
+  background: var(--color-surface);
+}
+
+.inline-stat-label {
+  color: var(--color-ink-3);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.inline-stat-value {
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 650;
+}
+
+.nutrition,
+.ingredients,
+.steps {
+  margin-bottom: var(--sp-8);
+}
+
+.nutri-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.nutri-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: white;
-  border: none;
+  gap: var(--sp-3);
 }
 
-.recipe-hero-back svg { width: 18px; height: 18px; }
-
-/* Recipe Info Row */
-.recipe-info {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.recipe-info-item {
-  flex: 1;
-  border-radius: 14px;
-  padding: 12px 8px;
-  text-align: center;
-}
-
-.recipe-info-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 6px;
-}
-
-.recipe-info-icon svg { width: 16px; height: 16px; }
-
-.recipe-info-value { font-size: 15px; font-weight: 700; color: #1a1a1a; }
-.recipe-info-label { font-size: 11px; color: #a0a0a0; font-weight: 500; margin-top: 1px; }
-
-/* Nutrition */
-.nutrition-bar {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-  padding: 16px;
-}
-
-.nutrition-item {
-  flex: 1;
-  text-align: center;
-}
-
-.nutrition-circle {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  margin: 0 auto 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-
-.nutrition-circle svg {
-  width: 56px;
-  height: 56px;
-  transform: rotate(-90deg);
-}
-
-.nutrition-circle circle {
-  fill: none;
-  stroke-width: 4;
-  stroke-linecap: round;
-}
-
-.nutrition-circle .track { stroke: rgba(0,0,0,0.06); }
-.nutrition-circle .fill-orange { stroke: #ffb347; stroke-dasharray: 157; stroke-dashoffset: 47; }
-.nutrition-circle .fill-blue { stroke: #a8d8ea; stroke-dasharray: 157; stroke-dashoffset: 63; }
-.nutrition-circle .fill-green { stroke: #b8e6c8; stroke-dasharray: 157; stroke-dashoffset: 31; }
-.nutrition-circle .fill-purple { stroke: #b8a9e8; stroke-dasharray: 157; stroke-dashoffset: 79; }
-
-.nutrition-value {
-  position: absolute;
-  font-size: 13px;
-  font-weight: 700;
-  color: #1a1a1a;
-}
-
-.nutrition-label { font-size: 11px; color: #a0a0a0; font-weight: 500; }
-
-/* Steps */
-.step-list { margin-bottom: 24px; }
-
-.step-item {
-  display: flex;
-  gap: 14px;
-  margin-bottom: 16px;
-}
-
-.step-num {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
+.nutri-label {
+  width: 60px;
   flex-shrink: 0;
-  background: #1e1e2e;
-  color: white;
+  color: var(--color-ink-3);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.nutri-track {
+  flex: 1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--r-full);
+  background: var(--color-paper-3);
+}
+
+.nutri-fill {
+  height: 100%;
+  border-radius: var(--r-full);
+  background: var(--color-orange);
+  transition: width var(--dur-slow) var(--ease-out);
+}
+
+.nutri-fill--blue { background: var(--color-blue); }
+.nutri-fill--green { background: var(--color-green); }
+.nutri-fill--purple { background: var(--color-purple); }
+
+.nutri-val {
+  width: 36px;
+  flex-shrink: 0;
+  color: var(--color-ink-2);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-align: right;
+}
+
+.ingredient-row {
+  border-top: 1px solid var(--color-rule);
+}
+
+.ing-check {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--color-rule-strong);
+  border-radius: 50%;
+  transition: background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
+}
+
+.ing-check.checked {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: var(--color-surface);
+}
+
+.ing-check svg {
+  display: none;
+}
+
+.ing-check.checked svg {
+  display: block;
+}
+
+.list-row-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.list-row-title {
+  color: var(--color-ink);
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.list-row-sub {
+  color: var(--color-ink-3);
+  font-size: var(--text-xs);
   margin-top: 2px;
 }
 
-.step-content {
-  flex: 1;
-  border-radius: 14px;
-  padding: 14px 16px;
+.is-done {
+  color: var(--color-ink-3) !important;
+  text-decoration: line-through;
 }
 
-.step-title { font-size: 14px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
-.step-desc { font-size: 13px; color: #6b6b6b; line-height: 1.6; }
+.step {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: var(--sp-3);
+  padding: var(--sp-4) 0;
+  border-top: 1px solid var(--color-rule);
+}
+
+.step-num {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-ink);
+  color: var(--color-surface);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.step-body {
+  min-width: 0;
+}
+
+.step-title {
+  color: var(--color-ink);
+  font-size: var(--text-base);
+  font-weight: 650;
+  margin-bottom: 4px;
+}
+
+.step-desc {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+}
 
 .step-tip {
-  margin-top: 8px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: rgba(255,243,205,0.5);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin-top: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-sm);
+  background: var(--color-yellow-soft);
+  color: var(--color-ink-2);
   font-size: 12px;
-  color: #f59e0b;
   font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  line-height: 1.45;
 }
 
-.step-tip svg { width: 14px; height: 14px; flex-shrink: 0; }
-
-/* Actions */
-.recipe-actions {
+.actions {
   display: flex;
-  gap: 10px;
-  margin-bottom: 24px;
+  gap: var(--sp-3);
 }
 
-.btn-primary {
+.action-primary {
   flex: 1;
-  padding: 14px;
-  border-radius: 16px;
-  border: none;
-  background: #1e1e2e;
-  color: white;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  box-shadow: 0 6px 20px rgba(30,30,46,0.25);
-  transition: transform 0.15s ease;
 }
 
-.btn-primary:active { transform: scale(0.97); }
-.btn-primary svg { width: 20px; height: 20px; }
-
-.btn-secondary {
-  width: 50px;
-  height: 50px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.5);
-  background: rgba(255,255,255,0.65);
-  backdrop-filter: blur(20px) saturate(1.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.8);
-  transition: transform 0.15s ease;
-  flex-shrink: 0;
+.btn-outline.liked {
+  border-color: var(--color-red);
+  color: var(--color-red);
 }
 
-.btn-secondary:active { transform: scale(0.92); }
-.btn-secondary svg { width: 22px; height: 22px; color: #6b6b6b; }
-.btn-secondary.liked svg { color: #ef4444; fill: #ef4444; }
+.empty-hint {
+  padding: var(--sp-8) 0;
+  color: var(--color-ink-3);
+  text-align: center;
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 420px) {
+  .inline-stats {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

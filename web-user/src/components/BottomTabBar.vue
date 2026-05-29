@@ -1,5 +1,5 @@
 <template>
-  <nav class="tabbar">
+  <nav class="tabbar" aria-label="主导航">
     <router-link
       v-for="tab in tabs"
       :key="tab.path"
@@ -57,44 +57,67 @@ function isActive(path: string) {
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - 32px);
-  max-width: 400px;
-  height: 64px;
+  width: calc(100% - var(--sp-10));
+  max-width: calc(var(--max-w) - var(--sp-8));
+  height: 60px;
   display: flex;
   align-items: center;
-  justify-content: space-around;
-  background: rgba(30,30,46,0.55);
-  backdrop-filter: blur(24px) saturate(1.6);
-  -webkit-backdrop-filter: blur(24px) saturate(1.6);
-  border-radius: 9999px;
-  border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 8px 40px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.1);
-  padding: 0 8px;
-  margin-bottom: 10px;
+  background: color-mix(in oklch, var(--color-surface) 92%, transparent);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--color-rule);
+  box-shadow: 0 8px 28px var(--color-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 0 var(--sp-1);
+  margin-bottom: var(--sp-3);
   z-index: 100;
 }
 
 .tab {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 6px 12px;
-  border-radius: 20px;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  color: rgba(255,255,255,0.45);
+  justify-content: center;
+  gap: 3px;
+  padding: var(--sp-1) 0;
+  border-radius: var(--r-sm);
+  transition: color var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  color: var(--color-ink-3);
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
+  min-width: 0;
+  position: relative;
+}
+
+.tab-label {
+  position: relative;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+@media (hover: hover) {
+  .tab:hover { color: var(--color-ink-2); }
 }
 
 .tab.active {
-  background: rgba(255,255,255,0.15);
-  color: #fff;
+  background: var(--color-paper-2);
+  color: var(--color-ink);
 }
 
-.tab:active {
-  transform: scale(0.92);
+.tab.active .tab-label::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 100%;
+  height: 2px;
+  border-radius: var(--r-full);
+  background: var(--color-accent);
 }
+
+.tab:active { transform: translateY(1px); }
 
 .tab-icon {
   width: 24px;
@@ -106,9 +129,5 @@ function isActive(path: string) {
   height: 24px;
 }
 
-.tab-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-}
+
 </style>

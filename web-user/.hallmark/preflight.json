@@ -1,0 +1,8 @@
+{
+  "date": "2026-05-29",
+  "fontStack": "Plus Jakarta Sans + Fraunces",
+  "palette": "warm paper neutrals with oat-amber accent",
+  "motion": "motion-cut lite",
+  "spacing": "4pt scale",
+  "framework": "Vue 3 + Vite"
+}

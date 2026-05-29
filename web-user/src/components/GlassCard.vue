@@ -15,11 +15,18 @@ withDefaults(defineProps<{
 </script>
 
 <style scoped>
-.glass-card--green { background: rgba(212,237,218,0.4); border-color: rgba(212,237,218,0.5); }
-.glass-card--purple { background: rgba(232,223,245,0.4); border-color: rgba(232,223,245,0.5); }
-.glass-card--orange { background: rgba(255,224,168,0.4); border-color: rgba(255,224,168,0.5); }
-.glass-card--blue { background: rgba(168,216,234,0.4); border-color: rgba(168,216,234,0.5); }
-.glass-card--yellow { background: rgba(255,243,205,0.4); border-color: rgba(255,243,205,0.5); }
-.glass-card--red { background: rgba(252,165,165,0.4); border-color: rgba(252,165,165,0.5); }
-.glass-card--sm { padding: 14px; border-radius: 16px; }
+.glass-card {
+  border: 1px solid var(--color-rule);
+  border-radius: var(--r-lg);
+  background: var(--color-surface);
+  box-shadow: 0 8px 28px var(--color-shadow);
+}
+
+.glass-card--green { background: var(--color-green-soft); border-color: var(--color-green-soft); }
+.glass-card--purple { background: var(--color-purple-soft); border-color: var(--color-purple-soft); }
+.glass-card--orange { background: var(--color-orange-soft); border-color: var(--color-orange-soft); }
+.glass-card--blue { background: var(--color-blue-soft); border-color: var(--color-blue-soft); }
+.glass-card--yellow { background: var(--color-yellow-soft); border-color: var(--color-yellow-soft); }
+.glass-card--red { background: var(--color-red-soft); border-color: var(--color-red-soft); }
+.glass-card--sm { padding: var(--sp-4); border-radius: var(--r-md); }
 </style>
