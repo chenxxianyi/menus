@@ -11,7 +11,7 @@
       </div>
 
       <form class="login-form anim-delay-2" @submit.prevent="handleSubmit">
-        <div class="form-group">
+        <div class="form-field">
           <input
             v-model="form.username"
             type="text"
@@ -20,7 +20,7 @@
             required
           />
         </div>
-        <div class="form-group">
+        <div class="form-field">
           <input
             v-model="form.password"
             type="password"
@@ -29,7 +29,7 @@
             required
           />
         </div>
-        <div v-if="isRegister" class="form-group">
+        <div v-if="isRegister" class="form-field">
           <input
             v-model="form.confirmPassword"
             type="password"
@@ -113,20 +113,19 @@ async function handleSubmit() {
   display: grid;
   place-items: center;
   padding: var(--sp-6);
+  background: var(--color-bg);
 }
 
 .login-panel {
   width: 100%;
-  max-width: 380px;
+  max-width: 360px;
 }
 
 .login-media {
   overflow: hidden;
-  border-radius: var(--r-xl);
+  border-radius: var(--r-lg);
   margin-bottom: var(--sp-6);
-  background: var(--color-surface);
-  border: 1px solid var(--color-rule);
-  box-shadow: 0 8px 28px var(--color-shadow);
+  background: var(--color-surface-2);
 }
 
 .login-media img {
@@ -141,23 +140,23 @@ async function handleSubmit() {
 }
 
 .login-eyebrow {
-  color: var(--color-ink-3);
+  color: var(--color-text-3);
   font-size: var(--text-xs);
   font-weight: 600;
   margin-bottom: var(--sp-1);
 }
 
 .login-title {
-  color: var(--color-ink);
+  color: var(--color-text);
   font-family: var(--font-display);
   font-size: var(--text-2xl);
   font-weight: 650;
-  line-height: 1.06;
+  line-height: 1.08;
 }
 
 .login-sub {
   margin-top: var(--sp-2);
-  color: var(--color-ink-3);
+  color: var(--color-text-3);
   font-size: var(--text-sm);
   line-height: 1.65;
 }
@@ -167,7 +166,7 @@ async function handleSubmit() {
   flex-direction: column;
 }
 
-.form-group {
+.form-field {
   margin-bottom: var(--sp-3);
 }
 
@@ -175,38 +174,39 @@ async function handleSubmit() {
   width: 100%;
   min-height: 48px;
   padding: 0 var(--sp-4);
-  border: 1px solid var(--color-rule);
+  border: 1px solid var(--color-border);
   border-radius: var(--r-sm);
   background: var(--color-surface);
-  color: var(--color-ink);
+  color: var(--color-text);
   font-family: var(--font-body);
   font-size: var(--text-base);
-  transition: border-color var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out);
+  transition: border-color var(--dur-base) var(--ease), box-shadow var(--dur-base) var(--ease);
 }
 
 .form-input::placeholder {
-  color: var(--color-ink-3);
+  color: var(--color-text-3);
 }
 
 .form-input:focus {
+  outline: none;
   border-color: var(--color-accent);
-  background: var(--color-surface);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.form-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .form-error {
   margin-bottom: var(--sp-3);
-  color: var(--color-red);
+  color: var(--color-error);
   font-size: var(--text-sm);
 }
 
 .login-btn {
   width: 100%;
   margin-top: var(--sp-1);
-}
-
-.login-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .login-footer {
@@ -222,5 +222,17 @@ async function handleSubmit() {
   font-size: var(--text-sm);
   font-weight: 600;
   cursor: pointer;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.login-toggle:hover {
+  opacity: 0.8;
+}
+
+/* ── Responsive ── */
+@media (min-width: 768px) {
+  .login-panel {
+    max-width: 400px;
+  }
 }
 </style>

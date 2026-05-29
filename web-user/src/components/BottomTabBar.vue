@@ -57,18 +57,18 @@ function isActive(path: string) {
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - var(--sp-10));
+  width: calc(100% - var(--sp-8));
   max-width: calc(var(--max-w) - var(--sp-8));
-  height: 60px;
+  height: 56px;
   display: flex;
   align-items: center;
-  background: color-mix(in oklch, var(--color-surface) 92%, transparent);
-  border-radius: var(--r-lg);
-  border: 1px solid var(--color-rule);
-  box-shadow: 0 8px 28px var(--color-shadow);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  padding: 0 var(--sp-1);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-md);
+  box-shadow: var(--glass-shadow);
+  padding: 0 var(--sp-2);
   margin-bottom: var(--sp-3);
   z-index: 100;
 }
@@ -79,15 +79,22 @@ function isActive(path: string) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 2px;
   padding: var(--sp-1) 0;
   border-radius: var(--r-sm);
-  transition: color var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out), transform var(--dur-fast) var(--ease-out);
-  color: var(--color-ink-3);
+  transition: color var(--dur-base) var(--ease);
+  color: var(--color-text-3);
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
-  min-width: 0;
   position: relative;
+}
+
+.tab:hover {
+  color: var(--color-text-2);
+}
+
+.tab.active {
+  color: var(--color-text);
 }
 
 .tab-label {
@@ -97,15 +104,6 @@ function isActive(path: string) {
   letter-spacing: 0;
 }
 
-@media (hover: hover) {
-  .tab:hover { color: var(--color-ink-2); }
-}
-
-.tab.active {
-  background: var(--color-paper-2);
-  color: var(--color-ink);
-}
-
 .tab.active .tab-label::after {
   content: '';
   position: absolute;
@@ -113,21 +111,19 @@ function isActive(path: string) {
   bottom: -4px;
   width: 100%;
   height: 2px;
-  border-radius: var(--r-full);
+  border-radius: 1px;
   background: var(--color-accent);
 }
 
 .tab:active { transform: translateY(1px); }
 
 .tab-icon {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
 }
 
 .tab-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
 }
-
-
 </style>

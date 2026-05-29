@@ -1,11 +1,10 @@
 <template>
   <div class="page">
-    <!-- Header -->
     <header class="header anim-delay-1">
       <button class="btn-ghost" aria-label="返回" @click="$router.back()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
       </button>
-      <div style="flex:1;text-align:center;">
+      <div class="header-center">
         <div class="header-title">购物清单</div>
         <div class="header-sub">根据本周菜单生成</div>
       </div>
@@ -17,7 +16,7 @@
       </button>
     </header>
 
-    <!-- Price summary -->
+    <!-- Price Bar -->
     <div class="price-bar anim-delay-2">
       <div>
         <div class="price-label">预估总价</div>
@@ -26,8 +25,8 @@
       <button class="btn-solid">一键复制</button>
     </div>
 
-    <!-- Category filter -->
-    <div class="cat-filter anim-delay-2">
+    <!-- Category Filter -->
+    <div class="cat-bar anim-delay-2">
       <button
         v-for="cat in categories"
         :key="cat.name"
@@ -51,7 +50,6 @@
           v-for="(item, idx) in group.items"
           :key="idx"
           class="list-row shop-row"
-          :class="{ checked: item.checked }"
           @click="toggleItem(item)"
         >
           <div class="shop-check" :class="{ checked: item.checked }">
@@ -59,7 +57,7 @@
           </div>
           <span class="shop-emoji">{{ item.emoji }}</span>
           <div class="list-row-body">
-            <div class="list-row-title" :class="{ 'is-done': item.checked }">{{ item.name }}</div>
+            <div class="list-row-title" :class="{ done: item.checked }">{{ item.name }}</div>
             <div class="list-row-sub">{{ item.amount }}</div>
           </div>
           <span class="shop-price">{{ item.price ? '¥' + item.price : '' }}</span>
@@ -123,8 +121,6 @@ const totalPrice = computed(() => {
     .toFixed(1)
 })
 
-const totalCount = computed(() => shoppingStore.allItems.length)
-
 function toggleItem(item: any) {
   const idx = shoppingStore.allItems.indexOf(item)
   if (idx > -1) shoppingStore.toggleItemChecked(idx)
@@ -136,22 +132,26 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ── Price bar ── */
+.header-center {
+  flex: 1;
+  text-align: center;
+}
+
+/* ── Price Bar ── */
 .price-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: var(--sp-4);
   background: var(--color-surface);
-  border-radius: var(--r-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
   margin-bottom: var(--sp-5);
-  border: 1px solid var(--color-rule);
-  box-shadow: 0 8px 28px var(--color-shadow);
 }
 
 .price-label {
   font-size: var(--text-xs);
-  color: var(--color-ink-3);
+  color: var(--color-text-3);
   font-weight: 500;
 }
 
@@ -159,12 +159,11 @@ onMounted(() => {
   font-family: var(--font-display);
   font-size: var(--text-xl);
   font-weight: 700;
-  color: var(--color-ink);
-  letter-spacing: 0;
+  color: var(--color-text);
 }
 
-/* ── Category filter ── */
-.cat-filter {
+/* ── Category Bar ── */
+.cat-bar {
   display: flex;
   gap: var(--sp-2);
   margin-bottom: var(--sp-5);
@@ -173,7 +172,7 @@ onMounted(() => {
   -webkit-overflow-scrolling: touch;
 }
 
-.cat-filter::-webkit-scrollbar { display: none; }
+.cat-bar::-webkit-scrollbar { display: none; }
 
 .cat-pill {
   flex-shrink: 0;
@@ -181,29 +180,29 @@ onMounted(() => {
   align-items: center;
   gap: 4px;
   padding: 6px 14px;
-  border-radius: var(--r-full);
-  border: 1px solid var(--color-rule);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--color-border);
   background: var(--color-surface);
   font-size: var(--text-xs);
   font-weight: 600;
-  color: var(--color-ink-2);
+  color: var(--color-text-2);
   cursor: pointer;
-  transition: all var(--dur-base) var(--ease-out);
+  transition: all var(--dur-base) var(--ease);
   -webkit-tap-highlight-color: transparent;
 }
 
 .cat-pill.active {
-  background: var(--color-dark);
-  color: var(--color-ink);
-  border-color: var(--color-dark);
+  background: var(--color-text);
+  color: var(--color-text-inv);
+  border-color: var(--color-text);
 }
 
-.cat-pill:active { transform: scale(0.95); }
+.cat-pill:active { transform: scale(0.96); }
 
 .cat-count {
   font-size: 10px;
   font-weight: 700;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 /* ── Groups ── */
@@ -218,35 +217,36 @@ onMounted(() => {
 }
 
 .group-emoji { font-size: 16px; }
-.group-name { font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); }
-.group-count { font-size: 11px; color: var(--color-ink-3); margin-left: auto; }
+.group-name { font-size: var(--text-sm); font-weight: 600; color: var(--color-text); }
+.group-count { font-size: 11px; color: var(--color-text-3); margin-left: auto; }
 
-/* ── Shop row ── */
+/* ── Shop Row ── */
 .shop-row {
   gap: var(--sp-3);
+  cursor: pointer;
 }
 
 .shop-check {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  border: 1.5px solid var(--color-rule);
+  border: 1.5px solid var(--color-border-med);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: all var(--dur-base) var(--ease-out);
+  transition: all var(--dur-base) var(--ease);
 }
 
 .shop-check.checked {
-  background: var(--color-green);
-  border-color: var(--color-green);
+  background: var(--color-success);
+  border-color: var(--color-success);
 }
 
 .shop-check svg { display: none; color: white; }
 .shop-check.checked svg { display: block; }
 
-.shop-emoji { font-size: 24px; flex-shrink: 0; }
+.shop-emoji { font-size: 22px; flex-shrink: 0; }
 
 .shop-price {
   font-size: var(--text-sm);
@@ -255,14 +255,14 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.is-done { text-decoration: line-through; color: var(--color-ink-3) !important; }
+.done { text-decoration: line-through; color: var(--color-text-3) !important; }
 
-/* ── Add button ── */
+/* ── Add Button ── */
 .add-btn {
   width: 100%;
   padding: var(--sp-4);
-  border-radius: var(--r-lg);
-  border: 1.5px dashed var(--color-rule);
+  border-radius: var(--r-md);
+  border: 1.5px dashed var(--color-border-med);
   background: transparent;
   display: flex;
   align-items: center;
@@ -271,10 +271,22 @@ onMounted(() => {
   cursor: pointer;
   font-size: var(--text-sm);
   font-weight: 600;
-  color: var(--color-ink-3);
+  color: var(--color-text-3);
   margin-top: var(--sp-2);
-  transition: border-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
+  transition: border-color var(--dur-base) var(--ease), color var(--dur-base) var(--ease);
 }
 
-.add-btn:active { border-color: var(--color-accent); color: var(--color-accent); }
+.add-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.add-btn:active { transform: translateY(1px); }
+
+/* ── Responsive ── */
+@media (min-width: 768px) {
+  .page {
+    max-width: 640px;
+  }
+}
 </style>

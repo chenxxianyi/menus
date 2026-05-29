@@ -1,82 +1,88 @@
-/* Hallmark pre-emit critique: P4 H4 E4 S4 R5 V4 */
-/* Hallmark macrostructure: editorial mobile journal; tone: Nordic Minimal lifestyle; anchor hue: oat-amber */
+/* Liquid Glass Design System — Clean, Minimal, Premium */
 
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,650;0,9..144,750;1,9..144,400;1,9..144,650&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,650;9..144,750&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
 :root {
-  --color-paper:       oklch(97.2% 0.010 82);
-  --color-paper-2:     oklch(94.8% 0.012 82);
-  --color-paper-3:     oklch(91.8% 0.014 78);
-  --color-surface:     oklch(99.4% 0.004 86);
-  --color-surface-2:   oklch(96.5% 0.010 86);
-  --color-rule:        oklch(86.5% 0.010 78);
-  --color-rule-strong: oklch(73% 0.018 72);
-  --color-ink:         oklch(18% 0.010 65);
-  --color-ink-2:       oklch(34% 0.010 66);
-  --color-ink-3:       oklch(55% 0.012 72);
-  --color-ink-soft:    oklch(66% 0.012 78);
-  --color-accent:      oklch(48% 0.060 62);
-  --color-accent-soft: oklch(92.5% 0.030 68);
-  --color-focus:       oklch(48% 0.060 62);
+  /* ── Surface & Background ── */
+  --color-bg:          #f8f7f5;
+  --color-surface:     #ffffff;
+  --color-surface-2:   #f2f1ef;
+  --color-surface-3:   #eae9e7;
+  --color-elevated:    #ffffff;
 
-  --color-green:       oklch(47% 0.060 152);
-  --color-green-soft:  oklch(92.5% 0.026 150);
-  --color-blue:        oklch(49% 0.045 228);
-  --color-blue-soft:   oklch(92.5% 0.022 225);
-  --color-purple:      oklch(47% 0.040 305);
-  --color-purple-soft: oklch(93.2% 0.020 305);
-  --color-orange:      oklch(52% 0.075 48);
-  --color-orange-soft: oklch(92.8% 0.034 58);
-  --color-red:         oklch(48% 0.090 26);
-  --color-red-soft:    oklch(93% 0.030 28);
-  --color-yellow:      oklch(66% 0.080 86);
-  --color-yellow-soft: oklch(93.5% 0.040 86);
+  /* ── Borders ── */
+  --color-border:      rgba(0, 0, 0, 0.06);
+  --color-border-med:  rgba(0, 0, 0, 0.10);
+  --color-border-dark: rgba(0, 0, 0, 0.16);
 
-  --color-dark:        oklch(92.5% 0.018 72);
-  --color-dark-2:      oklch(88.5% 0.020 70);
-  --color-photo-wash:  oklch(22% 0.012 68 / 0.22);
-  --color-shadow:      oklch(18% 0.010 65 / 0.065);
+  /* ── Text ── */
+  --color-text:        #1a1917;
+  --color-text-2:      #55534e;
+  --color-text-3:      #8a8883;
+  --color-text-inv:    #ffffff;
 
-  --font-display: "Fraunces", ui-serif, Georgia, "Noto Serif SC", serif;
+  /* ── Accent — warm amber ── */
+  --color-accent:      #c4853a;
+  --color-accent-soft: #fdf4ea;
+  --color-accent-hover:#b07530;
+
+  /* ── Semantic ── */
+  --color-success:     #3a8c6e;
+  --color-success-soft:#eaf6f0;
+  --color-error:       #c44a3a;
+  --color-error-soft:  #fdecea;
+  --color-warning:     #c49a3a;
+  --color-warning-soft:#fdf8ea;
+
+  /* ── Liquid Glass ── */
+  --glass-bg:          rgba(255, 255, 255, 0.72);
+  --glass-border:      rgba(255, 255, 255, 0.45);
+  --glass-blur:        16px;
+  --glass-shadow:      0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
+
+  /* ── Typography ── */
+  --font-display: "Fraunces", "Georgia", serif;
   --font-body:    "Plus Jakarta Sans", -apple-system, system-ui, sans-serif;
 
-  --text-xs:   0.694rem;
-  --text-sm:   0.833rem;
-  --text-base: 1rem;
-  --text-md:   1.125rem;
-  --text-lg:   1.333rem;
-  --text-xl:   1.777rem;
-  --text-2xl:  2.369rem;
-  --text-3xl:  3.157rem;
+  --text-2xs:  0.625rem;
+  --text-xs:   0.75rem;
+  --text-sm:   0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md:   1.0625rem;
+  --text-lg:   1.25rem;
+  --text-xl:   1.625rem;
+  --text-2xl:  2rem;
+  --text-3xl:  2.625rem;
 
+  /* ── Spacing (8px grid) ── */
+  --sp-0:  0;
   --sp-1:  4px;
   --sp-2:  8px;
   --sp-3:  12px;
   --sp-4:  16px;
   --sp-5:  20px;
   --sp-6:  24px;
-  --sp-7:  28px;
   --sp-8:  32px;
   --sp-10: 40px;
   --sp-12: 48px;
   --sp-16: 64px;
 
-  --r-sm:   6px;
-  --r-md:   8px;
-  --r-lg:   10px;
-  --r-xl:   12px;
-  --r-2xl:  16px;
-  --r-full: 9999px;
+  /* ── Radius ── */
+  --r-sm:  8px;
+  --r-md:  12px;
+  --r-lg:  16px;
+  --r-xl:  20px;
 
-  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in:     cubic-bezier(0.32, 0, 0.67, 0);
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --dur-fast:    100ms;
-  --dur-base:    180ms;
-  --dur-slow:    300ms;
+  /* ── Motion ── */
+  --ease:     cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
 
+  /* ── Layout ── */
   --safe-top:    env(safe-area-inset-top, 59px);
   --safe-bottom: env(safe-area-inset-bottom, 34px);
-  --tab-h:       76px;
-  --max-w:       430px;
+  --tab-h:       64px;
+  --max-w:       480px;
 }

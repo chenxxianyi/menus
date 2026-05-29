@@ -1,6 +1,6 @@
 <template>
   <div class="empty-state">
-    <div class="empty-state-icon">
+    <div class="empty-icon">
       <svg v-if="type === 'no-data'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
         <polyline points="7 10 12 15 17 10"/>
@@ -14,7 +14,7 @@
         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
       </svg>
     </div>
-    <p class="empty-state-text">{{ displayText }}</p>
+    <p class="empty-text">{{ displayText }}</p>
   </div>
 </template>
 
@@ -43,20 +43,23 @@ const displayText = computed(() => props.text || defaultTexts[props.type])
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 20px;
-  color: var(--color-ink-3);
+  padding: var(--sp-16) var(--sp-6);
+  color: var(--color-text-3);
 }
-.empty-state-icon {
-  width: 64px;
-  height: 64px;
-  margin-bottom: 16px;
-  opacity: 0.4;
+
+.empty-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--sp-4);
+  opacity: 0.3;
 }
-.empty-state-icon svg {
+
+.empty-icon svg {
   width: 100%;
   height: 100%;
 }
-.empty-state-text {
+
+.empty-text {
   font-size: var(--text-sm);
   font-weight: 500;
 }

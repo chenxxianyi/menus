@@ -1,11 +1,10 @@
 <template>
   <div class="page">
-    <!-- Header -->
     <header class="header anim-delay-1">
       <button class="btn-ghost" aria-label="返回" @click="$router.back()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
       </button>
-      <div style="flex:1;text-align:center;">
+      <div class="header-center">
         <div class="header-title">一周菜单</div>
       </div>
       <button class="btn-ghost" aria-label="生成" @click="generateWeekMenu">
@@ -14,7 +13,7 @@
     </header>
 
     <!-- Week Selector -->
-    <div class="week-strip anim-delay-2">
+    <div class="week-bar anim-delay-2">
       <button
         v-for="(day, idx) in weekDays"
         :key="idx"
@@ -28,33 +27,36 @@
       </button>
     </div>
 
-    <!-- Loading / Empty -->
-    <div v-if="loading" class="empty-hint anim-delay-3">生成中...</div>
-    <div v-else-if="!weekMenuData.length" class="empty-hint anim-delay-3">
-      <p>点击右上角 + 生成一周菜单</p>
+    <!-- Loading -->
+    <div v-if="loading" class="empty-state anim-delay-3">
+      <div class="loading-spinner"></div>
+      <p>生成中...</p>
     </div>
 
-    <!-- Meal Timeline -->
+    <!-- Empty -->
+    <div v-else-if="!weekMenuData.length" class="empty-state anim-delay-3">
+      <p class="empty-text">点击右上角 + 生成一周菜单</p>
+    </div>
+
+    <!-- Timeline -->
     <div v-else class="timeline anim-delay-3">
       <template v-if="currentDayMeals.length">
         <div v-for="(meal, idx) in currentDayMeals" :key="idx" class="tl-item">
           <div class="tl-left">
             <span class="tl-time">{{ mealTime(meal.type) }}</span>
             <span class="tl-dot" :class="meal.type"></span>
-            <span v-if="Number(idx) < currentDayMeals.length - 1" class="tl-line"></span>
+            <span v-if="idx < currentDayMeals.length - 1" class="tl-line"></span>
           </div>
-          <div class="tl-card">
-            <div class="tl-card-top">
-              <span class="tl-card-type" :class="meal.type">{{ mealTypeLabel(meal.type) }}</span>
-            </div>
-            <div v-for="(dish, di) in meal.dishes" :key="di" style="margin-bottom:var(--sp-2);">
-              <h3 class="tl-card-name">{{ dish.name }}</h3>
-              <p class="tl-card-desc">{{ dish.cook_time }}分钟 · {{ dish.difficulty }}</p>
+          <div class="tl-content">
+            <span class="tl-type" :class="meal.type">{{ mealTypeLabel(meal.type) }}</span>
+            <div v-for="(dish, di) in meal.dishes" :key="di" class="tl-dish">
+              <h3 class="tl-dish-name">{{ dish.name }}</h3>
+              <p class="tl-dish-meta">{{ dish.cook_time }}分钟 · {{ dish.difficulty }}</p>
             </div>
           </div>
         </div>
       </template>
-      <div v-else class="empty-hint">今日暂无推荐</div>
+      <div v-else class="empty-state">今日暂无推荐</div>
     </div>
   </div>
 </template>
@@ -77,7 +79,6 @@ const weekDays = [
   { label: '日', date: '' },
 ]
 
-// Fill in actual dates for this week
 ;(() => {
   const now = new Date()
   const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay()
@@ -126,17 +127,20 @@ async function generateWeekMenu() {
   }
 }
 
-onMounted(() => {
-  // Auto-load if data exists, otherwise show empty state
-})
+onMounted(() => {})
 </script>
 
 <style scoped>
-/* ── Week selector ── */
-.week-strip {
+.header-center {
+  flex: 1;
+  text-align: center;
+}
+
+/* ── Week Bar ── */
+.week-bar {
   display: flex;
   gap: var(--sp-1);
-  margin-bottom: var(--sp-5);
+  margin-bottom: var(--sp-6);
 }
 
 .week-day {
@@ -146,40 +150,40 @@ onMounted(() => {
   align-items: center;
   gap: 2px;
   padding: var(--sp-2) 0;
-  border-radius: var(--r-md);
+  border-radius: var(--r-sm);
   border: none;
   background: transparent;
   cursor: pointer;
-  transition: all var(--dur-base) var(--ease-out);
+  transition: all var(--dur-base) var(--ease);
   position: relative;
   -webkit-tap-highlight-color: transparent;
 }
 
 .week-day.active {
-  background: var(--color-dark);
+  background: var(--color-text);
 }
 
-.week-day:active { transform: scale(0.93); }
+.week-day:active { transform: scale(0.95); }
 
 .week-day-label {
   font-size: 11px;
   font-weight: 500;
-  color: var(--color-ink-3);
+  color: var(--color-text-3);
 }
 
 .week-day.active .week-day-label {
-  color: var(--color-ink-3);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .week-day-num {
   font-size: var(--text-md);
   font-weight: 700;
-  color: var(--color-ink);
+  color: var(--color-text);
   line-height: 1.2;
 }
 
 .week-day.active .week-day-num {
-  color: var(--color-ink);
+  color: var(--color-text-inv);
 }
 
 .week-day-dot {
@@ -191,65 +195,54 @@ onMounted(() => {
   bottom: 4px;
 }
 
-/* ── Stats ── */
-.stats-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-5);
-  padding: var(--sp-4) 0;
-  margin-bottom: var(--sp-6);
-  border-bottom: 0.5px solid var(--color-rule);
+/* ── Empty ── */
+.empty-state {
+  text-align: center;
+  padding: var(--sp-12) 0;
+  color: var(--color-text-3);
+  font-size: var(--text-sm);
 }
 
-.stat {
-  display: flex;
-  align-items: baseline;
-  gap: var(--sp-1);
+.empty-text {
+  color: var(--color-text-3);
 }
 
-.stat-value {
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
-  font-weight: 700;
-  color: var(--color-ink);
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--color-surface-3);
+  border-top-color: var(--color-text-3);
+  border-radius: 50%;
+  margin: 0 auto var(--sp-3);
+  animation: spin 0.8s linear infinite;
 }
 
-.stat-value--accent { color: var(--color-accent); }
-.stat-value--green { color: var(--color-green); }
-
-.stat-label {
-  font-size: var(--text-xs);
-  color: var(--color-ink-3);
-  font-weight: 500;
-}
-
-.stat-sep {
-  width: 1px;
-  height: 20px;
-  background: var(--color-rule);
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ── Timeline ── */
+.timeline {
+  padding-bottom: var(--sp-8);
+}
+
 .tl-item {
   display: flex;
   gap: var(--sp-4);
-  min-height: 80px;
 }
 
 .tl-left {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 44px;
+  width: 40px;
   flex-shrink: 0;
-  gap: var(--sp-1);
 }
 
 .tl-time {
   font-size: 11px;
   font-weight: 600;
-  color: var(--color-ink-3);
+  color: var(--color-text-3);
   white-space: nowrap;
 }
 
@@ -258,99 +251,68 @@ onMounted(() => {
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
-  margin: var(--sp-1) 0;
+  margin: var(--sp-2) 0;
 }
 
-.tl-dot.breakfast { background: var(--color-orange); }
-.tl-dot.lunch { background: var(--color-blue); }
-.tl-dot.dinner { background: var(--color-purple); }
+.tl-dot.breakfast { background: var(--color-accent); }
+.tl-dot.lunch { background: var(--color-text); }
+.tl-dot.dinner { background: var(--color-text-2); }
 
 .tl-line {
   width: 1.5px;
   flex: 1;
-  background: var(--color-rule);
+  background: var(--color-border);
   min-height: 16px;
 }
 
-.tl-card {
+.tl-content {
   flex: 1;
-  padding: var(--sp-3) 0 var(--sp-5);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: opacity var(--dur-fast);
+  padding: 0 0 var(--sp-6);
 }
 
-.tl-card:active { opacity: 0.7; }
-
-.tl-card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--sp-1);
-}
-
-.tl-card-type {
+.tl-type {
   font-size: 11px;
   font-weight: 600;
+  margin-bottom: var(--sp-2);
+  display: inline-block;
 }
 
-.tl-card-type.breakfast { color: var(--color-orange); }
-.tl-card-type.lunch { color: var(--color-blue); }
-.tl-card-type.dinner { color: var(--color-purple); }
+.tl-type.breakfast { color: var(--color-accent); }
+.tl-type.lunch { color: var(--color-text); }
+.tl-type.dinner { color: var(--color-text-2); }
 
-.tl-card-kcal {
-  font-size: 11px;
-  color: var(--color-ink-3);
-  font-weight: 500;
+.tl-dish {
+  margin-bottom: var(--sp-2);
 }
 
-.tl-card-name {
+.tl-dish:last-child {
+  margin-bottom: 0;
+}
+
+.tl-dish-name {
   font-family: var(--font-display);
   font-size: var(--text-md);
-  font-weight: 700;
-  color: var(--color-ink);
-  letter-spacing: 0;
+  font-weight: 650;
+  color: var(--color-text);
   line-height: 1.3;
-  margin-bottom: 2px;
 }
 
-.tl-card-desc {
+.tl-dish-meta {
   font-size: var(--text-xs);
-  color: var(--color-ink-3);
-  line-height: 1.5;
+  color: var(--color-text-3);
+  margin-top: 2px;
 }
 
-.tl-card-tags {
-  display: flex;
-  gap: var(--sp-2);
-  margin-top: var(--sp-2);
-  flex-wrap: wrap;
+/* ── Responsive ── */
+@media (min-width: 768px) {
+  .page {
+    max-width: 640px;
+  }
 }
 
-.tl-add {
-  flex: 1;
-  padding: var(--sp-4);
-  border-radius: var(--r-lg);
-  border: 1.5px dashed var(--color-rule);
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-2);
-  cursor: pointer;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--color-ink-3);
-  transition: border-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
-  margin-bottom: var(--sp-4);
-}
-
-.tl-add:active { border-color: var(--color-accent); color: var(--color-accent); }
-
-.empty-hint {
-  text-align: center;
-  padding: var(--sp-8) 0;
-  font-size: var(--text-sm);
-  color: var(--color-ink-3);
+@media (min-width: 1024px) {
+  .page {
+    max-width: 800px;
+  }
 }
 </style>
