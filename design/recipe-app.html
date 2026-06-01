@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>食刻推荐 - 智能食谱推荐</title>
+<script src="https://modao.cc/agent-py/static/source/js/tailwindcss.js"></script>
+<script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.js"></script>
+<script src="https://modao.cc/agent-py/static/source/js/echarts.min.js"></script>
+<style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #F3F4F6;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .iphone-container {
+            width: 375px;
+            height: 812px;
+            margin: 20px auto;
+            background: #F7F7F7;
+            position: relative;
+            overflow: hidden;
+            border: 8px solid #333;
+            border-radius: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .safe-area-bottom {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab-active {
+            color: #07C160;
+        }
+
+        .page {
+            display: none;
+            height: calc(812px - 84px); /* Subtract TabBar height */
+            overflow-y: auto;
+            padding-bottom: 20px;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            z-index: 50;
+            transform: translateY(100%);
+            transition: transform 0.3s ease-out;
+        }
+
+        .overlay.active {
+            transform: translateY(0);
+        }
+
+        .recipe-card-shadow {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .wechat-btn {
+            background-color: #07C160;
+            color: white;
+        }
+
+        .wechat-btn:active {
+            background-color: #06AD56;
+        }
+
+        /* 模拟微信胶囊按钮 */
+        .capsule-menu {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(10px);
+            border: 0.5px solid rgba(0,0,0,0.1);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            padding: 4px 10px;
+            z-index: 40;
+        }
+
+        /* 骨架屏动画 */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        .animate-pulse-custom {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body>
+<div class="iphone-container">
+<!-- 状态栏模拟 -->
+<div class="h-10 flex justify-between items-center px-8 pt-4 z-40 relative">
+<span class="text-xs font-bold">09:41</span>
+<div class="flex gap-1 items-center">
+<iconify-icon class="text-xs" icon="mdi:signal"></iconify-icon>
+<iconify-icon class="text-xs" icon="mdi:wifi"></iconify-icon>
+<iconify-icon class="text-sm" icon="mdi:battery"></iconify-icon>
+</div>
+</div>
+<!-- 胶囊按钮模拟 -->
+<div class="capsule-menu">
+<iconify-icon class="text-lg mr-2" icon="mdi:dots-horizontal"></iconify-icon>
+<div class="w-[1px] h-4 bg-gray-300 mx-1"></div>
+<iconify-icon class="text-lg ml-2" icon="mdi:close-circle-outline"></iconify-icon>
+</div>
+<!-- 页面内容 -->
+<div id="pages-container">
+<!-- 首页 -->
+<div class="page active" id="page-home">
+<div class="px-5 pt-4">
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-gray-200 border-2 border-white shadow-sm">
+<img alt="User avatar" class="w-full h-full object-cover" src="/agent-py/static/source/images/placeholder.svg"/>
+</div>
+<div>
+<h2 class="text-sm font-bold text-gray-800">早上好，美食家</h2>
+<p class="text-[10px] text-gray-400">今天想吃点什么？</p>
+</div>
+</div>
+</div>
+<!-- 搜索框 -->
+<div class="bg-white rounded-full px-4 py-2.5 flex items-center gap-2 mb-6 shadow-sm border border-gray-100 cursor-pointer" onclick="switchPage('recipes')">
+<iconify-icon class="text-gray-400 text-lg" icon="mdi:magnify"></iconify-icon>
+<span class="text-gray-400 text-sm">搜索你感兴趣的菜谱...</span>
+</div>
+<!-- 今日推荐菜单 -->
+<div class="mb-8">
+<div class="flex justify-between items-end mb-4">
+<h3 class="font-bold text-lg text-gray-800">今日推荐菜单</h3>
+<span class="text-xs text-[#07C160] font-medium">查看周计划</span>
+</div>
+<div class="flex gap-4 overflow-x-auto hide-scrollbar pb-2">
+<!-- 早餐 -->
+<div class="min-w-[240px] bg-white rounded-2xl p-4 recipe-card-shadow border border-gray-50">
+<div class="flex justify-between items-start mb-3">
+<span class="px-2 py-0.5 bg-green-100 text-[#07C160] text-[10px] rounded-md font-bold">早餐推荐</span>
+<div class="flex items-center text-[10px] text-gray-400">
+<iconify-icon class="mr-1" icon="mdi:clock-outline"></iconify-icon> 10min
+                                </div>
+</div>
+<h4 class="font-bold text-gray-800 mb-1">能量活力早餐</h4>
+<p class="text-xs text-gray-500 mb-3">燕麦牛奶 + 水煮蛋 + 全麦面包</p>
+<div class="flex justify-between items-center">
+<span class="text-xs font-bold text-orange-500">320 kcal</span>
+<button class="text-[10px] bg-[#07C160] text-white px-3 py-1 rounded-full">去制作</button>
+</div>
+</div>
+<!-- 午餐 -->
+<div class="min-w-[240px] bg-white rounded-2xl p-4 recipe-card-shadow border border-gray-50">
+<div class="flex justify-between items-start mb-3">
+<span class="px-2 py-0.5 bg-orange-100 text-orange-600 text-[10px] rounded-md font-bold">午餐推荐</span>
+<div class="flex items-center text-[10px] text-gray-400">
+<iconify-icon class="mr-1" icon="mdi:clock-outline"></iconify-icon> 25min
+                                </div>
+</div>
+<h4 class="font-bold text-gray-800 mb-1">经典家常套餐</h4>
+<p class="text-xs text-gray-500 mb-3">番茄炒蛋 + 青椒肉丝 + 米饭</p>
+<div class="flex justify-between items-center">
+<span class="text-xs font-bold text-orange-500">650 kcal</span>
+<button class="text-[10px] bg-[#07C160] text-white px-3 py-1 rounded-full">去制作</button>
+</div>
+</div>
+<!-- 晚餐 -->
+<div class="min-w-[240px] bg-white rounded-2xl p-4 recipe-card-shadow border border-gray-50">
+<div class="flex justify-between items-start mb-3">
+<span class="px-2 py-0.5 bg-blue-100 text-blue-600 text-[10px] rounded-md font-bold">晚餐推荐</span>
+<div class="flex items-center text-[10px] text-gray-400">
+<iconify-icon class="mr-1" icon="mdi:clock-outline"></iconify-icon> 30min
+                                </div>
+</div>
+<h4 class="font-bold text-gray-800 mb-1">轻盈低脂晚餐</h4>
+<p class="text-xs text-gray-500 mb-3">清蒸鲈鱼 + 蒜蓉西兰花 + 杂粮饭</p>
+<div class="flex justify-between items-center">
+<span class="text-xs font-bold text-orange-500">480 kcal</span>
+<button class="text-[10px] bg-[#07C160] text-white px-3 py-1 rounded-full">去制作</button>
+</div>
+</div>
+</div>
+</div>
+<!-- 快速入口 -->
+<div class="grid grid-cols-3 gap-3 mb-8">
+<div class="bg-white p-3 rounded-xl flex flex-col items-center justify-center gap-2 recipe-card-shadow border border-gray-50 active:scale-95 transition-transform" onclick="openIngredientRec()">
+<div class="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center">
+<iconify-icon class="text-orange-500 text-xl" icon="mdi:food-apple-outline"></iconify-icon>
+</div>
+<span class="text-[10px] font-medium text-gray-600">按食材推荐</span>
+</div>
+<div class="bg-white p-3 rounded-xl flex flex-col items-center justify-center gap-2 recipe-card-shadow border border-gray-50">
+<div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+<iconify-icon class="text-red-500 text-xl" icon="mdi:fire"></iconify-icon>
+</div>
+<span class="text-[10px] font-medium text-gray-600">按口味推荐</span>
+</div>
+<div class="bg-white p-3 rounded-xl flex flex-col items-center justify-center gap-2 recipe-card-shadow border border-gray-50">
+<div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+<iconify-icon class="text-blue-500 text-xl" icon="mdi:target"></iconify-icon>
+</div>
+<span class="text-[10px] font-medium text-gray-600">按场景推荐</span>
+</div>
+<div class="bg-white p-3 rounded-xl flex flex-col items-center justify-center gap-2 recipe-card-shadow border border-gray-50">
+<div class="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+<iconify-icon class="text-green-500 text-xl" icon="mdi:calendar-week"></iconify-icon>
+</div>
+<span class="text-[10px] font-medium text-gray-600">一周菜单</span>
+</div>
+<div class="bg-white p-3 rounded-xl flex flex-col items-center justify-center gap-2 recipe-card-shadow border border-gray-50">
+<div class="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center">
+<iconify-icon class="text-purple-500 text-xl" icon="mdi:fridge-outline"></iconify-icon>
+</div>
+<span class="text-[10px] font-medium text-gray-600">冰箱剩菜</span>
+</div>
+<div class="bg-white p-3 rounded-xl flex flex-col items-center justify-center gap-2 recipe-card-shadow border border-gray-50">
+<div class="w-10 h-10 rounded-full bg-yellow-50 flex items-center justify-center">
+<iconify-icon class="text-yellow-500 text-xl" icon="mdi:trending-up"></iconify-icon>
+</div>
+<span class="text-[10px] font-medium text-gray-600">最热菜谱</span>
+</div>
+</div>
+<!-- 热门菜谱 -->
+<div>
+<div class="flex justify-between items-end mb-4">
+<h3 class="font-bold text-lg text-gray-800">热门菜谱</h3>
+<span class="text-xs text-gray-400" onclick="switchPage('recipes')">更多</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-white rounded-2xl overflow-hidden recipe-card-shadow" onclick="showRecipeDetail(1)">
+<div class="h-28 bg-gray-100 relative">
+<img alt="Tomato Egg" class="w-full h-full object-cover" src="/agent-py/static/source/images/placeholder.svg"/>
+<div class="absolute top-2 right-2 bg-black/30 backdrop-blur-md rounded-full px-2 py-0.5 text-[8px] text-white flex items-center">
+<iconify-icon class="text-yellow-400 mr-0.5" icon="mdi:star"></iconify-icon> 4.8
+                                </div>
+</div>
+<div class="p-3">
+<h5 class="font-bold text-xs text-gray-800 mb-1 truncate">番茄炒蛋</h5>
+<div class="flex justify-between items-center text-[9px] text-gray-400">
+<span>简单 · 15min</span>
+</div>
+</div>
+</div>
+<div class="bg-white rounded-2xl overflow-hidden recipe-card-shadow" onclick="showRecipeDetail(2)">
+<div class="h-28 bg-gray-100 relative">
+<img alt="Ribs" class="w-full h-full object-cover" src="/agent-py/static/source/images/placeholder.svg"/>
+<div class="absolute top-2 right-2 bg-black/30 backdrop-blur-md rounded-full px-2 py-0.5 text-[8px] text-white flex items-center">
+<iconify-icon class="text-yellow-400 mr-0.5" icon="mdi:star"></iconify-icon> 4.9
+                                </div>
+</div>
+<div class="p-3">
+<h5 class="font-bold text-xs text-gray-800 mb-1 truncate">红烧排骨</h5>
+<div class="flex justify-between items-center text-[9px] text-gray-400">
+<span>中等 · 45min</span>
+</div>
+</div>
+</div>
+<div class="bg-white rounded-2xl overflow-hidden recipe-card-shadow" onclick="showRecipeDetail(3)">
+<div class="h-28 bg-gray-100 relative">
+<img alt="Fish" class="w-full h-full object-cover" src="/agent-py/static/source/images/placeholder.svg"/>
+<div class="absolute top-2 right-2 bg-black/30 backdrop-blur-md rounded-full px-2 py-0.5 text-[8px] text-white flex items-center">
+<iconify-icon class="text-yellow-400 mr-0.5" icon="mdi:star"></iconify-icon> 4.7
+                                </div>
+</div>
+<div class="p-3">
+<h5 class="font-bold text-xs text-gray-800 mb-1 truncate">清蒸鲈鱼</h5>
+<div class="flex justify-between items-center text-[9px] text-gray-400">
+<span>中等 · 20min</span>
+</div>
+</div>
+</div>
+<div class="bg-white rounded-2xl overflow-hidden recipe-card-shadow" onclick="showRecipeDetail(4)">
+<div class="h-28 bg-gray-100 relative">
+<img alt="Tofu" class="w-full h-full object-cover" src="/agent-py/static/source/images/placeholder.svg"/>
+<div class="absolute top-2 right-2 bg-black/30 backdrop-blur-md rounded-full px-2 py-0.5 text-[8px] text-white flex items-center">
+<iconify-icon class="text-yellow-400 mr-0.5" icon="mdi:star"></iconify-icon> 4.6
+                                </div>
+</div>
+<div class="p-3">
+<h5 class="font-bold text-xs text-gray-800 mb-1 truncate">麻婆豆腐</h5>
+<div class="flex justify-between items-center text-[9px] text-gray-400">
+<span>简单 · 10min</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 菜谱列表页 -->
+<div class="page" id="page-recipes">
+<div class="sticky top-0 bg-[#F7F7F7] z-10 px-5 pt-4 pb-2">
+<div class="flex items-center gap-2 mb-4">
+<div class="flex-1 bg-white rounded-full px-4 py-2 flex items-center gap-2 shadow-sm border border-gray-100">
+<iconify-icon class="text-gray-400 text-lg" icon="mdi:magnify"></iconify-icon>
+<input class="bg-transparent text-sm w-full outline-none focus:ring-0" placeholder="想吃什么？" type="text"/>
+</div>
+<button class="bg-[#07C160] text-white px-4 py-2 rounded-full text-xs font-medium">搜索</button>
+</div>
+<!-- 分类筛选 -->
+<div class="flex gap-4 overflow-x-auto hide-scrollbar mb-3">
+<span class="whitespace-nowrap px-3 py-1 rounded-full text-xs bg-[#07C160] text-white font-medium">全部</span>
+<span class="whitespace-nowrap px-3 py-1 rounded-full text-xs bg-white text-gray-500 border border-gray-100">家常菜</span>
+<span class="whitespace-nowrap px-3 py-1 rounded-full text-xs bg-white text-gray-500 border border-gray-100">快手菜</span>
+<span class="whitespace-nowrap px-3 py-1 rounded-full text-xs bg-white text-gray-500 border border-gray-100">减脂餐</span>
+<span class="whitespace-nowrap px-3 py-1 rounded-full text-xs bg-white text-gray-500 border border-gray-100">儿童餐</span>
+<span class="whitespace-nowrap px-3 py-1 rounded-full text-xs bg-white text-gray-500 border border-gray-100">烘焙</span>
+</div>
+<!-- 排序 -->
+<div class="flex gap-6 border-b border-gray-200 pb-2">
+<span class="text-xs font-bold text-[#07C160] border-b-2 border-[#07C160] pb-1">热门</span>
+<span class="text-xs text-gray-400">最新</span>
+<span class="text-xs text-gray-400">收藏最多</span>
+<span class="text-xs text-gray-400">时间短</span>
+</div>
+</div>
+<div class="px-5 pt-2 flex flex-col gap-4" id="recipe-list-container">
+<!-- 菜谱列表项由JS填充 -->
+</div>
+</div>
+<!-- 菜单推荐页 -->
+<div class="page px-5 pt-6" id="page-recommend">
+<h2 class="text-xl font-bold text-gray-800 mb-2">智能菜单推荐</h2>
+<p class="text-xs text-gray-400 mb-6">告诉我们你的需求，即刻生成专属三餐方案</p>
+<div class="space-y-6" id="recommendation-form">
+<!-- 用餐人数 -->
+<div>
+<label class="block text-sm font-bold text-gray-700 mb-3">用餐人数</label>
+<div class="flex items-center gap-4">
+<button class="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center active:bg-gray-100" onclick="changePeople(-1)">
+<iconify-icon icon="mdi:minus"></iconify-icon>
+</button>
+<span class="text-lg font-bold w-4 text-center" id="people-count">2</span>
+<button class="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center active:bg-gray-100" onclick="changePeople(1)">
+<iconify-icon icon="mdi:plus"></iconify-icon>
+</button>
+<span class="text-xs text-gray-400 ml-2">人</span>
+</div>
+</div>
+<!-- 用餐时间 -->
+<div>
+<label class="block text-sm font-bold text-gray-700 mb-3">用餐时间</label>
+<div class="flex gap-3">
+<label class="flex-1">
+<input checked="" class="hidden peer" name="meal-time" type="radio"/>
+<div class="text-center py-2 rounded-xl border border-gray-200 text-xs peer-checked:bg-[#07C160] peer-checked:text-white peer-checked:border-[#07C160] transition-all">早餐</div>
+</label>
+<label class="flex-1">
+<input class="hidden peer" name="meal-time" type="radio"/>
+<div class="text-center py-2 rounded-xl border border-gray-200 text-xs peer-checked:bg-[#07C160] peer-checked:text-white peer-checked:border-[#07C160] transition-all">午餐</div>
+</label>
+<label class="flex-1">
+<input class="hidden peer" name="meal-time" type="radio"/>
+<div class="text-center py-2 rounded-xl border border-gray-200 text-xs peer-checked:bg-[#07C160] peer-checked:text-white peer-checked:border-[#07C160] transition-all">晚餐</div>
+</label>
+</div>
+</div>
+<!-- 口味偏好 -->
+<div>
+<label class="block text-sm font-bold text-gray-700 mb-3">口味偏好 (多选)</label>
+<div class="flex flex-wrap gap-2">
+<label>
+<input class="hidden peer" type="checkbox"/>
+<div class="px-4 py-1.5 rounded-full border border-gray-200 text-xs peer-checked:bg-orange-50 peer-checked:text-orange-600 peer-checked:border-orange-200">清淡</div>
+</label>
+<label>
+<input class="hidden peer" type="checkbox"/>
+<div class="px-4 py-1.5 rounded-full border border-gray-200 text-xs peer-checked:bg-orange-50 peer-checked:text-orange-600 peer-checked:border-orange-200">辣</div>
+</label>
+<label>
+<input class="hidden peer" type="checkbox"/>
+<div class="px-4 py-1.5 rounded-full border border-gray-200 text-xs peer-checked:bg-orange-50 peer-checked:text-orange-600 peer-checked:border-orange-200">酸甜</div>
+</label>
+<label>
+<input class="hidden peer" type="checkbox"/>
+<div class="px-4 py-1.5 rounded-full border border-gray-200 text-xs peer-checked:bg-orange-50 peer-checked:text-orange-600 peer-checked:border-orange-200">咸香</div>
+</label>
+</div>
+</div>
+<!-- 饮食目标 -->
+<div>
+<label class="block text-sm font-bold text-gray-700 mb-3">饮食目标</label>
+<select class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#07C160]">
+<option>普通饮食</option>
+<option>减脂瘦身</option>
+<option>增肌补能</option>
+<option>控糖计划</option>
+<option>儿童营养</option>
+</select>
+</div>
+<!-- 现有食材 -->
+<div>
+<label class="block text-sm font-bold text-gray-700 mb-3">现有食材 (可选)</label>
+<div class="flex flex-wrap gap-2 mb-3">
+<label><input class="hidden peer" type="checkbox"/><div class="px-3 py-1.5 rounded-lg bg-gray-100 text-[10px] peer-checked:bg-green-100 peer-checked:text-green-700">鸡蛋</div></label>
+<label><input class="hidden peer" type="checkbox"/><div class="px-3 py-1.5 rounded-lg bg-gray-100 text-[10px] peer-checked:bg-green-100 peer-checked:text-green-700">番茄</div></label>
+<label><input class="hidden peer" type="checkbox"/><div class="px-3 py-1.5 rounded-lg bg-gray-100 text-[10px] peer-checked:bg-green-100 peer-checked:text-green-700">土豆</div></label>
+<label><input class="hidden peer" type="checkbox"/><div class="px-3 py-1.5 rounded-lg bg-gray-100 text-[10px] peer-checked:bg-green-100 peer-checked:text-green-700">鸡肉</div></label>
+<label><input class="hidden peer" type="checkbox"/><div class="px-3 py-1.5 rounded-lg bg-gray-100 text-[10px] peer-checked:bg-green-100 peer-checked:text-green-700">西兰花</div></label>
+<label><input class="hidden peer" type="checkbox"/><div class="px-3 py-1.5 rounded-lg bg-gray-100 text-[10px] peer-checked:bg-green-100 peer-checked:text-green-700">豆腐</div></label>
+</div>
+<input class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none" placeholder="输入其他食材，用空格隔开" type="text"/>
+</div>
+<button class="w-full wechat-btn py-4 rounded-2xl font-bold shadow-lg shadow-green-100 flex items-center justify-center gap-2" onclick="generateMenu()">
+<iconify-icon class="text-xl" icon="mdi:auto-fix"></iconify-icon>
+                    生成推荐菜单
+                </button>
+</div>
+<!-- 推荐结果区 (初始隐藏) -->
+<div class="hidden space-y-6 pb-10" id="recommend-result">
+<div class="bg-white rounded-3xl p-6 recipe-card-shadow border border-gray-50">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-bold text-lg">为您推荐的午餐</h3>
+<span class="text-[10px] text-gray-400">总用时 约 35min</span>
+</div>
+<div class="space-y-4 mb-6">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
+<img alt="Dish" class="w-full h-full object-cover" src="/agent-py/static/source/images/placeholder.svg"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between">
+<span class="text-xs font-bold">主菜：番茄炒蛋</span>
+<span class="text-[10px] text-gray-400">15min</span>
+</div>
+<p class="text-[10px] text-gray-400 mt-0.5">经典快手菜，营养均衡</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
+<img alt="Dish" class="w-full h-full object-cover" src="/agent-py/static/source/images/placeholder.svg"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between">
+<span class="text-xs font-bold">配菜：青椒土豆丝</span>
+<span class="text-[10px] text-gray-400">12min</span>
+</div>
+<p class="text-[10px] text-gray-400 mt-0.5">口感爽脆，开胃下饭</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
+<img alt="Dish" class="w-full h-full object-cover" src="/agent-py/static/source/images/placeholder.svg"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between">
+<span class="text-xs font-bold">汤：紫菜蛋花汤</span>
+<span class="text-[10px] text-gray-400">8min</span>
+</div>
+<p class="text-[10px] text-gray-400 mt-0.5">清淡爽口，制作简单</p>
+</div>
+</div>
+</div>
+<div class="p-4 bg-gray-50 rounded-2xl mb-6">
+<h4 class="text-[10px] font-bold text-gray-500 mb-2 uppercase">推荐理由</h4>
+<p class="text-xs text-gray-600 leading-relaxed">基于您选择的“减脂”目标，这套方案控制了油脂摄入，同时保证了充足的优质蛋白和膳食纤维。总热量约 580kcal。</p>
+</div>
+<div class="flex gap-3">
+<button class="flex-1 py-3 rounded-xl border border-[#07C160] text-[#07C160] text-xs font-bold" onclick="showToast('已加入购物清单')">加入购物清单</button>
+<button class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400" onclick="resetRecommend()">
+<iconify-icon class="text-xl" icon="mdi:refresh"></iconify-icon>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- 个人中心页 -->
+<div class="page px-5 pt-8" id="page-profile">
+<div class="flex items-center gap-4 mb-8">
+<div class="w-16 h-16 rounded-full overflow-hidden border-4 border-white shadow-md">
+<img alt="User" class="w-full h-full object-cover" src="/agent-py/static/source/images/placeholder.svg"/>
+</div>
+<div>
+<h2 class="text-lg font-bold text-gray-800">美食探索者</h2>
+<p class="text-xs text-gray-400">加入食刻推荐第 128 天</p>
+</div>
+<iconify-icon class="ml-auto text-gray-300 text-xl" icon="mdi:pencil-outline"></iconify-icon>
+</div>
+<!-- 统计卡片 -->
+<div class="bg-white rounded-2xl p-4 flex justify-around mb-8 recipe-card-shadow">
+<div class="text-center">
+<div class="text-lg font-bold text-gray-800">12</div>
+<div class="text-[10px] text-gray-400">我的收藏</div>
+</div>
+<div class="w-[1px] h-8 bg-gray-100 self-center"></div>
+<div class="text-center">
+<div class="text-lg font-bold text-gray-800">5</div>
+<div class="text-[10px] text-gray-400">定制菜单</div>
+</div>
+<div class="w-[1px] h-8 bg-gray-100 self-center"></div>
+<div class="text-center">
+<div class="text-lg font-bold text-gray-800">3</div>
+<div class="text-[10px] text-gray-400">购物清单</div>
+</div>
+</div>
+<!-- 功能列表 -->
+<div class="bg-white rounded-2xl overflow-hidden recipe-card-shadow">
+<div class="flex items-center justify-between p-4 border-b border-gray-50 active:bg-gray-50">
+<div class="flex items-center gap-3">
+<iconify-icon class="text-red-400 text-lg" icon="mdi:heart-outline"></iconify-icon>
+<span class="text-xs font-medium text-gray-700">我的收藏</span>
+</div>
+<iconify-icon class="text-gray-300" icon="mdi:chevron-right"></iconify-icon>
+</div>
+<div class="flex items-center justify-between p-4 border-b border-gray-50 active:bg-gray-50">
+<div class="flex items-center gap-3">
+<iconify-icon class="text-blue-400 text-lg" icon="mdi:clipboard-text-outline"></iconify-icon>
+<span class="text-xs font-medium text-gray-700">我的菜单</span>
+</div>
+<iconify-icon class="text-gray-300" icon="mdi:chevron-right"></iconify-icon>
+</div>
+<div class="flex items-center justify-between p-4 border-b border-gray-50 active:bg-gray-50">
+<div class="flex items-center gap-3">
+<iconify-icon class="text-orange-400 text-lg" icon="mdi:cart-outline"></iconify-icon>
+<span class="text-xs font-medium text-gray-700">我的购物清单</span>
+</div>
+<iconify-icon class="text-gray-300" icon="mdi:chevron-right"></iconify-icon>
+</div>
+<div class="flex items-center justify-between p-4 border-b border-gray-50 active:bg-gray-50">
+<div class="flex items-center gap-3">
+<iconify-icon class="text-gray-400 text-lg" icon="mdi:cog-outline"></iconify-icon>
+<span class="text-xs font-medium text-gray-700">饮食偏好设置</span>
+</div>
+<iconify-icon class="text-gray-300" icon="mdi:chevron-right"></iconify-icon>
+</div>
+<div class="flex items-center justify-between p-4 border-b border-gray-50 active:bg-gray-50">
+<div class="flex items-center gap-3">
+<iconify-icon class="text-green-400 text-lg" icon="mdi:history"></iconify-icon>
+<span class="text-xs font-medium text-gray-700">浏览历史</span>
+</div>
+<iconify-icon class="text-gray-300" icon="mdi:chevron-right"></iconify-icon>
+</div>
+<div class="flex items-center justify-between p-4 active:bg-gray-50">
+<div class="flex items-center gap-3">
+<iconify-icon class="text-gray-400 text-lg" icon="mdi:information-outline"></iconify-icon>
+<span class="text-xs font-medium text-gray-700">关于我们</span>
+</div>
+<iconify-icon class="text-gray-300" icon="mdi:chevron-right"></iconify-icon>
+</div>
+</div>
+<button class="w-full mt-8 py-3 text-xs text-red-500 font-medium">退出登录</button>
+</div>
+</div>
+<!-- 详情页覆盖层 -->
+<div class="overlay" id="recipe-detail-overlay">
+<div class="h-full overflow-y-auto pb-24">
+<div class="relative h-64">
+<img alt="Recipe detail" class="w-full h-full object-cover" src="/agent-py/static/source/images/placeholder.svg"/>
+<button class="absolute top-12 left-5 w-10 h-10 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white" onclick="closeDetail()">
+<iconify-icon class="text-2xl" icon="mdi:chevron-left"></iconify-icon>
+</button>
+<div class="absolute bottom-4 right-5 flex gap-2">
+<button class="w-10 h-10 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center text-gray-600 shadow-sm">
+<iconify-icon class="text-lg" icon="mdi:share-variant-outline"></iconify-icon>
+</button>
+<button class="w-10 h-10 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center text-gray-600 shadow-sm" id="detail-fav-btn" onclick="toggleFavoriteDetail()">
+<iconify-icon class="text-lg" icon="mdi:heart-outline"></iconify-icon>
+</button>
+</div>
+</div>
+<div class="px-5 pt-6">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h1 class="text-2xl font-bold text-gray-800 mb-2" id="detail-title">番茄炒蛋</h1>
+<div class="flex items-center gap-1">
+<iconify-icon class="text-yellow-400" icon="mdi:star"></iconify-icon>
+<span class="text-xs font-bold text-gray-800">4.8</span>
+<span class="text-xs text-gray-400 ml-2">2.4k 人做过</span>
+</div>
+</div>
+</div>
+<p class="text-xs text-gray-500 leading-relaxed mb-6">
+                    这是一道家喻户晓的国民级菜肴。色泽鲜艳，酸甜可口，无论是拌饭还是单吃都是极佳的选择。本做法采用了独家配比，让鸡蛋更蓬松，汤汁更浓郁。
+                </p>
+<div class="grid grid-cols-3 gap-4 mb-8">
+<div class="bg-gray-50 rounded-xl p-3 text-center">
+<iconify-icon class="text-gray-400 mb-1" icon="mdi:account-group-outline"></iconify-icon>
+<div class="text-[10px] text-gray-400">分量</div>
+<div class="text-xs font-bold">2-3人</div>
+</div>
+<div class="bg-gray-50 rounded-xl p-3 text-center">
+<iconify-icon class="text-gray-400 mb-1" icon="mdi:clock-outline"></iconify-icon>
+<div class="text-[10px] text-gray-400">时间</div>
+<div class="text-xs font-bold">15min</div>
+</div>
+<div class="bg-gray-50 rounded-xl p-3 text-center">
+<iconify-icon class="text-gray-400 mb-1" icon="mdi:chef-hat"></iconify-icon>
+<div class="text-[10px] text-gray-400">难度</div>
+<div class="text-xs font-bold">简单</div>
+</div>
+</div>
+<!-- 食材列表 -->
+<div class="mb-8">
+<div class="flex justify-between items-center mb-4">
+<h3 class="font-bold text-gray-800">所需食材</h3>
+<span class="text-[10px] text-[#07C160]">一键加入购物清单</span>
+</div>
+<div class="space-y-3">
+<label class="flex items-center justify-between py-2 border-b border-gray-50">
+<div class="flex items-center gap-3">
+<input class="w-4 h-4 accent-[#07C160]" type="checkbox"/>
+<span class="text-xs text-gray-700">新鲜鸡蛋</span>
+</div>
+<span class="text-xs text-gray-400">3-4个</span>
+</label>
+<label class="flex items-center justify-between py-2 border-b border-gray-50">
+<div class="flex items-center gap-3">
+<input class="w-4 h-4 accent-[#07C160]" type="checkbox"/>
+<span class="text-xs text-gray-700">熟透的番茄</span>
+</div>
+<span class="text-xs text-gray-400">2个</span>
+</label>
+<label class="flex items-center justify-between py-2 border-b border-gray-50">
+<div class="flex items-center gap-3">
+<input class="w-4 h-4 accent-[#07C160]" type="checkbox"/>
+<span class="text-xs text-gray-700">小葱</span>
+</div>
+<span class="text-xs text-gray-400">2根</span>
+</label>
+</div>
+</div>
+<!-- 烹饪步骤 -->
+<div class="mb-8">
+<h3 class="font-bold text-gray-800 mb-4">详细步骤</h3>
+<div class="space-y-6">
+<div class="flex gap-4">
+<div class="w-6 h-6 rounded-full bg-[#07C160] text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">1</div>
+<div class="flex-1">
+<p class="text-xs text-gray-700 leading-relaxed">番茄洗净切成小块；鸡蛋打入碗中，加入少许盐，充分搅拌均匀。</p>
+<div class="mt-3 h-32 bg-gray-100 rounded-xl overflow-hidden">
+<img alt="Step 1" class="w-full h-full object-cover" src="/agent-py/static/source/images/placeholder.svg"/>
+</div>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="w-6 h-6 rounded-full bg-[#07C160] text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">2</div>
+<div class="flex-1">
+<p class="text-xs text-gray-700 leading-relaxed">锅中热油，倒入蛋液，中火快速划散，成型后立刻盛出备用。</p>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="w-6 h-6 rounded-full bg-[#07C160] text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">3</div>
+<div class="flex-1">
+<p class="text-xs text-gray-700 leading-relaxed">锅中留少许底油，下番茄块翻炒至出汁，加入适量糖和盐调味。</p>
+</div>
+</div>
+</div>
+</div>
+<!-- 营养信息 -->
+<div class="mb-8">
+<h3 class="font-bold text-gray-800 mb-4">营养分析 (每100g)</h3>
+<div class="h-48 w-full" id="nutrition-chart"></div>
+</div>
+</div>
+</div>
+<!-- 详情页底部操作栏 -->
+<div class="absolute bottom-0 left-0 w-full bg-white/80 backdrop-blur-lg border-t border-gray-100 px-5 py-4 flex gap-4 safe-area-bottom">
+<button class="flex-1 wechat-btn py-3 rounded-xl font-bold text-xs" onclick="showToast('已加入购物清单')">加入购物清单</button>
+<button class="w-12 h-12 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400" onclick="showToast('收藏成功')">
+<iconify-icon class="text-xl" icon="mdi:heart-outline"></iconify-icon>
+</button>
+</div>
+</div>
+<!-- 食材推荐覆盖层 -->
+<div class="overlay" id="ingredient-overlay">
+<div class="px-5 pt-12 pb-24">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-xl font-bold">按食材推荐</h2>
+<button class="text-gray-400" onclick="closeIngredientRec()">
+<iconify-icon class="text-2xl" icon="mdi:close"></iconify-icon>
+</button>
+</div>
+<p class="text-xs text-gray-400 mb-6">选择你现有的食材，我们为你匹配最合适的菜谱</p>
+<div class="mb-8">
+<h3 class="text-sm font-bold mb-4">热门食材</h3>
+<div class="flex flex-wrap gap-2" id="ingredient-tags">
+<!-- JS 填充 -->
+</div>
+</div>
+<div class="mb-8">
+<h3 class="text-sm font-bold mb-4">已选食材</h3>
+<div class="min-h-[40px] p-3 border-2 border-dashed border-gray-200 rounded-xl flex flex-wrap gap-2 text-xs text-gray-400 italic" id="selected-ingredients">
+                    点击上方标签添加食材...
+                </div>
+</div>
+<button class="w-full wechat-btn py-4 rounded-2xl font-bold flex items-center justify-center gap-2" onclick="searchByIngredients()">
+                匹配菜谱
+            </button>
+<!-- 推荐列表 (初始隐藏) -->
+<div class="hidden mt-8 space-y-4" id="ingredient-results">
+<h3 class="text-sm font-bold">为您匹配到 3 个菜谱</h3>
+<div class="space-y-3">
+<div class="bg-white p-3 rounded-xl border border-gray-100 flex gap-3 shadow-sm">
+<div class="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
+<img alt="Rec" class="w-full h-full object-cover" src="/agent-py/static/source/images/placeholder.svg"/>
+</div>
+<div class="flex-1">
+<h4 class="text-xs font-bold">地三鲜</h4>
+<p class="text-[10px] text-gray-400 mt-1">包含：土豆、青椒、茄子</p>
+<div class="flex justify-between items-center mt-2">
+<span class="text-[9px] text-[#07C160]">匹配度 95%</span>
+<span class="text-[9px] text-gray-400">25min</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 底部导航栏 -->
+<div class="absolute bottom-0 left-0 w-full h-[84px] bg-white border-t border-gray-200 flex justify-around items-start pt-3 safe-area-bottom z-40">
+<div class="flex flex-col items-center gap-1 tab-active cursor-pointer" id="tab-home" onclick="switchPage('home')">
+<iconify-icon class="text-2xl" icon="mdi:home"></iconify-icon>
+<span class="text-[10px] font-medium">首页</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-gray-400 cursor-pointer" id="tab-recipes" onclick="switchPage('recipes')">
+<iconify-icon class="text-2xl" icon="mdi:book-open-variant"></iconify-icon>
+<span class="text-[10px] font-medium">菜谱</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-gray-400 cursor-pointer" id="tab-recommend" onclick="switchPage('recommend')">
+<iconify-icon class="text-2xl" icon="mdi:silverware-fork-knife"></iconify-icon>
+<span class="text-[10px] font-medium">菜单推荐</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-gray-400 cursor-pointer" id="tab-profile" onclick="switchPage('profile')">
+<iconify-icon class="text-2xl" icon="mdi:account"></iconify-icon>
+<span class="text-[10px] font-medium">我的</span>
+</div>
+</div>
+<!-- Toast 提示 -->
+<div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/70 backdrop-blur-md text-white px-6 py-3 rounded-full text-xs opacity-0 pointer-events-none transition-opacity duration-300 z-[100]" id="toast">
+        提示文字
+    </div>
+</div>
+<script>
+    // 模拟数据
+    const recipes = [
+        { id: 1, name: "番茄炒蛋", rating: 4.8, time: "15min", difficulty: "简单", fav: false },
+        { id: 2, name: "红烧排骨", rating: 4.9, time: "45min", difficulty: "中等", fav: true },
+        { id: 3, name: "清蒸鲈鱼", rating: 4.7, time: "20min", difficulty: "中等", fav: false },
+        { id: 4, name: "麻婆豆腐", rating: 4.6, time: "10min", difficulty: "简单", fav: false },
+        { id: 5, name: "宫保鸡丁", rating: 4.8, time: "25min", difficulty: "中等", fav: false },
+        { id: 6, name: "蒜蓉西兰花", rating: 4.5, time: "10min", difficulty: "简单", fav: false },
+        { id: 7, name: "糖醋里脊", rating: 4.7, time: "30min", difficulty: "中等", fav: false },
+        { id: 8, name: "冬瓜排骨汤", rating: 4.6, time: "40min", difficulty: "简单", fav: false }
+    ];
+
+    const ingredients = ["鸡蛋", "番茄", "土豆", "青椒", "鸡肉", "牛肉", "猪肉", "豆腐", "白菜", "西兰花", "胡萝卜", "洋葱", "茄子", "黄瓜"];
+
+    // 状态管理
+    let currentPage = 'home';
+    let peopleCount = 2;
+    let selectedIngredients = [];
+
+    // 初始化
+    window.onload = () => {
+        renderRecipeList();
+        renderIngredientTags();
+        initNutritionChart();
+    };
+
+    // 页面切换
+    function switchPage(pageId) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(`page-${pageId}`).classList.add('active');
+        
+        document.querySelectorAll('[id^="tab-"]').forEach(t => t.classList.remove('tab-active', 'text-gray-400'));
+        document.querySelectorAll('[id^="tab-"]').forEach(t => t.classList.add('text-gray-400'));
+        document.getElementById(`tab-${pageId}`).classList.add('tab-active');
+        document.getElementById(`tab-${pageId}`).classList.remove('text-gray-400');
+        
+        currentPage = pageId;
+    }
+
+    // 渲染菜谱列表
+    function renderRecipeList() {
+        const container = document.getElementById('recipe-list-container');
+        container.innerHTML = recipes.map(r => `
+            <div class="bg-white rounded-2xl p-3 flex gap-4 recipe-card-shadow border border-gray-50 active:bg-gray-50" onclick="showRecipeDetail(${r.id})">
+                <div class="w-20 h-20 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0">
+                    <img src="/agent-py/static/source/images/placeholder.svg" alt="${r.name}" class="w-full h-full object-cover">
+                </div>
+                <div class="flex-1 flex flex-col justify-between py-1">
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <h4 class="text-sm font-bold text-gray-800">${r.name}</h4>
+                            <iconify-icon onclick="event.stopPropagation(); toggleFav(${r.id})" icon="${r.fav ? 'mdi:heart' : 'mdi:heart-outline'}" class="${r.fav ? 'text-red-500' : 'text-gray-300'} text-lg"></iconify-icon>
+                        </div>
+                        <div class="flex items-center gap-1 mt-1">
+                            <iconify-icon icon="mdi:star" class="text-yellow-400 text-[10px]"></iconify-icon>
+                            <span class="text-[10px] font-bold text-gray-800">${r.rating}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 text-[9px] text-gray-400">
+                        <span><iconify-icon icon="mdi:clock-outline" class="mr-0.5"></iconify-icon>${r.time}</span>
+                        <span><iconify-icon icon="mdi:chef-hat" class="mr-0.5"></iconify-icon>${r.difficulty}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // 详情页逻辑
+    function showRecipeDetail(id) {
+        const recipe = recipes.find(r => r.id === id);
+        document.getElementById('detail-title').innerText = recipe.name;
+        document.getElementById('recipe-detail-overlay').classList.add('active');
+        
+        // 模拟详情页收藏状态
+        const favBtn = document.getElementById('detail-fav-btn');
+        favBtn.innerHTML = `<iconify-icon icon="${recipe.fav ? 'mdi:heart' : 'mdi:heart-outline'}" class="text-lg"></iconify-icon>`;
+        favBtn.className = `w-10 h-10 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center ${recipe.fav ? 'text-red-500' : 'text-gray-600'} shadow-sm`;
+    }
+
+    function closeDetail() {
+        document.getElementById('recipe-detail-overlay').classList.remove('active');
+    }
+
+    function toggleFav(id) {
+        const recipe = recipes.find(r => r.id === id);
+        recipe.fav = !recipe.fav;
+        renderRecipeList();
+        showToast(recipe.fav ? '已加入收藏' : '已取消收藏');
+    }
+
+    function toggleFavoriteDetail() {
+        showToast('操作成功');
+    }
+
+    // 推荐人数调整
+    function changePeople(delta) {
+        peopleCount = Math.max(1, Math.min(10, peopleCount + delta));
+        document.getElementById('people-count').innerText = peopleCount;
+    }
+
+    // 生成菜单模拟
+    function generateMenu() {
+        const form = document.getElementById('recommendation-form');
+        const result = document.getElementById('recommend-result');
+        
+        form.classList.add('hidden');
+        result.classList.remove('hidden');
+        showToast('推荐生成中...');
+    }
+
+    function resetRecommend() {
+        document.getElementById('recommendation-form').classList.remove('hidden');
+        document.getElementById('recommend-result').classList.add('hidden');
+    }
+
+    // 食材推荐逻辑
+    function openIngredientRec() {
+        document.getElementById('ingredient-overlay').classList.add('active');
+    }
+
+    function closeIngredientRec() {
+        document.getElementById('ingredient-overlay').classList.remove('active');
+    }
+
+    function renderIngredientTags() {
+        const container = document.getElementById('ingredient-tags');
+        container.innerHTML = ingredients.map(ing => `
+            <span onclick="toggleIngredient('${ing}')" class="px-4 py-1.5 bg-white border border-gray-100 rounded-full text-xs text-gray-600 active:scale-95 transition-transform shadow-sm">
+                ${ing}
+            </span>
+        `).join('');
+    }
+
+    function toggleIngredient(ing) {
+        if (selectedIngredients.includes(ing)) {
+            selectedIngredients = selectedIngredients.filter(i => i !== ing);
+        } else {
+            selectedIngredients.push(ing);
+        }
+        updateSelectedUI();
+    }
+
+    function updateSelectedUI() {
+        const container = document.getElementById('selected-ingredients');
+        if (selectedIngredients.length === 0) {
+            container.innerHTML = '点击上方标签添加食材...';
+            container.classList.add('text-gray-400', 'italic');
+        } else {
+            container.classList.remove('text-gray-400', 'italic');
+            container.innerHTML = selectedIngredients.map(ing => `
+                <span class="px-3 py-1 bg-[#07C160] text-white rounded-lg flex items-center gap-1">
+                    ${ing}
+                    <iconify-icon icon="mdi:close" onclick="event.stopPropagation(); toggleIngredient('${ing}')" class="cursor-pointer"></iconify-icon>
+                </span>
+            `).join('');
+        }
+    }
+
+    function searchByIngredients() {
+        if (selectedIngredients.length === 0) {
+            showToast('请先选择食材');
+            return;
+        }
+        document.getElementById('ingredient-results').classList.remove('hidden');
+        showToast('匹配成功');
+    }
+
+    // Toast 提示
+    function showToast(msg) {
+        const toast = document.getElementById('toast');
+        toast.innerText = msg;
+        toast.classList.remove('opacity-0', 'pointer-events-none');
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'pointer-events-none');
+        }, 2000);
+    }
+
+    // 初始化营养图表
+    function initNutritionChart() {
+        const chartDom = document.getElementById('nutrition-chart');
+        const myChart = echarts.init(chartDom);
+        const option = {
+            radar: {
+                indicator: [
+                    { name: '热量', max: 100 },
+                    { name: '蛋白质', max: 100 },
+                    { name: '脂肪', max: 100 },
+                    { name: '碳水', max: 100 },
+                    { name: '纤维素', max: 100 }
+                ],
+                radius: '65%',
+                axisName: {
+                    color: '#999',
+                    fontSize: 8
+                }
+            },
+            series: [{
+                type: 'radar',
+                data: [
+                    {
+                        value: [80, 70, 40, 60, 30],
+                        name: '营养分布',
+                        areaStyle: {
+                            color: 'rgba(7, 193, 96, 0.3)'
+                        },
+                        lineStyle: {
+                            color: '#07C160'
+                        },
+                        itemStyle: {
+                            color: '#07C160'
+                        }
+                    }
+                ]
+            }]
+        };
+        myChart.setOption(option);
+    }
+</script>
+</body>
+</html>

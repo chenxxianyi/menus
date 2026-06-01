@@ -1,12 +1,13 @@
 <template>
-  <div class="page">
-    <header class="header anim-delay-1">
+  <div class="page stats-page">
+    <!-- Header -->
+    <header class="stats-header anim-delay-1">
       <div class="header-spacer"></div>
       <div class="header-center">
-        <div class="header-title">营养统计</div>
-        <div class="header-sub">本周数据</div>
+        <h1 class="header-title">营养统计</h1>
+        <p class="header-sub">本周数据</p>
       </div>
-      <button class="btn-ghost" aria-label="设置">
+      <button class="settings-btn" aria-label="设置">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="3"/>
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -129,13 +130,66 @@ const mealBars = [
 </script>
 
 <style scoped>
-.header-spacer { width: 36px; }
-.header-center { flex: 1; text-align: center; }
+.stats-page {
+  padding-top: var(--sp-4);
+}
+
+/* ── Header ── */
+.stats-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-6);
+}
+
+.header-spacer {
+  width: 36px;
+}
+
+.header-center {
+  flex: 1;
+  text-align: center;
+}
+
+.header-title {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.header-sub {
+  font-size: 10px;
+  color: var(--color-text-3);
+  margin-top: 2px;
+}
+
+.settings-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-sm);
+  background: var(--color-surface);
+  color: var(--color-text-2);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.settings-btn:hover {
+  background: var(--color-surface-2);
+}
+
+.settings-btn svg {
+  width: 18px;
+  height: 18px;
+}
 
 /* ── Streak ── */
 .streak {
-  background: var(--color-text);
-  border-radius: var(--r-md);
+  background: var(--color-accent);
+  border-radius: var(--r-lg);
   padding: var(--sp-5);
   margin-bottom: var(--sp-6);
   color: var(--color-text-inv);
@@ -149,13 +203,12 @@ const mealBars = [
 
 .streak-label {
   font-size: var(--text-sm);
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.7);
   font-weight: 500;
   margin-bottom: var(--sp-1);
 }
 
 .streak-value {
-  font-family: var(--font-display);
   font-size: var(--text-3xl);
   font-weight: 800;
   line-height: 1;
@@ -164,7 +217,7 @@ const mealBars = [
 .streak-unit {
   font-size: var(--text-base);
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .streak-pips {
@@ -176,11 +229,11 @@ const mealBars = [
   width: 20px;
   height: 20px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.2);
 }
 
-.pip.done { background: var(--color-accent); }
-.pip.today { border: 1.5px solid var(--color-accent); background: transparent; }
+.pip.done { background: rgba(255, 255, 255, 0.9); }
+.pip.today { border: 1.5px solid rgba(255, 255, 255, 0.9); background: transparent; }
 
 /* ── Overview ── */
 .overview {
@@ -196,7 +249,6 @@ const mealBars = [
 }
 
 .overview-num {
-  font-family: var(--font-display);
   font-size: var(--text-md);
   font-weight: 700;
 }
@@ -236,9 +288,8 @@ const mealBars = [
 
 .block-title {
   color: var(--color-text);
-  font-family: var(--font-display);
   font-size: var(--text-lg);
-  font-weight: 650;
+  font-weight: 700;
 }
 
 .tab-toggle {
@@ -296,7 +347,7 @@ const mealBars = [
 .bar-fill {
   width: 100%;
   border-radius: 3px 3px 1px 1px;
-  background: var(--color-text);
+  background: var(--color-accent);
   transition: height var(--dur-slow) var(--ease-out);
   min-height: 3px;
 }

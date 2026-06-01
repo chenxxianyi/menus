@@ -72,9 +72,13 @@ func (s *AuthService) Register(username, password, email, phone string) (*model.
 	user := &model.User{
 		Username:     username,
 		PasswordHash: hash,
-		Email:        email,
-		Phone:        phone,
 		Nickname:     username,
+	}
+	if email != "" {
+		user.Email = &email
+	}
+	if phone != "" {
+		user.Phone = &phone
 	}
 
 	if err := s.userRepo.Create(user); err != nil {

@@ -1,14 +1,17 @@
 <template>
-  <div class="page">
-    <header class="header anim-delay-1">
-      <button class="btn-ghost" aria-label="返回" @click="$router.back()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+  <div class="page shopping-page">
+    <!-- Header -->
+    <header class="shopping-header anim-delay-1">
+      <button class="back-btn" @click="$router.back()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
       </button>
       <div class="header-center">
-        <div class="header-title">购物清单</div>
-        <div class="header-sub">根据本周菜单生成</div>
+        <h1 class="header-title">购物清单</h1>
+        <p class="header-sub">根据本周菜单生成</p>
       </div>
-      <button class="btn-ghost" aria-label="分享">
+      <button class="share-btn" aria-label="分享">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
           <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
@@ -22,7 +25,7 @@
         <div class="price-label">预估总价</div>
         <div class="price-value">¥ {{ totalPrice }}</div>
       </div>
-      <button class="btn-solid">一键复制</button>
+      <button class="copy-btn">一键复制</button>
     </div>
 
     <!-- Category Filter -->
@@ -132,9 +135,56 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.shopping-page {
+  padding-top: var(--sp-4);
+}
+
+/* ── Header ── */
+.shopping-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-6);
+}
+
+.back-btn, .share-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-sm);
+  background: var(--color-surface);
+  color: var(--color-text-2);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.back-btn:hover, .share-btn:hover {
+  background: var(--color-surface-2);
+}
+
+.back-btn svg, .share-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
 .header-center {
   flex: 1;
   text-align: center;
+}
+
+.header-title {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.header-sub {
+  font-size: 10px;
+  color: var(--color-text-3);
+  margin-top: 2px;
 }
 
 /* ── Price Bar ── */
@@ -144,22 +194,41 @@ onMounted(() => {
   justify-content: space-between;
   padding: var(--sp-4);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
   margin-bottom: var(--sp-5);
+  box-shadow: var(--shadow-sm);
 }
 
 .price-label {
   font-size: var(--text-xs);
   color: var(--color-text-3);
-  font-weight: 500;
 }
 
 .price-value {
-  font-family: var(--font-display);
   font-size: var(--text-xl);
   font-weight: 700;
   color: var(--color-text);
+  margin-top: 4px;
+}
+
+.copy-btn {
+  padding: 8px 16px;
+  background: var(--color-accent);
+  color: var(--color-text-inv);
+  border: none;
+  border-radius: var(--r-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.copy-btn:hover {
+  background: var(--color-accent-hover);
+}
+
+.copy-btn:active {
+  transform: scale(0.95);
 }
 
 /* ── Category Bar ── */
@@ -180,21 +249,20 @@ onMounted(() => {
   align-items: center;
   gap: 4px;
   padding: 6px 14px;
-  border-radius: var(--r-sm);
+  border-radius: var(--r-full);
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   font-size: var(--text-xs);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text-2);
   cursor: pointer;
   transition: all var(--dur-base) var(--ease);
-  -webkit-tap-highlight-color: transparent;
 }
 
 .cat-pill.active {
-  background: var(--color-text);
+  background: var(--color-accent);
   color: var(--color-text-inv);
-  border-color: var(--color-text);
+  border-color: var(--color-accent);
 }
 
 .cat-pill:active { transform: scale(0.96); }
@@ -202,7 +270,7 @@ onMounted(() => {
 .cat-count {
   font-size: 10px;
   font-weight: 700;
-  opacity: 0.5;
+  opacity: 0.6;
 }
 
 /* ── Groups ── */

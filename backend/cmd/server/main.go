@@ -54,6 +54,8 @@ func main() {
 		&model.Feedback{},
 		&model.Banner{},
 		&model.AdminUser{},
+		&model.CoupleBinding{},
+		&model.CoupleOrder{},
 	); err != nil {
 		logger.Fatal("auto migrate failed", zap.Error(err))
 	}

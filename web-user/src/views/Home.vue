@@ -2,118 +2,187 @@
   <div class="page home-page">
     <!-- Header -->
     <header class="home-header anim-delay-1">
-      <div class="home-header-top">
-        <span class="home-brand-name">Menu Journal</span>
-        <button class="search-btn" aria-label="搜索">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.35-4.35" />
-          </svg>
-        </button>
-      </div>
       <div class="home-greeting">
         <div class="avatar">{{ userInitial }}</div>
         <div>
-          <p class="greeting-sub">今天想吃什么</p>
-          <h1 class="greeting-title">温柔一点，慢一点</h1>
+          <h1 class="greeting-title">早上好，美食家</h1>
+          <p class="greeting-sub">今天想吃点什么？</p>
         </div>
       </div>
     </header>
 
-    <!-- Hero -->
-    <section class="hero anim-delay-2" :class="{ clickable: !!todayRecommend }" @click="openHero">
-      <div class="hero-inner">
-        <div class="hero-image-wrap">
-          <img :src="heroImage" :alt="heroTitle" class="hero-image" />
-        </div>
-        <div class="hero-content">
-          <h2 class="hero-title">{{ heroTitle }}</h2>
-          <span class="hero-time">{{ heroTime }}</span>
-        </div>
+    <!-- Search Box -->
+    <div class="search-box anim-delay-2" @click="goToRecipes">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.35-4.35" />
+      </svg>
+      <span class="search-placeholder">搜索你感兴趣的菜谱...</span>
+    </div>
+
+    <!-- Today's Menu Recommendations -->
+    <section class="section anim-delay-3">
+      <div class="section-top">
+        <h2 class="section-heading">今日推荐菜单</h2>
+        <span class="section-more">查看周计划</span>
       </div>
-      <div class="hero-bottom">
-        <span class="hero-tags">{{ heroDifficulty }} · {{ heroPeople }} · {{ heroTaste }}</span>
-        <div class="hero-badge">
-          <span class="hero-badge-text">{{ hasRecommend ? '今日推荐' : '今日灵感' }}</span>
-          <span class="hero-badge-date">{{ issueDate }}</span>
+
+      <div class="menu-scroll">
+        <!-- Breakfast -->
+        <div class="menu-card">
+          <div class="menu-card-header">
+            <span class="menu-tag breakfast">早餐推荐</span>
+            <span class="menu-time">
+              <svg class="time-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              10min
+            </span>
+          </div>
+          <h3 class="menu-title">能量活力早餐</h3>
+          <p class="menu-desc">燕麦牛奶 + 水煮蛋 + 全麦面包</p>
+          <div class="menu-footer">
+            <span class="menu-calories">320 kcal</span>
+            <button class="menu-btn">去制作</button>
+          </div>
+        </div>
+
+        <!-- Lunch -->
+        <div class="menu-card">
+          <div class="menu-card-header">
+            <span class="menu-tag lunch">午餐推荐</span>
+            <span class="menu-time">
+              <svg class="time-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              25min
+            </span>
+          </div>
+          <h3 class="menu-title">经典家常套餐</h3>
+          <p class="menu-desc">番茄炒蛋 + 青椒肉丝 + 米饭</p>
+          <div class="menu-footer">
+            <span class="menu-calories">650 kcal</span>
+            <button class="menu-btn">去制作</button>
+          </div>
+        </div>
+
+        <!-- Dinner -->
+        <div class="menu-card">
+          <div class="menu-card-header">
+            <span class="menu-tag dinner">晚餐推荐</span>
+            <span class="menu-time">
+              <svg class="time-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              30min
+            </span>
+          </div>
+          <h3 class="menu-title">轻盈低脂晚餐</h3>
+          <p class="menu-desc">清蒸鲈鱼 + 蒜蓉西兰花 + 杂粮饭</p>
+          <div class="menu-footer">
+            <span class="menu-calories">480 kcal</span>
+            <button class="menu-btn">去制作</button>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Meal Nav -->
-    <nav class="meal-nav anim-delay-3" aria-label="餐次切换">
-      <button
-        v-for="meal in meals"
-        :key="meal.key"
-        class="meal-pill"
-        :class="{ active: activeMeal === meal.key }"
-        @click="activeMeal = meal.key"
-      >
-        {{ meal.label }}
-      </button>
-    </nav>
+    <!-- Quick Access Grid -->
+    <section class="section anim-delay-4">
+      <div class="quick-grid">
+        <button class="quick-item" @click="$router.push('/week-menu')">
+          <div class="quick-icon orange">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/>
+              <path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93"/>
+            </svg>
+          </div>
+          <span class="quick-label">按食材推荐</span>
+        </button>
+        <button class="quick-item">
+          <div class="quick-icon red">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2c.5 2.5 2 4.5 2 7a4 4 0 1 1-8 0c0-2.5 1.5-4.5 2-7 1.3 1.5 3 2 4 2s2.7-.5 4-2z"/>
+            </svg>
+          </div>
+          <span class="quick-label">按口味推荐</span>
+        </button>
+        <button class="quick-item">
+          <div class="quick-icon blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <circle cx="12" cy="12" r="6"/>
+              <circle cx="12" cy="12" r="2"/>
+            </svg>
+          </div>
+          <span class="quick-label">按场景推荐</span>
+        </button>
+        <button class="quick-item" @click="$router.push('/week-menu')">
+          <div class="quick-icon green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
+          <span class="quick-label">一周菜单</span>
+        </button>
+        <button class="quick-item">
+          <div class="quick-icon purple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
+          <span class="quick-label">冰箱剩菜</span>
+        </button>
+        <button class="quick-item">
+          <div class="quick-icon yellow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+              <polyline points="17 6 23 6 23 12"/>
+            </svg>
+          </div>
+          <span class="quick-label">最热菜谱</span>
+        </button>
+      </div>
+    </section>
 
-    <!-- Hot Recipes -->
-    <section class="section anim-delay-3">
+    <!-- Hot Recipes Grid -->
+    <section class="section anim-delay-5">
       <div class="section-top">
         <h2 class="section-heading">热门菜谱</h2>
-        <span class="section-more">Curated</span>
+        <span class="section-more" @click="goToRecipes">更多</span>
       </div>
 
-      <template v-if="hotRecipes.length">
-        <div class="recipe-scroll">
-          <article
-            v-for="recipe in hotRecipes.slice(0, 6)"
-            :key="recipe.id"
-            class="recipe-card"
-            @click="goToRecipe(recipe.id)"
-          >
-            <div class="recipe-cover">
-              <img :src="recipe.cover || heroArt" :alt="recipe.title" />
+      <div class="recipe-grid">
+        <div
+          v-for="recipe in hotRecipes.slice(0, 4)"
+          :key="recipe.id"
+          class="recipe-card"
+          @click="goToRecipe(recipe.id)"
+        >
+          <div class="recipe-cover">
+            <img :src="recipe.cover || heroArt" :alt="recipe.title" />
+            <div class="recipe-rating">
+              <svg class="star-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+              {{ recipe.rating || '4.8' }}
             </div>
+          </div>
+          <div class="recipe-info">
             <h3 class="recipe-name">{{ recipe.title }}</h3>
             <p class="recipe-meta">
               <span class="recipe-diff">{{ recipe.difficulty }}</span>
-              <span class="recipe-time">{{ recipe.cook_time }}分钟</span>
+              <span class="recipe-time">{{ recipe.cook_time }}min</span>
             </p>
-          </article>
+          </div>
         </div>
-      </template>
-      <div v-else class="empty-hint">
-        <p>还没有上架的推荐。</p>
-      </div>
-    </section>
-
-    <!-- Quick Access -->
-    <section class="section anim-delay-4">
-      <div class="section-top">
-        <h2 class="section-heading">快速入口</h2>
-      </div>
-      <div class="quick-list">
-        <button class="quick-row" @click="$router.push('/week-menu')">
-          <span class="quick-index">01</span>
-          <span class="quick-body">
-            <span class="quick-title">AI 智能推荐</span>
-            <span class="quick-sub">告诉我你有什么食材</span>
-          </span>
-          <svg class="quick-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
-        </button>
-        <button class="quick-row" @click="$router.push('/week-menu')">
-          <span class="quick-index">02</span>
-          <span class="quick-body">
-            <span class="quick-title">一周菜单</span>
-            <span class="quick-sub">自动生成 7 天食谱</span>
-          </span>
-          <svg class="quick-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
-        </button>
-        <button class="quick-row" @click="$router.push('/shopping-list')">
-          <span class="quick-index">03</span>
-          <span class="quick-body">
-            <span class="quick-title">购物清单</span>
-            <span class="quick-sub">根据菜单自动生成</span>
-          </span>
-          <svg class="quick-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
-        </button>
       </div>
     </section>
   </div>
@@ -157,6 +226,10 @@ function goToRecipe(id: number) {
   router.push(`/recipes/${id}`)
 }
 
+function goToRecipes() {
+  router.push('/recipes')
+}
+
 function openHero() {
   if (todayRecommend.value?.id) goToRecipe(todayRecommend.value.id)
 }
@@ -174,56 +247,13 @@ onMounted(async () => {
 
 <style scoped>
 .home-page {
-  padding-top: var(--sp-2);
+  padding-top: var(--sp-4);
+  padding-bottom: var(--sp-8);
 }
 
 /* ── Header ── */
 .home-header {
   margin-bottom: var(--sp-6);
-}
-
-.home-header-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--sp-4);
-}
-
-.home-brand-name {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--color-text-3);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.search-btn {
-  width: 34px;
-  height: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-sm);
-  background: var(--color-surface);
-  color: var(--color-text-2);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
-}
-
-.search-btn:hover {
-  border-color: var(--color-border-med);
-}
-
-.search-btn:active {
-  background: var(--color-surface-2);
-  transform: translateY(1px);
-}
-
-.search-btn svg {
-  width: 18px;
-  height: 18px;
 }
 
 .home-greeting {
@@ -233,158 +263,64 @@ onMounted(async () => {
 }
 
 .avatar {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: var(--color-text);
-  color: var(--color-text-inv);
+  background: var(--color-surface-2);
+  border: 2px solid var(--color-surface);
+  box-shadow: var(--shadow-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
+  color: var(--color-text);
   flex-shrink: 0;
-}
-
-.greeting-sub {
-  color: var(--color-text-3);
-  font-size: var(--text-xs);
-  font-weight: 500;
 }
 
 .greeting-title {
   color: var(--color-text);
-  font-family: var(--font-display);
-  font-size: var(--text-xl);
-  font-weight: 650;
-  line-height: 1.1;
-}
-
-/* ── Hero ── */
-.hero {
-  margin-bottom: var(--sp-6);
-  border-radius: var(--r-lg);
-  background: var(--color-surface-2);
-  overflow: hidden;
-}
-
-.hero.clickable {
-  cursor: pointer;
-}
-
-.hero-inner {
-  display: flex;
-  gap: var(--sp-4);
-  padding: var(--sp-4);
-}
-
-.hero-image-wrap {
-  width: 42%;
-  min-height: 130px;
-  border-radius: var(--r-sm);
-  overflow: hidden;
-  flex-shrink: 0;
-  background: var(--color-surface-3);
-}
-
-.hero-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.hero-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: var(--sp-2);
-  min-width: 0;
-}
-
-.hero-title {
-  color: var(--color-text);
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
-  font-weight: 650;
+  font-size: var(--text-sm);
+  font-weight: 700;
   line-height: 1.2;
-  overflow-wrap: anywhere;
 }
 
-.hero-time {
+.greeting-sub {
   color: var(--color-text-3);
-  font-size: var(--text-xs);
+  font-size: 10px;
+  font-weight: 400;
+  margin-top: 2px;
 }
 
-.hero-bottom {
+/* ── Search Box ── */
+.search-box {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: var(--sp-3) var(--sp-4);
-}
-
-.hero-tags {
-  color: var(--color-text-3);
-  font-size: var(--text-xs);
-}
-
-.hero-badge {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
-  padding: var(--sp-2) var(--sp-3);
-  border-radius: var(--r-sm);
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--glass-border);
-}
-
-.hero-badge-text {
-  color: var(--color-text);
-  font-size: var(--text-xs);
-  font-weight: 600;
-}
-
-.hero-badge-date {
-  color: var(--color-text-3);
-  font-size: var(--text-2xs);
-}
-
-/* ── Meal Nav ── */
-.meal-nav {
-  display: flex;
   gap: var(--sp-2);
-  margin-bottom: var(--sp-8);
-}
-
-.meal-pill {
-  flex: 1;
-  min-height: 40px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-sm);
+  padding: 10px 16px;
   background: var(--color-surface);
-  color: var(--color-text-3);
-  font-size: var(--text-xs);
-  font-weight: 600;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-full);
+  margin-bottom: var(--sp-6);
   cursor: pointer;
-  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--dur-fast) var(--ease);
 }
 
-.meal-pill:hover {
-  border-color: var(--color-border-med);
+.search-box:hover {
+  box-shadow: var(--shadow-md);
 }
 
-.meal-pill.active {
-  background: var(--color-text);
-  border-color: var(--color-text);
-  color: var(--color-text-inv);
+.search-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--color-text-3);
+  flex-shrink: 0;
 }
 
-.meal-pill:active {
-  transform: translateY(1px);
+.search-placeholder {
+  color: var(--color-text-3);
+  font-size: var(--text-sm);
 }
 
 /* ── Sections ── */
@@ -399,16 +335,23 @@ onMounted(async () => {
   margin-bottom: var(--sp-4);
 }
 
-.section-more {
-  color: var(--color-text-3);
-  font-size: var(--text-xs);
-  font-weight: 500;
+.section-heading {
+  color: var(--color-text);
+  font-size: var(--text-lg);
+  font-weight: 700;
 }
 
-/* ── Recipe Scroll ── */
-.recipe-scroll {
+.section-more {
+  color: var(--color-accent);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* ── Menu Scroll ── */
+.menu-scroll {
   display: flex;
-  gap: var(--sp-3);
+  gap: var(--sp-4);
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
@@ -416,20 +359,222 @@ onMounted(async () => {
   padding: 0 var(--sp-5) var(--sp-2);
 }
 
-.recipe-scroll::-webkit-scrollbar { display: none; }
+.menu-scroll::-webkit-scrollbar { display: none; }
+
+.menu-card {
+  min-width: 240px;
+  background: var(--color-surface);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  scroll-snap-align: start;
+  transition: transform var(--dur-base) var(--ease-out),
+              box-shadow var(--dur-base) var(--ease-out);
+}
+
+.menu-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.menu-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--sp-3);
+}
+
+.menu-tag {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.menu-tag.breakfast {
+  background: #E8F5E9;
+  color: #07C160;
+}
+
+.menu-tag.lunch {
+  background: #FFF3E0;
+  color: #F57C00;
+}
+
+.menu-tag.dinner {
+  background: #E3F2FD;
+  color: #1976D2;
+}
+
+.menu-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--color-text-3);
+}
+
+.time-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.menu-title {
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.menu-desc {
+  color: var(--color-text-2);
+  font-size: var(--text-xs);
+  margin-bottom: var(--sp-3);
+}
+
+.menu-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.menu-calories {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: #F57C00;
+}
+
+.menu-btn {
+  padding: 4px 12px;
+  background: var(--color-accent);
+  color: var(--color-text-inv);
+  border: none;
+  border-radius: var(--r-full);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.menu-btn:hover {
+  background: var(--color-accent-hover);
+}
+
+.menu-btn:active {
+  transform: scale(0.95);
+}
+
+/* ── Quick Grid ── */
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-3);
+}
+
+.quick-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  background: var(--color-surface);
+  border-radius: var(--r-md);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease),
+              box-shadow var(--dur-fast) var(--ease);
+}
+
+.quick-item:hover {
+  transform: scale(0.95);
+  box-shadow: var(--shadow-md);
+}
+
+.quick-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quick-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.quick-icon.orange {
+  background: #FFF3E0;
+  color: #F57C00;
+}
+
+.quick-icon.red {
+  background: #FFEBEE;
+  color: #E53935;
+}
+
+.quick-icon.blue {
+  background: #E3F2FD;
+  color: #1976D2;
+}
+
+.quick-icon.green {
+  background: #E8F5E9;
+  color: #07C160;
+}
+
+.quick-icon.purple {
+  background: #F3E5F5;
+  color: #7B1FA2;
+}
+
+.quick-icon.yellow {
+  background: #FFFDE7;
+  color: #FBC02D;
+}
+
+.quick-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--color-text-2);
+  text-align: center;
+}
+
+/* ── Recipe Grid ── */
+.recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--sp-4);
+}
 
 .recipe-card {
-  flex: 0 0 132px;
-  scroll-snap-align: start;
+  background: var(--color-surface);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
+  transition: transform var(--dur-base) var(--ease-out),
+              box-shadow var(--dur-base) var(--ease-out);
+}
+
+.recipe-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+.recipe-card:active {
+  transform: translateY(0);
 }
 
 .recipe-cover {
   width: 100%;
-  aspect-ratio: 1;
-  border-radius: var(--r-sm);
-  overflow: hidden;
+  height: 112px;
   background: var(--color-surface-2);
+  position: relative;
 }
 
 .recipe-cover img {
@@ -438,98 +583,55 @@ onMounted(async () => {
   object-fit: cover;
 }
 
+.recipe-rating {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  border-radius: var(--r-full);
+  padding: 2px 8px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 8px;
+  color: var(--color-text-inv);
+}
+
+.star-icon {
+  width: 10px;
+  height: 10px;
+  color: #FBC02D;
+}
+
+.recipe-info {
+  padding: var(--sp-3);
+}
+
 .recipe-name {
-  margin-top: var(--sp-2);
   color: var(--color-text);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  line-height: 1.3;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .recipe-meta {
-  margin-top: 2px;
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: var(--sp-2);
+  font-size: 9px;
   color: var(--color-text-3);
-  font-size: var(--text-xs);
 }
 
 .recipe-diff {
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
-  font-weight: 600;
-  font-size: var(--text-2xs);
+  font-weight: 500;
 }
 
-/* ── Quick Access ── */
-.quick-list {
-  border-top: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.quick-row {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  padding: var(--sp-4) 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: background var(--dur-fast) var(--ease);
-}
-
-.quick-row:hover {
-  background: var(--color-surface-2);
-}
-
-.quick-row:active {
-  background: var(--color-surface-3);
-}
-
-.quick-row + .quick-row {
-  border-top: 1px solid var(--color-border);
-}
-
-.quick-index {
-  width: 32px;
-  color: var(--color-text-3);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  flex-shrink: 0;
-}
-
-.quick-body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.quick-title {
-  color: var(--color-text);
-  font-size: var(--text-base);
-  font-weight: 600;
-}
-
-.quick-sub {
-  margin-top: 1px;
-  color: var(--color-text-3);
-  font-size: var(--text-xs);
-}
-
-.quick-arrow {
-  width: 16px;
-  height: 16px;
-  color: var(--color-text-3);
-  flex-shrink: 0;
+.recipe-time {
+  font-weight: 400;
 }
 
 /* ── Empty ── */
@@ -546,14 +648,6 @@ onMounted(async () => {
     max-width: 640px;
     padding: 0 var(--sp-8);
   }
-
-  .hero-inner {
-    padding: var(--sp-6);
-  }
-
-  .recipe-card {
-    flex: 0 0 160px;
-  }
 }
 
 @media (min-width: 1024px) {
@@ -569,13 +663,8 @@ onMounted(async () => {
 }
 
 @media (max-width: 420px) {
-  .hero-inner {
-    flex-direction: column;
-  }
-
-  .hero-image-wrap {
-    width: 100%;
-    min-height: 150px;
+  .menu-card {
+    min-width: 200px;
   }
 }
 </style>

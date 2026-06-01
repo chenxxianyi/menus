@@ -30,6 +30,7 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 	feedbackRepo := repository.NewFeedbackRepo(db)
 	ingredientRepo := repository.NewIngredientRepo(db)
 	_ = repository.NewMenuRepo(db)
+	coupleRepo := repository.NewCoupleRepo(db)
 
 	// Services
 	authService := service.NewAuthService(userRepo, cfg.JWT.SecretKey, cfg.JWT.ExpireDuration())
@@ -41,6 +42,7 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 	shoppingService := service.NewShoppingService(shoppingRepo)
 	feedbackService := service.NewFeedbackService(feedbackRepo)
 	recommendService := service.NewRecommendService(recipeRepo, ingredientRepo)
+	coupleService := service.NewCoupleService(coupleRepo, recipeRepo, userRepo)
 
 	// Handlers - v1
 	authHandler := v1.NewAuthHandler(authService)
@@ -53,6 +55,7 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 	shoppingHandler := v1.NewShoppingHandler(shoppingService)
 	feedbackHandler := v1.NewFeedbackHandler(feedbackService)
 	recommendHandler := v1.NewRecommendHandler(recommendService)
+	coupleHandler := v1.NewCoupleHandler(coupleService)
 
 	// Handlers - admin
 	adminAuthHandler := admin.NewAuthHandler(authService, db)
@@ -86,6 +89,8 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 			auth.PUT("/user/preferences", userHandler.UpdatePreferences)
 			auth.POST("/recipes/:id/favorite", favoriteHandler.Add)
 			auth.DELETE("/recipes/:id/favorite", favoriteHandler.Remove)
+			auth.GET("/user/favorites", favoriteHandler.List)
+			auth.GET("/user/favorites/count", favoriteHandler.Count)
 			auth.GET("/shopping-list", shoppingHandler.List)
 			auth.POST("/shopping-list", shoppingHandler.Create)
 			auth.PUT("/shopping-list/:id", shoppingHandler.Update)
@@ -94,6 +99,18 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 			auth.POST("/recommend/by-ingredients", recommendHandler.ByIngredients)
 			auth.POST("/recommend/week-menu", recommendHandler.WeekMenu)
 			auth.POST("/feedback", feedbackHandler.Create)
+
+			// Couple
+			auth.GET("/couple/invite-code", coupleHandler.GetInviteCode)
+			auth.POST("/couple/bind", coupleHandler.Bind)
+			auth.GET("/couple/info", coupleHandler.GetInfo)
+			auth.POST("/couple/unbind", coupleHandler.Unbind)
+			auth.PUT("/couple/name", coupleHandler.SetCoupleName)
+			auth.POST("/couple/orders", coupleHandler.CreateOrder)
+			auth.GET("/couple/orders", coupleHandler.GetOrders)
+			auth.PUT("/couple/orders/:id", coupleHandler.UpdateOrderStatus)
+			auth.DELETE("/couple/orders/:id", coupleHandler.DeleteOrder)
+			auth.POST("/couple/orders/generate-shopping-list", coupleHandler.GenerateShoppingList)
 		}
 	}
 

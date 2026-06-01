@@ -16,3 +16,11 @@ export function getPreferences() {
 export function updatePreferences(data: UserPreferences) {
   return api.put('/user/preferences', data)
 }
+
+export function getFavoriteCount() {
+  return api.get('/user/favorites/count')
+}
+
+export function getUserFavorites(page = 1, pageSize = 10) {
+  return api.get('/user/favorites', { params: { page, page_size: pageSize } })
+}

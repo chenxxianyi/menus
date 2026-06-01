@@ -12,16 +12,14 @@
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
           <polyline points="9 22 9 12 15 12 15 22"/>
         </svg>
-        <svg v-else-if="tab.icon === 'calendar'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-          <line x1="16" y1="2" x2="16" y2="6"/>
-          <line x1="8" y1="2" x2="8" y2="6"/>
-          <line x1="3" y1="10" x2="21" y2="10"/>
+        <svg v-else-if="tab.icon === 'book'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
         </svg>
-        <svg v-else-if="tab.icon === 'chart'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="20" x2="18" y2="10"/>
-          <line x1="12" y1="20" x2="12" y2="4"/>
-          <line x1="6" y1="20" x2="6" y2="14"/>
+        <svg v-else-if="tab.icon === 'utensils'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/>
+          <path d="M7 2v20"/>
+          <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/>
         </svg>
         <svg v-else-if="tab.icon === 'user'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -40,8 +38,8 @@ const route = useRoute()
 
 const tabs = [
   { path: '/', icon: 'home', label: '首页' },
-  { path: '/week-menu', icon: 'calendar', label: '一周菜单' },
-  { path: '/stats', icon: 'chart', label: '营养' },
+  { path: '/recipes', icon: 'book', label: '菜谱' },
+  { path: '/week-menu', icon: 'utensils', label: '菜单推荐' },
   { path: '/user', icon: 'user', label: '我的' },
 ]
 
@@ -57,19 +55,14 @@ function isActive(path: string) {
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - var(--sp-8));
-  max-width: calc(var(--max-w) - var(--sp-8));
-  height: 56px;
+  width: 100%;
+  max-width: var(--max-w);
+  height: 84px;
   display: flex;
-  align-items: center;
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--glass-border);
-  border-radius: var(--r-md);
-  box-shadow: var(--glass-shadow);
-  padding: 0 var(--sp-2);
-  margin-bottom: var(--sp-3);
+  align-items: flex-start;
+  padding-top: 12px;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
   z-index: 100;
 }
 
@@ -79,14 +72,13 @@ function isActive(path: string) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 4px;
   padding: var(--sp-1) 0;
-  border-radius: var(--r-sm);
   transition: color var(--dur-base) var(--ease);
   color: var(--color-text-3);
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
-  position: relative;
+  cursor: pointer;
 }
 
 .tab:hover {
@@ -94,36 +86,26 @@ function isActive(path: string) {
 }
 
 .tab.active {
-  color: var(--color-text);
+  color: var(--color-accent);
 }
 
 .tab-label {
-  position: relative;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0;
 }
 
-.tab.active .tab-label::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: -4px;
-  width: 100%;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--color-accent);
+.tab:active {
+  transform: scale(0.95);
 }
 
-.tab:active { transform: translateY(1px); }
-
 .tab-icon {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
 }
 
 .tab-icon svg {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
 }
 </style>

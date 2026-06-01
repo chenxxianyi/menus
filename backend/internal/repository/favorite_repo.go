@@ -28,6 +28,12 @@ func (r *FavoriteRepo) Exists(userID, recipeID uint) bool {
 	return count > 0
 }
 
+func (r *FavoriteRepo) CountByUserID(userID uint) int64 {
+	var count int64
+	r.db.Model(&model.Favorite{}).Where("user_id = ?", userID).Count(&count)
+	return count
+}
+
 func (r *FavoriteRepo) FindByUserID(userID uint, page, pageSize int) ([]model.Favorite, int64, error) {
 	var favs []model.Favorite
 	var total int64

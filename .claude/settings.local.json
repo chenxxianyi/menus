@@ -34,7 +34,8 @@
       "Bash(python \".claude/skills/ui-ux-pro-max/scripts/search.py\" \"animation card hover\" --domain ux -n 5)",
       "Bash(python \".claude/skills/ui-ux-pro-max/scripts/search.py\" \"warm soft card\" --domain style -n 3)",
       "Bash(taskkill /PID 23328 /F)",
-      "PowerShell(Stop-Process -Id 23328 -Force)"
+      "PowerShell(Stop-Process -Id 23328 -Force)",
+      "Bash(curl -s http://localhost:5199/)"
     ]
   }
 }

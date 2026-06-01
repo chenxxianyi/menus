@@ -34,6 +34,10 @@ func (s *FavoriteService) RemoveFavorite(userID, recipeID uint) error {
 	return s.recipeRepo.DecrementFavoriteCount(recipeID)
 }
 
+func (s *FavoriteService) GetFavoriteCount(userID uint) int64 {
+	return s.favRepo.CountByUserID(userID)
+}
+
 func (s *FavoriteService) GetUserFavorites(userID uint, page, pageSize int) ([]model.Recipe, int64, error) {
 	favs, total, err := s.favRepo.FindByUserID(userID, page, pageSize)
 	if err != nil {
