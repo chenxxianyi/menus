@@ -31,9 +31,21 @@
         </div>
         <h3 class="order-dish-name">{{ order.dish_name }}</h3>
         <p v-if="order.note" class="order-note">{{ order.note }}</p>
+        <div v-if="order.recipe" class="recipe-match">
+          <div>
+            <span class="match-label">已匹配菜谱</span>
+            <strong>{{ order.recipe.title }}</strong>
+            <p>{{ order.recipe.cook_time || '--' }} 分钟 · {{ order.recipe.difficulty || '家常' }}</p>
+          </div>
+          <button class="recipe-link" @click="router.push(`/recipes/${order.recipe.id}`)">看做法</button>
+        </div>
+        <div v-else class="recipe-match muted">
+          <span>暂未匹配到菜谱，确认后不会生成食材。</span>
+        </div>
         <div class="order-actions">
-          <button v-if="order.status === 0" class="action-btn confirm" @click="handleStatus(order.id, 1)">确认</button>
+          <button v-if="order.status === 0" class="action-btn confirm" @click="handleStatus(order.id, 1)">接单做饭</button>
           <button v-if="order.status === 0" class="action-btn cancel" @click="handleStatus(order.id, 2)">取消</button>
+          <button v-if="order.status === 1" class="action-btn confirm" @click="$router.push('/couple/menu')">生成采购</button>
           <button v-if="order.status === 1" class="action-btn cancel" @click="handleStatus(order.id, 0)">撤回</button>
           <button class="action-btn delete" @click="handleDelete(order.id)">删除</button>
         </div>
@@ -250,6 +262,56 @@ onMounted(async () => {
   font-size: var(--text-xs);
   color: var(--color-text-3);
   margin-bottom: var(--sp-3);
+}
+
+.recipe-match {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: var(--r-md);
+  background: var(--color-broth-soft);
+  margin-top: var(--sp-3);
+}
+
+.recipe-match.muted {
+  color: var(--color-text-3);
+  font-size: var(--text-xs);
+}
+
+.match-label {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--color-tomato);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+}
+
+.recipe-match strong {
+  display: block;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.recipe-match p {
+  margin-top: 2px;
+  color: var(--color-text-3);
+  font-size: var(--text-2xs);
+}
+
+.recipe-link {
+  min-height: 32px;
+  flex-shrink: 0;
+  padding: 0 var(--sp-3);
+  border: 0;
+  border-radius: var(--r-full);
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .order-actions {

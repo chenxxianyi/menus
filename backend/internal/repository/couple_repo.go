@@ -58,7 +58,7 @@ func (r *CoupleRepo) CreateOrder(o *model.CoupleOrder) error {
 
 func (r *CoupleRepo) FindOrdersByCoupleID(coupleID uint, mealDate string) ([]model.CoupleOrder, error) {
 	var orders []model.CoupleOrder
-	query := r.db.Where("couple_id = ?", coupleID).Preload("User")
+	query := r.db.Where("couple_id = ?", coupleID).Preload("User").Preload("Recipe")
 	if mealDate != "" {
 		query = query.Where("meal_date = ?", mealDate)
 	}
@@ -68,7 +68,7 @@ func (r *CoupleRepo) FindOrdersByCoupleID(coupleID uint, mealDate string) ([]mod
 
 func (r *CoupleRepo) FindOrdersByCoupleIDAndType(coupleID uint, mealDate, mealType string) ([]model.CoupleOrder, error) {
 	var orders []model.CoupleOrder
-	query := r.db.Where("couple_id = ? AND status = 1", coupleID)
+	query := r.db.Where("couple_id = ? AND status = 1", coupleID).Preload("User").Preload("Recipe")
 	if mealDate != "" {
 		query = query.Where("meal_date = ?", mealDate)
 	}

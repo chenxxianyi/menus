@@ -4,11 +4,17 @@
       <button class="back-btn" @click="$router.back()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
       </button>
-      <h1 class="page-title">我要点餐</h1>
+      <h1 class="page-title">发布想吃</h1>
       <div style="width:34px"></div>
     </header>
 
     <div class="order-form">
+      <section class="flow-card">
+        <p class="flow-kicker">给做饭的人一个明确请求</p>
+        <h2 class="flow-title">说出想吃什么，系统会自动匹配菜谱</h2>
+        <p class="flow-desc">对方确认后，可以直接查看做法并生成采购清单。</p>
+      </section>
+
       <!-- Dish name -->
       <div class="form-group">
         <label class="form-label">想吃什么</label>
@@ -16,7 +22,7 @@
           v-model="form.dish_name"
           class="form-input"
           type="text"
-          placeholder="输入菜名，如：红烧肉"
+          placeholder="输入菜名，如：番茄炒蛋、红烧肉"
           maxlength="100"
         />
       </div>
@@ -61,7 +67,8 @@
 
       <!-- Quick recipes -->
       <div class="form-group" v-if="recipes.length">
-        <label class="form-label">或者从菜谱里选</label>
+        <label class="form-label">指定菜谱（可选）</label>
+        <p class="form-hint">不选择也可以，提交后会按菜名自动匹配一份菜谱。</p>
         <div class="recipe-grid">
           <button
             v-for="r in recipes"
@@ -78,12 +85,12 @@
 
       <!-- Submit -->
       <button class="submit-btn" @click="handleSubmit" :disabled="!form.dish_name.trim() || submitting">
-        {{ submitting ? '提交中...' : '提交点餐' }}
+        {{ submitting ? '发布中...' : '发布给对方' }}
       </button>
     </div>
 
     <!-- Success toast -->
-    <div v-if="showSuccess" class="toast">点餐成功！</div>
+    <div v-if="showSuccess" class="toast">已发布，等待对方确认</div>
   </div>
 </template>
 
@@ -188,6 +195,38 @@ onMounted(async () => {
   padding: 0 var(--sp-4);
 }
 
+.flow-card {
+  margin-bottom: var(--sp-5);
+  padding: var(--sp-5);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-lg);
+  background:
+    linear-gradient(135deg, var(--color-surface), var(--color-broth-soft));
+  box-shadow: var(--glass-shadow);
+}
+
+.flow-kicker {
+  margin-bottom: var(--sp-1);
+  color: var(--color-accent);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+}
+
+.flow-title {
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.flow-desc {
+  margin-top: var(--sp-2);
+  color: var(--color-text-2);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
 .form-group {
   margin-bottom: var(--sp-5);
 }
@@ -198,6 +237,13 @@ onMounted(async () => {
   font-weight: 600;
   color: var(--color-text);
   margin-bottom: var(--sp-2);
+}
+
+.form-hint {
+  margin: calc(-1 * var(--sp-1)) 0 var(--sp-3);
+  color: var(--color-text-3);
+  font-size: var(--text-xs);
+  line-height: 1.5;
 }
 
 .form-input {

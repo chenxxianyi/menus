@@ -39,8 +39,14 @@
       <div class="orders-summary">
         <h3 class="summary-title">已确认的点餐（{{ result.orders.length }}）</h3>
         <div v-for="order in result.orders" :key="order.id" class="summary-item">
-          <span class="summary-dish">{{ order.dish_name }}</span>
-          <span class="summary-note" v-if="order.note">{{ order.note }}</span>
+          <div class="summary-main">
+            <span class="summary-dish">{{ order.dish_name }}</span>
+            <span class="summary-note" v-if="order.note">{{ order.note }}</span>
+            <button v-if="order.recipe" class="guide-link" @click="router.push(`/recipes/${order.recipe.id}`)">
+              查看做饭指南
+            </button>
+          </div>
+          <span v-if="order.recipe" class="summary-recipe">{{ order.recipe.title }}</span>
         </div>
         <div v-if="!result.orders.length" class="summary-empty">暂无已确认的点餐</div>
       </div>
@@ -67,7 +73,7 @@
 
       <div v-else class="empty-shopping">
         <p>没有找到需要购买的食材</p>
-        <p class="empty-hint">请先确认点餐并关联菜谱</p>
+        <p class="empty-hint">请先发布想吃的菜，并确认一条已匹配菜谱的点餐。</p>
       </div>
     </div>
 
@@ -94,7 +100,9 @@ const today = new Date().toISOString().split('T')[0]
 const mealDate = ref(today)
 const mealType = ref('')
 const loading = ref(false)
-const result = ref<(GenerateShoppingListResult & { shopping_list: (ShoppingListItem & { checked: boolean })[] }) | null>(null)
+type CheckedShoppingItem = ShoppingListItem & { checked: boolean }
+type CoupleMenuResult = Omit<GenerateShoppingListResult, 'shopping_list'> & { shopping_list: CheckedShoppingItem[] }
+const result = ref<CoupleMenuResult | null>(null)
 
 const mealTypes = [
   { value: '', label: '全部' },
@@ -286,6 +294,13 @@ onMounted(async () => {
 
 .summary-item:last-child { border-bottom: none; }
 
+.summary-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
 .summary-dish {
   font-size: var(--text-sm);
   font-weight: 600;
@@ -295,7 +310,27 @@ onMounted(async () => {
 .summary-note {
   font-size: var(--text-2xs);
   color: var(--color-text-3);
+}
+
+.summary-recipe {
+  max-width: 42%;
   margin-left: auto;
+  flex-shrink: 0;
+  color: var(--color-accent);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  text-align: right;
+}
+
+.guide-link {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-tomato);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  cursor: pointer;
 }
 
 .summary-empty {

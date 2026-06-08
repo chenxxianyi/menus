@@ -190,6 +190,13 @@ func (s *CoupleService) CreateOrder(userID uint, dishName string, recipeID *uint
 		return nil, errors.New("请先绑定情侣关系")
 	}
 
+	if recipeID == nil {
+		if recipe, err := s.recipeRepo.FindBestMatch(dishName); err == nil && recipe.ID > 0 {
+			matchedID := recipe.ID
+			recipeID = &matchedID
+		}
+	}
+
 	order := &model.CoupleOrder{
 		CoupleID: binding.ID,
 		UserID:   userID,
@@ -207,6 +214,9 @@ func (s *CoupleService) CreateOrder(userID uint, dishName string, recipeID *uint
 
 	// Load user info
 	order.User, _ = s.userRepo.FindByID(userID)
+	if order.RecipeID != nil {
+		order.Recipe, _ = s.recipeRepo.FindByID(*order.RecipeID)
+	}
 
 	return order, nil
 }
@@ -406,4 +416,3 @@ func (s *CoupleService) GetOrdersGroupedByDate(userID uint) (map[string][]model.
 
 	return grouped, nil
 }
-

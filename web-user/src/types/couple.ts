@@ -24,6 +24,14 @@ export interface CoupleOrder {
   status: number
   created_at: string
   user?: CouplePartner
+  recipe?: {
+    id: number
+    title: string
+    cover?: string
+    cook_time?: number
+    difficulty?: string
+    people_count?: number
+  }
 }
 
 export interface ShoppingListItem {

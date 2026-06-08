@@ -15,6 +15,7 @@ const routes: RouteRecordRaw[] = [
       { path: '', name: 'Home', component: () => import('@/views/Home.vue'), meta: { showTabBar: true } },
       { path: 'week-menu', name: 'WeekMenu', component: () => import('@/views/WeekMenu.vue'), meta: { showTabBar: true } },
       { path: 'stats', name: 'Stats', component: () => import('@/views/Stats.vue'), meta: { showTabBar: true } },
+      { path: 'recipes', name: 'RecipeList', component: () => import('@/views/RecipeList.vue'), meta: { showTabBar: true } },
       { path: 'recipes/:id', name: 'RecipeDetail', component: () => import('@/views/RecipeDetail.vue') },
       { path: 'shopping-list', name: 'ShoppingList', component: () => import('@/views/ShoppingList.vue') },
       { path: 'user', name: 'UserCenter', component: () => import('@/views/UserCenter.vue'), meta: { showTabBar: true } },

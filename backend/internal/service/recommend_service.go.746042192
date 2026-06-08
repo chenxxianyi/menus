@@ -28,13 +28,13 @@ type RecommendParams struct {
 }
 
 type DishResult struct {
-	RecipeID     uint     `json:"recipe_id"`
-	Name         string   `json:"name"`
-	Type         string   `json:"type"`
-	CookTime     int      `json:"cook_time"`
-	Difficulty   string   `json:"difficulty"`
-	Ingredients  []string `json:"ingredients"`
-	StepsSummary string   `json:"steps_summary"`
+	RecipeID      uint     `json:"recipe_id"`
+	Name          string   `json:"name"`
+	Type          string   `json:"type"`
+	CookTime      int      `json:"cook_time"`
+	Difficulty    string   `json:"difficulty"`
+	Ingredients   []string `json:"ingredients"`
+	StepsSummary  string   `json:"steps_summary"`
 }
 
 type RecommendResult struct {

@@ -29,6 +29,16 @@
   --color-accent:      #07C160;
   --color-accent-soft: #E8F5E9;
   --color-accent-hover:#06AD56;
+  --color-herb-mist:   rgba(7, 193, 96, 0.13);
+  --color-broth-soft:  #FFF7E8;
+  --color-tomato:      #F97316;
+  --color-tomato-soft: #FFE8D6;
+  --color-berry:       #E11D48;
+  --color-berry-soft:  #FFE4EA;
+  --color-water:       #2563EB;
+  --color-water-soft:  #E2EEFF;
+  --color-plum:        #9333EA;
+  --color-plum-soft:   #F0E4FF;
 
   /* ── Semantic ── */
   --color-success:     #07C160;
@@ -39,10 +49,10 @@
   --color-warning-soft:#FEF3C7;
 
   /* ── Glass ── */
-  --glass-bg:          rgba(255, 255, 255, 0.90);
-  --glass-border:      rgba(0, 0, 0, 0.06);
-  --glass-blur:        16px;
-  --glass-shadow:      0 4px 12px rgba(0, 0, 0, 0.05);
+  --glass-bg:          rgba(255, 255, 255, 0.82);
+  --glass-border:      rgba(255, 255, 255, 0.72);
+  --glass-blur:        18px;
+  --glass-shadow:      0 12px 32px rgba(31, 41, 55, 0.08);
 
   /* ── Typography ── */
   --font-display: "Noto Sans SC", -apple-system, system-ui, sans-serif;

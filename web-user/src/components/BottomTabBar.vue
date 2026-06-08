@@ -52,17 +52,21 @@ function isActive(path: string) {
 <style scoped>
 .tabbar {
   position: fixed;
-  bottom: 0;
+  bottom: max(12px, var(--safe-bottom));
   left: 50%;
   transform: translateX(-50%);
-  width: 100%;
-  max-width: var(--max-w);
-  height: 84px;
+  width: calc(100% - 24px);
+  max-width: calc(var(--max-w) - 24px);
+  height: 72px;
   display: flex;
-  align-items: flex-start;
-  padding-top: 12px;
-  background: var(--color-surface);
-  border-top: 1px solid var(--color-border);
+  align-items: center;
+  padding: 8px;
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  background: var(--glass-bg);
+  box-shadow: 0 18px 44px rgba(31, 41, 55, 0.16);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   z-index: 100;
 }
 
@@ -73,8 +77,15 @@ function isActive(path: string) {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: var(--sp-1) 0;
-  transition: color var(--dur-base) var(--ease);
+  min-width: 0;
+  height: 56px;
+  border-radius: 18px;
+  padding: 0;
+  transition:
+    background var(--dur-base) var(--ease-spring),
+    color var(--dur-base) var(--ease),
+    transform var(--dur-fast) var(--ease),
+    box-shadow var(--dur-base) var(--ease);
   color: var(--color-text-3);
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
@@ -86,7 +97,9 @@ function isActive(path: string) {
 }
 
 .tab.active {
+  background: var(--color-surface);
   color: var(--color-accent);
+  box-shadow: var(--shadow-sm);
 }
 
 .tab-label {
@@ -96,16 +109,16 @@ function isActive(path: string) {
 }
 
 .tab:active {
-  transform: scale(0.95);
+  transform: translateY(1px);
 }
 
 .tab-icon {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
 }
 
 .tab-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
 }
 </style>
