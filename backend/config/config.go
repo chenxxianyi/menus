@@ -3,9 +3,11 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/spf13/viper"
+	"github.com/subosito/gotenv"
 )
 
 type Config struct {
@@ -34,19 +36,26 @@ func (s ServerConfig) Addr() string {
 }
 
 type DatabaseConfig struct {
-	Host         string `mapstructure:"host"`
-	Port         int    `mapstructure:"port"`
-	User         string `mapstructure:"user"`
-	Password     string `mapstructure:"password"`
-	DBName       string `mapstructure:"dbname"`
-	Charset      string `mapstructure:"charset"`
-	MaxIdleConns int    `mapstructure:"max_idle_conns"`
-	MaxOpenConns int    `mapstructure:"max_open_conns"`
+	Host                   string `mapstructure:"host"`
+	Port                   int    `mapstructure:"port"`
+	User                   string `mapstructure:"user"`
+	Password               string `mapstructure:"password"`
+	DBName                 string `mapstructure:"dbname"`
+	Charset                string `mapstructure:"charset"`
+	Loc                    string `mapstructure:"loc"`
+	MaxIdleConns           int    `mapstructure:"max_idle_conns"`
+	MaxOpenConns           int    `mapstructure:"max_open_conns"`
+	ConnMaxLifetimeMinutes int    `mapstructure:"conn_max_lifetime_minutes"`
+	AutoMigrate            bool   `mapstructure:"auto_migrate"`
 }
 
 func (d DatabaseConfig) DSN() string {
-	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",
-		d.User, d.Password, d.Host, d.Port, d.DBName, d.Charset)
+	loc := d.Loc
+	if loc == "" {
+		loc = "Local"
+	}
+	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=%s",
+		d.User, d.Password, d.Host, d.Port, d.DBName, d.Charset, loc)
 }
 
 type RedisConfig struct {
@@ -61,8 +70,8 @@ func (r RedisConfig) Addr() string {
 }
 
 type JWTConfig struct {
-	SecretKey  string `mapstructure:"secret_key"`
-	ExpireHours int   `mapstructure:"expire_hours"`
+	SecretKey   string `mapstructure:"secret_key"`
+	ExpireHours int    `mapstructure:"expire_hours"`
 }
 
 func (j JWTConfig) ExpireDuration() time.Duration {
@@ -79,6 +88,8 @@ type UploadConfig struct {
 }
 
 func LoadConfig() (*Config, error) {
+	_ = gotenv.Load(".env")
+
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("./config")
@@ -96,6 +107,7 @@ func LoadConfig() (*Config, error) {
 	if v := os.Getenv("DB_PASSWORD"); v != "" {
 		cfg.Database.Password = v
 	}
+	applyDatabaseEnv(&cfg.Database)
 	if v := os.Getenv("JWT_SECRET_KEY"); v != "" {
 		cfg.JWT.SecretKey = v
 	}
@@ -104,4 +116,50 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+func applyDatabaseEnv(cfg *DatabaseConfig) {
+	if v := os.Getenv("DATABASE_HOST"); v != "" {
+		cfg.Host = v
+	}
+	if v := os.Getenv("DATABASE_PORT"); v != "" {
+		if port, err := strconv.Atoi(v); err == nil {
+			cfg.Port = port
+		}
+	}
+	if v := os.Getenv("DATABASE_NAME"); v != "" {
+		cfg.DBName = v
+	}
+	if v := os.Getenv("DATABASE_USER"); v != "" {
+		cfg.User = v
+	}
+	if v := os.Getenv("DATABASE_PASSWORD"); v != "" {
+		cfg.Password = v
+	}
+	if v := os.Getenv("DATABASE_CHARSET"); v != "" {
+		cfg.Charset = v
+	}
+	if v := os.Getenv("DATABASE_LOC"); v != "" {
+		cfg.Loc = v
+	}
+	if v := os.Getenv("DATABASE_MAX_OPEN_CONNS"); v != "" {
+		if conns, err := strconv.Atoi(v); err == nil {
+			cfg.MaxOpenConns = conns
+		}
+	}
+	if v := os.Getenv("DATABASE_MAX_IDLE_CONNS"); v != "" {
+		if conns, err := strconv.Atoi(v); err == nil {
+			cfg.MaxIdleConns = conns
+		}
+	}
+	if v := os.Getenv("DATABASE_CONN_MAX_LIFETIME_MINUTES"); v != "" {
+		if minutes, err := strconv.Atoi(v); err == nil {
+			cfg.ConnMaxLifetimeMinutes = minutes
+		}
+	}
+	if v := os.Getenv("DB_AUTO_MIGRATE"); v != "" {
+		if autoMigrate, err := strconv.ParseBool(v); err == nil {
+			cfg.AutoMigrate = autoMigrate
+		}
+	}
 }

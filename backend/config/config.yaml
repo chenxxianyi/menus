@@ -8,14 +8,17 @@ server:
   port: 8000
 
 database:
-  host: "localhost"
-  port: 3310
-  user: "xxladmin"
-  password: "XXLadmin_2021!"
-  dbname: "menu_recommend"
+  host: "127.0.0.1"
+  port: 3306
+  user: "root"
+  password: "123456"
+  dbname: "ai_workbench"
   charset: "utf8mb4"
+  loc: "UTC"
   max_idle_conns: 10
-  max_open_conns: 100
+  max_open_conns: 20
+  conn_max_lifetime_minutes: 30
+  auto_migrate: true
 
 redis:
   host: "localhost"

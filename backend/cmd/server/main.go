@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
@@ -39,25 +40,30 @@ func main() {
 	sqlDB, _ := db.DB()
 	sqlDB.SetMaxIdleConns(cfg.Database.MaxIdleConns)
 	sqlDB.SetMaxOpenConns(cfg.Database.MaxOpenConns)
+	if cfg.Database.ConnMaxLifetimeMinutes > 0 {
+		sqlDB.SetConnMaxLifetime(time.Duration(cfg.Database.ConnMaxLifetimeMinutes) * time.Minute)
+	}
 
 	// Auto migrate
-	if err := db.AutoMigrate(
-		&model.User{},
-		&model.UserPreference{},
-		&model.Recipe{},
-		&model.RecipeCategory{},
-		&model.Ingredient{},
-		&model.Favorite{},
-		&model.Menu{},
-		&model.ShoppingList{},
-		&model.RecommendLog{},
-		&model.Feedback{},
-		&model.Banner{},
-		&model.AdminUser{},
-		&model.CoupleBinding{},
-		&model.CoupleOrder{},
-	); err != nil {
-		logger.Fatal("auto migrate failed", zap.Error(err))
+	if cfg.Database.AutoMigrate {
+		if err := db.AutoMigrate(
+			&model.User{},
+			&model.UserPreference{},
+			&model.Recipe{},
+			&model.RecipeCategory{},
+			&model.Ingredient{},
+			&model.Favorite{},
+			&model.Menu{},
+			&model.ShoppingList{},
+			&model.RecommendLog{},
+			&model.Feedback{},
+			&model.Banner{},
+			&model.AdminUser{},
+			&model.CoupleBinding{},
+			&model.CoupleOrder{},
+		); err != nil {
+			logger.Fatal("auto migrate failed", zap.Error(err))
+		}
 	}
 
 	// Redis

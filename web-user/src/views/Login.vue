@@ -1,79 +1,103 @@
 <template>
   <div class="login-page">
-    <div class="login-panel anim-delay-1">
-      <div class="login-media" aria-hidden="true">
-        <div class="media-shelf">
-          <div class="menu-sheet sheet-back">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-          <div class="menu-sheet sheet-front">
-            <div class="plate">
-              <span class="plate-core"></span>
-            </div>
-            <div class="dish-copy">
-              <span class="dish-title"></span>
-              <span class="dish-line wide"></span>
-              <span class="dish-line"></span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="login-header">
-        <p class="login-eyebrow">Daily kitchen</p>
-        <h1 class="login-title">今天吃什么</h1>
-        <p class="login-sub">把每日菜谱、购物清单和口味偏好放在一处，晚餐决定更轻松。</p>
-      </div>
+    <main class="phone-frame" :style="{ '--login-bg': loginBackgroundImage }">
+      <section class="hero-scene" aria-label="今日菜单视觉预览"></section>
 
-      <form class="login-form anim-delay-2" @submit.prevent="handleSubmit">
-        <div class="form-field">
-          <input
-            v-model="form.username"
-            type="text"
-            placeholder="用户名"
-            class="form-input"
-            required
-          />
+      <section class="login-panel" aria-label="登录">
+        <div class="brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 64 64">
+            <path class="pot" d="M17 28h30v16a8 8 0 0 1-8 8H25a8 8 0 0 1-8-8V28Z" />
+            <path class="pot-line" d="M13 31h38M22 25h20M28 20c1.2-3 3.5-4.5 7-4.5 2.8 0 5 1.1 6.5 3.2" />
+            <path class="leaf" d="M43 49c8-1 12-6 12-14-8 .5-13.2 5-12 14Z" />
+            <path class="heart" d="M45.5 14.5c-2.6-3.2-8.4-1.4-8.4 3.3 0 4.6 8.4 9.4 8.4 9.4s8.4-4.8 8.4-9.4c0-4.7-5.8-6.5-8.4-3.3Z" />
+          </svg>
         </div>
-        <div class="form-field">
-          <input
-            v-model="form.password"
-            type="password"
-            placeholder="密码"
-            class="form-input"
-            required
-          />
-        </div>
-        <div v-if="isRegister" class="form-field">
-          <input
-            v-model="form.confirmPassword"
-            type="password"
-            placeholder="确认密码"
-            class="form-input"
-            required
-          />
-        </div>
-        <div v-if="error" class="form-error">{{ error }}</div>
-        <button type="submit" class="btn-solid login-btn" :disabled="loading">
-          {{ loading ? '请稍候...' : (isRegister ? '注册' : '登录') }}
-        </button>
-      </form>
 
-      <div class="login-footer anim-delay-3">
-        <button class="login-toggle" @click="isRegister = !isRegister">
-          {{ isRegister ? '已有账号，去登录' : '没有账号，去注册' }}
-        </button>
-      </div>
-    </div>
+        <header class="login-header">
+          <h1>今天吃什么</h1>
+          <p class="english-title">Daily Kitchen</p>
+          <p class="login-sub">把菜谱、菜单和采购清单放在一处</p>
+        </header>
+
+        <form class="login-form" @submit.prevent="handleSubmit">
+          <label class="form-field">
+            <span class="field-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" />
+              </svg>
+            </span>
+            <input
+              v-model="form.username"
+              type="text"
+              placeholder="用户名"
+              autocomplete="username"
+              required
+            />
+          </label>
+
+          <label class="form-field">
+            <span class="field-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M7 11V8a5 5 0 0 1 10 0v3M6 11h12v10H6V11Z" />
+              </svg>
+            </span>
+            <input
+              v-model="form.password"
+              :type="showPassword ? 'text' : 'password'"
+              placeholder="密码"
+              autocomplete="current-password"
+              required
+            />
+            <button class="icon-button" type="button" :aria-label="showPassword ? '隐藏密码' : '显示密码'" @click="showPassword = !showPassword">
+              <svg v-if="showPassword" viewBox="0 0 24 24">
+                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              <svg v-else viewBox="0 0 24 24">
+                <path d="m3 3 18 18M10.6 10.6A3 3 0 0 0 12 15a3 3 0 0 0 2.8-4M9.9 5.3A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a18.8 18.8 0 0 1-3.1 4.1M6.6 6.7C3.6 8.7 2 12 2 12s3.5 7 10 7c1.6 0 3-.4 4.2-1" />
+              </svg>
+            </button>
+          </label>
+
+          <label v-if="isRegister" class="form-field">
+            <span class="field-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M7 11V8a5 5 0 0 1 10 0v3M6 11h12v10H6V11Z" />
+              </svg>
+            </span>
+            <input
+              v-model="form.confirmPassword"
+              :type="showPassword ? 'text' : 'password'"
+              placeholder="确认密码"
+              autocomplete="new-password"
+              required
+            />
+          </label>
+
+          <p v-if="error" class="form-error">{{ error }}</p>
+
+          <button type="submit" class="login-btn" :disabled="loading">
+            {{ loading ? '请稍候...' : (isRegister ? '注册' : '登录') }}
+          </button>
+        </form>
+
+        <p class="login-footer">
+          <span>{{ isRegister ? '已有账号，' : '没有账号，' }}</span>
+          <button type="button" @click="isRegister = !isRegister">
+            {{ isRegister ? '去登录' : '去注册' }}
+          </button>
+        </p>
+      </section>
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { login as loginApi, register as registerApi } from '@/api/auth'
+import loginKitchenReference from '@/assets/login-kitchen-reference.png'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -81,6 +105,8 @@ const userStore = useUserStore()
 const isRegister = ref(false)
 const loading = ref(false)
 const error = ref('')
+const showPassword = ref(false)
+const loginBackgroundImage = computed(() => `url(${loginKitchenReference})`)
 
 const form = reactive({
   username: '',
@@ -123,318 +149,309 @@ async function handleSubmit() {
 </script>
 
 <style scoped>
-/* Hallmark - component: login screen - genre: quiet utility - theme: fresh kitchen
- * states: default - hover - focus - active - disabled - loading - error - success
- * contrast: pass
- */
 .login-page {
   min-height: 100vh;
   min-height: 100dvh;
   display: grid;
   place-items: center;
-  padding: clamp(var(--sp-4), 5vw, var(--sp-8));
   background:
-    linear-gradient(160deg, rgba(7, 193, 96, 0.13), transparent 38%),
-    linear-gradient(340deg, rgba(245, 158, 11, 0.11), transparent 34%),
-    var(--color-bg);
+    radial-gradient(circle at 50% 18%, rgba(255, 248, 232, 0.74), transparent 32%),
+    linear-gradient(145deg, #dec49b, #fff6e7 42%, #c6b08d);
+  color: #2f2a27;
+  font-family: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.phone-frame {
+  position: relative;
+  width: min(100vw, 430px);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(226, 197, 157, 0.2)),
+    var(--login-bg) center -44px / cover no-repeat;
+  isolation: isolate;
+}
+
+.phone-frame::after {
+  content: "";
+  position: absolute;
+  inset: 42% 0 0;
+  z-index: 0;
+  background: linear-gradient(180deg, rgba(255, 248, 232, 0), rgba(221, 192, 149, 0.32) 52%, rgba(208, 178, 134, 0.58));
+  pointer-events: none;
+}
+
+.hero-scene {
+  position: relative;
+  z-index: 1;
+  height: min(47vh, 405px);
+  min-height: 348px;
 }
 
 .login-panel {
-  width: 100%;
-  max-width: 392px;
-  padding: var(--sp-5);
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  border-radius: var(--r-xl);
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: 0 18px 60px rgba(31, 41, 55, 0.10);
-  backdrop-filter: blur(20px);
-}
-
-.login-media {
   position: relative;
-  overflow: hidden;
-  min-height: 218px;
-  border: 1px solid rgba(255, 255, 255, 0.82);
-  border-radius: var(--r-lg);
-  margin-bottom: var(--sp-6);
+  z-index: 2;
+  width: calc(100% - 56px);
+  max-width: 344px;
+  margin: -2px auto 38px;
+  padding: 19px 23px 17px;
+  border: 1px solid rgba(255, 255, 255, 0.86);
+  border-radius: 25px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.42)),
-    linear-gradient(135deg, #effaf0 0%, #fff8ec 100%);
-  box-shadow: inset 0 -1px 0 rgba(31, 41, 55, 0.05);
+    radial-gradient(circle at 72% 12%, rgba(219, 236, 196, 0.48), transparent 26%),
+    radial-gradient(circle at 12% 8%, rgba(255, 246, 229, 0.74), transparent 34%),
+    rgba(255, 252, 247, 0.88);
+  box-shadow:
+    0 22px 52px rgba(75, 49, 27, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(24px) saturate(1.18);
 }
 
-.login-media::before {
-  content: "";
-  position: absolute;
-  inset: var(--sp-4);
-  border: 1px solid rgba(7, 193, 96, 0.14);
-  border-radius: calc(var(--r-lg) - 4px);
-}
-
-.login-media::after {
-  content: "";
-  position: absolute;
-  right: -34px;
-  bottom: -42px;
-  width: 144px;
-  height: 144px;
-  border-radius: var(--r-full);
-  background: rgba(245, 158, 11, 0.18);
-}
-
-.media-shelf {
-  position: relative;
-  z-index: 1;
-  min-height: 218px;
-}
-
-.menu-sheet {
-  position: absolute;
-  left: 50%;
-  width: min(78%, 274px);
-  border: 1px solid rgba(31, 41, 55, 0.08);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 14px 36px rgba(31, 41, 55, 0.10);
-  transform: translateX(-50%) rotate(-3deg);
-}
-
-.sheet-back {
-  top: 30px;
-  height: 116px;
-  padding: var(--sp-4);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(232, 245, 233, 0.86));
-}
-
-.sheet-back span {
-  display: block;
-  height: 10px;
-  border-radius: var(--r-full);
-  background: rgba(31, 41, 55, 0.08);
-}
-
-.sheet-back span + span {
-  margin-top: var(--sp-3);
-}
-
-.sheet-back span:nth-child(1) {
-  width: 38%;
-  background: rgba(7, 193, 96, 0.22);
-}
-
-.sheet-back span:nth-child(2) {
-  width: 74%;
-}
-
-.sheet-back span:nth-child(3) {
-  width: 58%;
-}
-
-.sheet-front {
-  top: 74px;
-  min-height: 132px;
-  display: grid;
-  grid-template-columns: 78px minmax(0, 1fr);
-  gap: var(--sp-4);
-  align-items: center;
-  padding: var(--sp-4);
-  transform: translateX(-50%) rotate(2deg);
-}
-
-.plate {
-  position: relative;
-  width: 76px;
-  height: 76px;
+.brand-icon {
+  width: 64px;
+  height: 64px;
   display: grid;
   place-items: center;
-  border-radius: var(--r-full);
-  background:
-    radial-gradient(circle, rgba(255, 255, 255, 0.92) 0 42%, transparent 43%),
-    conic-gradient(from 20deg, #07c160, #f59e0b, #22c55e, #07c160);
-  box-shadow: inset 0 0 0 8px rgba(255, 255, 255, 0.78);
+  margin: -2px auto 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow:
+    0 12px 24px rgba(151, 82, 50, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
 }
 
-.plate-core {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--r-full);
-  background:
-    radial-gradient(circle at 34% 28%, #ffffff 0 14%, transparent 15%),
-    linear-gradient(135deg, #22c55e, #f59e0b);
-  box-shadow: 0 8px 16px rgba(7, 193, 96, 0.16);
+.brand-icon svg {
+  width: 42px;
+  height: 42px;
 }
 
-.dish-copy span {
-  display: block;
-  border-radius: var(--r-full);
+.brand-icon path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.dish-title {
-  width: 62%;
-  height: 14px;
-  margin-bottom: var(--sp-3);
-  background: rgba(31, 41, 55, 0.82);
+.pot {
+  fill: #e5483e;
+  stroke: #e5483e;
 }
 
-.dish-line {
-  width: 64%;
-  height: 9px;
-  background: rgba(156, 163, 175, 0.34);
+.pot-line {
+  stroke: #e5483e;
+  stroke-width: 4;
 }
 
-.dish-line.wide {
-  width: 88%;
-  margin-bottom: var(--sp-2);
+.leaf {
+  fill: #6d8d5b;
+  stroke: #6d8d5b;
+}
+
+.heart {
+  fill: #e5483e;
+  stroke: #e5483e;
 }
 
 .login-header {
-  margin-bottom: var(--sp-6);
+  text-align: center;
 }
 
-.login-eyebrow {
-  color: var(--color-accent-hover);
-  font-size: var(--text-xs);
-  font-weight: 600;
+.login-header h1 {
+  margin: 0;
+  color: #2f2b28;
+  font-size: clamp(32px, 8.4vw, 40px);
+  font-weight: 800;
+  line-height: 1.06;
   letter-spacing: 0;
-  margin-bottom: var(--sp-1);
 }
 
-.login-title {
-  color: var(--color-text);
-  font-family: var(--font-display);
-  font-size: var(--text-2xl);
-  font-weight: 650;
-  line-height: 1.08;
+.english-title {
+  margin: 6px 0 0;
+  color: #748762;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.1;
 }
 
 .login-sub {
-  margin-top: var(--sp-2);
-  max-width: 23em;
-  color: var(--color-text-2);
-  font-size: var(--text-sm);
-  line-height: 1.65;
+  margin: 9px 0 18px;
+  color: #8b8179;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.3;
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
+  gap: 11px;
 }
 
 .form-field {
-  margin-bottom: var(--sp-3);
-}
-
-.form-input {
-  width: 100%;
   min-height: 52px;
-  padding: 0 var(--sp-4);
-  border: 1px solid rgba(31, 41, 55, 0.08);
-  border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--color-text);
-  font-family: var(--font-body);
-  font-size: var(--text-base);
-  box-shadow: 0 1px 0 rgba(31, 41, 55, 0.04);
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid rgba(109, 95, 82, 0.16);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.67);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.76),
+    0 7px 18px rgba(94, 63, 38, 0.06);
   transition:
-    border-color var(--dur-base) var(--ease),
-    box-shadow var(--dur-base) var(--ease),
-    background var(--dur-base) var(--ease);
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
 }
 
-.form-input::placeholder {
-  color: var(--color-text-3);
+.form-field:focus-within {
+  border-color: rgba(229, 72, 62, 0.42);
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow:
+    0 0 0 4px rgba(229, 72, 62, 0.1),
+    0 10px 20px rgba(94, 63, 38, 0.08);
 }
 
-.form-input:hover {
-  border-color: rgba(7, 193, 96, 0.36);
+.field-icon,
+.icon-button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  color: #aaa29b;
 }
 
-.form-input:focus,
-.form-input:focus-visible {
-  outline: none;
-  border-color: var(--color-accent);
-  background: var(--color-surface);
-  box-shadow: 0 0 0 4px rgba(7, 193, 96, 0.14);
+.field-icon svg,
+.icon-button svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.form-input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.form-field input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #3e3731;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.form-field input::placeholder {
+  color: #aaa29b;
+  font-weight: 600;
+}
+
+.icon-button {
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    background 160ms ease;
+}
+
+.icon-button:hover {
+  color: #7f766f;
+  background: rgba(127, 118, 111, 0.08);
 }
 
 .form-error {
-  margin-bottom: var(--sp-3);
-  padding: var(--sp-3);
-  border-radius: var(--r-sm);
-  background: var(--color-error-soft);
-  color: var(--color-error);
-  font-size: var(--text-sm);
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(229, 72, 62, 0.1);
+  color: #d83e36;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .login-btn {
-  width: 100%;
   min-height: 52px;
-  margin-top: var(--sp-1);
-  box-shadow: 0 10px 22px rgba(31, 41, 55, 0.14);
-}
-
-.login-footer {
-  margin-top: var(--sp-5);
-  text-align: center;
-}
-
-.login-toggle {
+  margin-top: 5px;
   border: 0;
-  background: none;
-  color: var(--color-accent);
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  font-weight: 600;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #dd332d 0%, #f25549 100%);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0;
+  box-shadow:
+    0 14px 26px rgba(222, 61, 52, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
   cursor: pointer;
   transition:
-    color var(--dur-fast) var(--ease),
-    opacity var(--dur-fast) var(--ease),
-    transform var(--dur-fast) var(--ease);
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease;
 }
 
-.login-toggle:hover {
-  color: var(--color-accent-hover);
+.login-btn:hover:not(:disabled) {
+  box-shadow:
+    0 16px 30px rgba(222, 61, 52, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
-.login-toggle:active {
+.login-btn:active:not(:disabled) {
   transform: translateY(1px);
 }
 
-/* ── Responsive ── */
-@media (min-width: 768px) {
-  .login-panel {
-    max-width: 412px;
-    padding: var(--sp-6);
+.login-btn:disabled {
+  opacity: 0.68;
+  cursor: not-allowed;
+}
+
+.login-footer {
+  margin: 12px 0 0;
+  color: #817870;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.login-footer button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #df4038;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@media (min-width: 431px) {
+  .phone-frame {
+    min-height: min(100vh, 932px);
+    box-shadow: 0 24px 70px rgba(77, 53, 31, 0.36);
   }
 }
 
 @media (max-width: 374px) {
-  .login-page {
-    padding: var(--sp-3);
+  .hero-scene {
+    min-height: 360px;
   }
 
   .login-panel {
-    padding: var(--sp-4);
+    width: calc(100% - 38px);
+    padding: 20px 18px 18px;
+    margin-bottom: 42px;
   }
 
-  .login-media,
-  .media-shelf {
-    min-height: 194px;
-  }
-
-  .sheet-front {
-    grid-template-columns: 64px minmax(0, 1fr);
-  }
-
-  .plate {
-    width: 64px;
-    height: 64px;
+  .login-header h1 {
+    font-size: 32px;
   }
 }
 </style>
