@@ -21,6 +21,10 @@ export function getFavoriteCount() {
   return api.get('/user/favorites/count')
 }
 
+export function getUserStats() {
+  return api.get('/user/stats')
+}
+
 export function getUserFavorites(page = 1, pageSize = 10) {
   return api.get('/user/favorites', { params: { page, page_size: pageSize } })
 }

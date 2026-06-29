@@ -1,183 +1,252 @@
 <template>
-  <div class="page">
-    <header class="header anim-delay-1">
-      <button class="btn-ghost" aria-label="返回" @click="$router.back()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
-      </button>
-      <div class="header-center">
-        <div class="header-title">一周菜单</div>
-      </div>
-      <button class="btn-ghost" aria-label="生成" :disabled="loading" @click="generateWeekMenu">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-      </button>
-    </header>
+  <div class="meal-shell" :style="pageVars">
+    <div class="meal-warm-overlay" aria-hidden="true"></div>
 
-    <!-- Week Selector -->
-    <div class="week-bar anim-delay-2">
-      <button
-        v-for="(day, idx) in weekDays"
-        :key="idx"
-        class="week-day"
-        :class="{ active: activeDayIdx === idx }"
-        @click="activeDayIdx = idx"
-      >
-        <span class="week-day-label">{{ day.label }}</span>
-        <span class="week-day-num">{{ day.date }}</span>
-        <span v-if="weekMenuData[idx]" class="week-day-dot"></span>
-      </button>
-    </div>
+    <main class="meal-phone">
+      <header class="meal-topbar">
+        <button class="nav-btn" type="button" aria-label="返回" @click="router.back()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+        </button>
+        <h1>一周菜单</h1>
+        <button class="nav-btn" type="button" aria-label="生成菜单" :disabled="loading" @click="generateWeekMenu">
+          <svg v-if="!loading" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 5v14" />
+            <path d="M5 12h14" />
+          </svg>
+          <span v-else class="mini-spinner" aria-hidden="true"></span>
+        </button>
+      </header>
 
-    <section class="planner-hero anim-delay-3">
-      <div>
-        <p class="hero-kicker">{{ weekMenuData.length ? activeDayName : '智能周菜单' }}</p>
-        <h1 class="hero-title">{{ weekMenuData.length ? '今天这样吃' : '一键安排三餐' }}</h1>
-        <p class="hero-copy">
-          {{ weekMenuData.length ? '看菜谱、攒采购清单、照着步骤做饭。' : '点击右上角 +，根据菜谱库生成一周早中晚餐。' }}
-        </p>
-      </div>
-      <div class="hero-stats" aria-label="菜单概览">
-        <div>
-          <strong>{{ currentDishCount }}</strong>
-          <span>道菜</span>
+      <nav class="week-strip" aria-label="选择日期">
+        <button
+          v-for="(day, idx) in weekDays"
+          :key="day.key"
+          class="day"
+          :class="{ active: activeDayIdx === idx }"
+          type="button"
+          @click="activeDayIdx = idx"
+        >
+          <small>{{ day.label }}</small>
+          <strong>{{ day.date }}</strong>
+          <span v-if="weekMenuData[idx]" class="day-dot" aria-hidden="true"></span>
+        </button>
+      </nav>
+
+      <section class="glass-card smart-card">
+        <div class="smart-content">
+          <span class="smart-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3 13.7 8.3 19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3Z" />
+              <path d="M19 16v4M21 18h-4" />
+            </svg>
+            智能周菜单
+          </span>
+          <h2>{{ weekMenuData.length ? `${activeDayName}这样吃` : '一键安排三餐' }}</h2>
+          <p>
+            {{ weekMenuData.length ? '查看当天三餐、整理采购清单，照着菜谱轻松做饭' : '根据菜谱库智能搭配均衡三餐' }}<br />
+            {{ weekMenuData.length ? '安排省心，吃得更好' : '告别每天纠结，轻松吃得美味又健康' }}
+          </p>
         </div>
-        <div>
-          <strong>{{ currentDayIngredients.length }}</strong>
-          <span>食材</span>
+        <svg class="leaf-mark" viewBox="0 0 48 32" fill="currentColor" aria-hidden="true">
+          <path d="M24 29C19 17 9 18 3 21c3 7 11 11 21 8Z" />
+          <path d="M25 28C26 15 35 8 45 7c-1 10-8 19-20 21Z" />
+        </svg>
+        <div class="stat-pill">
+          <div class="stat">
+            <svg class="dish-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 17h16" />
+              <path d="M6 17a6 6 0 0 1 12 0" />
+              <path d="M12 6v2" />
+              <path d="M5 20h14" />
+            </svg>
+            <span><strong>{{ currentDishCount }}</strong>道菜</span>
+          </div>
+          <i aria-hidden="true"></i>
+          <div class="stat">
+            <svg class="basket-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 10h12l-1.2 10H7.2L6 10Z" />
+              <path d="M9 10a3 3 0 0 1 6 0" />
+              <path d="M9 14v2M12 14v2M15 14v2" />
+            </svg>
+            <span><strong>{{ currentDayIngredients.length }}</strong>食材</span>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <div v-if="loading" class="empty-state anim-delay-4">
-      <div class="loading-spinner"></div>
-      <p>正在搭配一周三餐...</p>
-    </div>
+      <section v-if="loading" class="glass-card state-card">
+        <div class="loading-spinner"></div>
+        <h2>正在生成周菜单</h2>
+        <p>正在根据菜谱库搭配一周三餐，请稍等一下。</p>
+      </section>
 
-    <div v-else-if="error" class="empty-state anim-delay-4">
-      <p class="empty-title">生成失败</p>
-      <p class="empty-text">{{ error }}</p>
-      <button class="retry-btn" @click="generateWeekMenu">重新生成</button>
-    </div>
-
-    <div v-else-if="!weekMenuData.length" class="empty-state empty-panel anim-delay-4">
-      <p class="empty-title">还没有周菜单</p>
-      <p class="empty-text">点右上角的 +，系统会按早餐、午餐、晚餐生成一周计划。</p>
-      <button class="retry-btn" @click="generateWeekMenu">生成一周菜单</button>
-    </div>
-
-    <template v-else>
-      <section class="day-tools anim-delay-4">
-        <div class="tool-copy">
-          <span>今日采购</span>
-          <strong>{{ currentDayIngredients.length ? currentDayIngredients.slice(0, 4).join('、') : '暂无食材' }}</strong>
+      <section v-else-if="error" class="glass-card state-card">
+        <div class="empty-art error-art" aria-hidden="true">
+          <span class="book"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 14 9.5 22 12l-8 2.5L12 22l-2-7.5L2 12l8-2.5L12 2Z" /></svg></span>
+          <span class="bowl"></span>
+          <span class="chopstick"></span>
         </div>
-        <button class="tool-btn" :disabled="!currentDayIngredients.length || shoppingSaving" @click="createDayShoppingList">
-          {{ shoppingSaving ? '生成中' : '加入采购清单' }}
+        <h2>生成失败</h2>
+        <p>{{ error }}</p>
+        <button class="primary-btn" type="button" @click="generateWeekMenu">
+          重新生成
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m9 18 6-6-6-6" />
+          </svg>
         </button>
       </section>
 
-      <p v-if="shoppingMessage" class="inline-message anim-delay-4">{{ shoppingMessage }}</p>
+      <section v-else-if="!weekMenuData.length" class="glass-card state-card">
+        <EmptyArt />
+        <h2>还没有周菜单</h2>
+        <p>点击下方按钮，系统将为你生成一周三餐<br />营养均衡，安排省心，吃得更好</p>
+        <button class="primary-btn" type="button" @click="generateWeekMenu">
+          生成一周菜单
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+        </button>
+      </section>
 
-      <div v-if="isGeneratedButEmpty" class="data-note anim-delay-4">
-        已经生成餐次，但后端菜谱库没有返回菜品。请先确认数据库里有启用状态的菜谱数据。
-      </div>
-
-      <div class="timeline anim-delay-5">
-        <div v-for="(meal, idx) in currentDayMeals" :key="idx" class="tl-item">
-          <div class="tl-left">
-            <span class="tl-time">{{ mealTime(meal.type) }}</span>
-            <span class="tl-dot" :class="meal.type"></span>
-            <span v-if="hasNextMeal(idx)" class="tl-line"></span>
-          </div>
-          <div class="tl-content">
-            <div class="meal-head">
-              <span class="tl-type" :class="meal.type">{{ mealTypeLabel(meal.type) }}</span>
-              <span class="meal-reason">{{ meal.reason || '按当前偏好推荐' }}</span>
+      <template v-else>
+        <section class="glass-card generated-card">
+          <div class="generated-head">
+            <div>
+              <span>{{ activeDayName }}三餐</span>
+              <h2>{{ currentDishCount ? '今日安排好了' : '今日暂无菜品' }}</h2>
             </div>
-            <template v-if="meal.dishes.length">
-              <article v-for="(dish, di) in meal.dishes" :key="dish.recipe_id || di" class="tl-dish">
-                <div class="dish-main">
-                  <div class="dish-mark" :class="meal.type">{{ dish.type || mealTypeLabel(meal.type) }}</div>
-                  <div class="dish-body">
-                    <h3 class="tl-dish-name">{{ dish.name }}</h3>
-                    <p class="tl-dish-meta">{{ dish.cook_time || '--' }}分钟 · {{ dish.difficulty || '家常' }}</p>
+            <button
+              class="shopping-btn"
+              type="button"
+              :disabled="!currentDayIngredients.length || shoppingSaving"
+              @click="createDayShoppingList"
+            >
+              {{ shoppingSaving ? '生成中' : '加入采购清单' }}
+            </button>
+          </div>
+
+          <p v-if="shoppingMessage" class="inline-message">{{ shoppingMessage }}</p>
+          <p v-if="isGeneratedButEmpty" class="data-note">
+            已经生成餐次，但后端菜谱库没有返回菜品。请先确认数据库里有启用状态的菜谱数据。
+          </p>
+
+          <div class="meal-plan-list">
+            <article v-for="meal in normalizedCurrentMeals" :key="meal.type" class="plan-meal-card">
+              <header>
+                <span class="meal-icon" :class="meal.type">
+                  <MealIcon :type="meal.type" />
+                </span>
+                <div>
+                  <strong>{{ mealTypeLabel(meal.type) }}</strong>
+                  <small>{{ mealTime(meal.type) }}</small>
+                </div>
+              </header>
+
+              <template v-if="meal.dishes.length">
+                <div v-for="dish in meal.dishes" :key="dish.recipe_id || dish.name" class="dish-row">
+                  <div>
+                    <h3>{{ dish.name || '未命名菜品' }}</h3>
+                    <p>{{ dish.cook_time || '--' }} 分钟 · {{ dish.difficulty || '家常' }}</p>
                   </div>
+                  <button type="button" :disabled="!dish.recipe_id" @click="openRecipe(dish.recipe_id)">做法</button>
                 </div>
-                <div v-if="dish.ingredients?.length" class="ingredient-row">
-                  <span v-for="item in dish.ingredients.slice(0, 5)" :key="item" class="ingredient-chip">{{ item }}</span>
+                <div class="ingredient-row" v-if="mealIngredients(meal).length">
+                  <span v-for="item in mealIngredients(meal).slice(0, 5)" :key="item">{{ item }}</span>
                 </div>
-                <div class="dish-actions">
-                  <button class="dish-btn" :disabled="!dish.recipe_id" @click="openRecipe(dish.recipe_id)">看做法</button>
-                  <button class="dish-btn dish-btn--quiet" @click="copyDishIngredients(dish)">复制食材</button>
-                </div>
-              </article>
-            </template>
-            <div v-else class="meal-empty">
-              <strong>{{ mealTypeLabel(meal.type) }}还没有推荐菜</strong>
-              <span>后端返回了餐次，但没有菜品内容。可以重新生成，或先去菜谱库新增菜谱。</span>
-            </div>
+              </template>
+
+              <p v-else class="meal-empty-text">后端暂未返回{{ mealTypeLabel(meal.type) }}菜品，可以重新生成试试。</p>
+            </article>
           </div>
-        </div>
-      </div>
-    </template>
+        </section>
+      </template>
+
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, defineComponent, h, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/index'
 import { useShoppingStore } from '@/stores/shopping'
 import type { ShoppingItem } from '@/api/shopping'
+import kitchenBg from '@/assets/home/kitchen-bg.jpg'
+import smartMealImage from '@/assets/home/couple-dining.jpg'
+
+type MealType = 'breakfast' | 'lunch' | 'dinner' | string
+
+interface WeekDish {
+  recipe_id?: number
+  name?: string
+  type?: string
+  cook_time?: number
+  difficulty?: string
+  ingredients?: string[]
+}
+
+interface WeekMeal {
+  type: MealType
+  reason?: string
+  dishes: WeekDish[]
+  shopping_list: string[]
+}
+
+interface WeekDay {
+  day?: number
+  meals: WeekMeal[]
+}
+
+interface WeekDate {
+  key: string
+  label: string
+  date: string
+}
 
 const router = useRouter()
 const shoppingStore = useShoppingStore()
 const activeDayIdx = ref(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1)
 const loading = ref(false)
 const error = ref('')
-const weekMenuData = ref<any[]>([])
+const weekMenuData = ref<WeekDay[]>([])
 const shoppingSaving = ref(false)
 const shoppingMessage = ref('')
 
-const weekDays = [
-  { label: '一', date: '' },
-  { label: '二', date: '' },
-  { label: '三', date: '' },
-  { label: '四', date: '' },
-  { label: '五', date: '' },
-  { label: '六', date: '' },
-  { label: '日', date: '' },
-]
+const weekDays = ref(buildWeekDays())
 
-;(() => {
-  const now = new Date()
-  const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay()
-  const monday = new Date(now)
-  monday.setDate(now.getDate() - dayOfWeek + 1)
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday)
-    d.setDate(monday.getDate() + i)
-    weekDays[i].date = String(d.getDate())
-  }
-})()
+const pageVars = computed(() => ({
+  '--meal-bg': `url(${kitchenBg})`,
+  '--smart-meal-img': `url(${smartMealImage})`,
+}))
 
-const currentDayMeals = computed(() => {
+const currentDayMeals = computed<WeekMeal[]>(() => {
   const day = weekMenuData.value[activeDayIdx.value]
   if (!day?.meals) return []
   return day.meals
 })
 
-const activeDayName = computed(() => `周${weekDays[activeDayIdx.value]?.label || ''}`)
+const normalizedCurrentMeals = computed<WeekMeal[]>(() => {
+  const map = new Map(currentDayMeals.value.map((meal) => [meal.type, meal]))
+  return ['breakfast', 'lunch', 'dinner'].map((type) => map.get(type) || {
+    type,
+    dishes: [],
+    shopping_list: [],
+  })
+})
+
+const activeDayName = computed(() => `周${weekDays.value[activeDayIdx.value]?.label || ''}`)
 
 const currentDishCount = computed(() => {
-  return currentDayMeals.value.reduce((sum: number, meal: any) => sum + (meal.dishes?.length || 0), 0)
+  return currentDayMeals.value.reduce((sum, meal) => sum + (meal.dishes?.length || 0), 0)
 })
 
 const currentDayIngredients = computed(() => {
   const names = new Set<string>()
-  currentDayMeals.value.forEach((meal: any) => {
-    ;(meal.shopping_list || []).forEach((item: string) => item && names.add(item))
-    ;(meal.dishes || []).forEach((dish: any) => {
-      ;(dish.ingredients || []).forEach((item: string) => item && names.add(item))
+  currentDayMeals.value.forEach((meal) => {
+    ;(meal.shopping_list || []).forEach((item) => item && names.add(item))
+    ;(meal.dishes || []).forEach((dish) => {
+      ;(dish.ingredients || []).forEach((item) => item && names.add(item))
     })
   })
   return Array.from(names)
@@ -185,9 +254,26 @@ const currentDayIngredients = computed(() => {
 
 const isGeneratedButEmpty = computed(() => {
   return weekMenuData.value.length > 0 && weekMenuData.value.every((day) => {
-    return (day.meals || []).every((meal: any) => !meal.dishes?.length)
+    return (day.meals || []).every((meal) => !meal.dishes?.length)
   })
 })
+
+function buildWeekDays(): WeekDate[] {
+  const labels = ['一', '二', '三', '四', '五', '六', '日']
+  const now = new Date()
+  const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay()
+  const monday = new Date(now)
+  monday.setDate(now.getDate() - dayOfWeek + 1)
+  return labels.map((label, index) => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + index)
+    return {
+      key: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`,
+      label,
+      date: String(d.getDate()),
+    }
+  })
+}
 
 function mealTime(type: string) {
   const map: Record<string, string> = { breakfast: '07:30', lunch: '12:00', dinner: '18:30' }
@@ -199,19 +285,24 @@ function mealTypeLabel(type: string) {
   return map[type] || type
 }
 
-function hasNextMeal(idx: number | string) {
-  return Number(idx) < currentDayMeals.value.length - 1
+function mealIngredients(meal: WeekMeal) {
+  const names = new Set<string>()
+  ;(meal.shopping_list || []).forEach((item) => item && names.add(item))
+  ;(meal.dishes || []).forEach((dish) => {
+    ;(dish.ingredients || []).forEach((item) => item && names.add(item))
+  })
+  return Array.from(names)
 }
 
-function normalizeWeekMenu(data: any[]) {
+function normalizeWeekMenu(data: any[]): WeekDay[] {
   const mealTypes = ['breakfast', 'lunch', 'dinner']
   return data.map((day) => ({
     ...day,
     meals: (day.meals || []).map((meal: any, idx: number) => ({
       ...meal,
       type: meal.type || meal.meal_type || mealTypes[idx] || 'lunch',
-      dishes: meal.dishes || [],
-      shopping_list: meal.shopping_list || [],
+      dishes: Array.isArray(meal.dishes) ? meal.dishes : [],
+      shopping_list: Array.isArray(meal.shopping_list) ? meal.shopping_list : [],
     })),
   }))
 }
@@ -222,8 +313,8 @@ function openRecipe(id?: number) {
 }
 
 function inferCategory(name: string) {
-  if (/鸡|鸭|鱼|肉|排骨|虾|蛋|牛|猪/.test(name)) return '肉蛋水产'
-  if (/米|面|粉|饭|面包|馒头/.test(name)) return '主食'
+  if (/鸡|鸭|鱼|虾|肉|牛|猪|蛋|排骨/.test(name)) return '肉蛋水产'
+  if (/米|面|粥|饭|馒头|粉/.test(name)) return '主食'
   if (/盐|糖|酱|醋|油|姜|蒜|葱|胡椒|淀粉/.test(name)) return '调味'
   if (/奶|酸奶|芝士/.test(name)) return '乳品'
   return '蔬果'
@@ -257,20 +348,6 @@ async function createDayShoppingList() {
   }
 }
 
-async function copyDishIngredients(dish: any) {
-  const text = (dish.ingredients || []).join('、')
-  if (!text) {
-    shoppingMessage.value = '这个菜谱暂时没有食材数据。'
-    return
-  }
-  try {
-    await navigator.clipboard?.writeText(text)
-    shoppingMessage.value = `已复制「${dish.name}」食材。`
-  } catch {
-    shoppingMessage.value = text
-  }
-}
-
 async function generateWeekMenu() {
   loading.value = true
   error.value = ''
@@ -297,562 +374,818 @@ async function generateWeekMenu() {
   }
 }
 
+const MealIcon = defineComponent({
+  props: { type: { type: String, required: true } },
+  setup(props) {
+    return () => {
+      if (props.type === 'breakfast') {
+        return h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
+          h('circle', { cx: 12, cy: 12, r: 4 }),
+          h('path', { d: 'M12 2v3M12 19v3M4.9 4.9 7 7M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1' }),
+        ])
+      }
+      if (props.type === 'lunch') {
+        return h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
+          h('path', { d: 'M12 3v3M5.6 5.6 7.8 7.8M3 12h3M18 12h3M16.2 7.8l2.2-2.2' }),
+          h('path', { d: 'M7 17a5 5 0 0 1 10 0' }),
+          h('path', { d: 'M4 17h16M6 20h12' }),
+        ])
+      }
+      return h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
+        h('path', { d: 'M20 15.3A8 8 0 0 1 8.7 4 8.3 8.3 0 1 0 20 15.3Z' }),
+        h('path', { d: 'M18 4v3M19.5 5.5h-3' }),
+      ])
+    }
+  },
+})
+
+const EmptyArt = defineComponent({
+  setup() {
+    return () => h('div', { class: 'empty-art', 'aria-hidden': 'true' }, [
+      h('span', { class: 'sprout' }, [
+        h('svg', { viewBox: '0 0 32 52', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' }, [
+          h('path', { d: 'M16 49V22' }),
+          h('path', { d: 'M16 25C8 16 2 17 1 18c3 8 9 12 15 7Z', fill: 'currentColor', opacity: '.32' }),
+          h('path', { d: 'M16 21C19 10 27 8 31 9c-2 8-8 13-15 12Z', fill: 'currentColor', opacity: '.42' }),
+        ]),
+      ]),
+      h('span', { class: 'book' }, [
+        h('svg', { viewBox: '0 0 24 24', fill: 'currentColor' }, [
+          h('path', { d: 'M20.8 4.6a5.4 5.4 0 0 0-7.6 0L12 5.8l-1.2-1.2a5.4 5.4 0 1 0-7.6 7.6L12 21l8.8-8.8a5.4 5.4 0 0 0 0-7.6Z' }),
+        ]),
+      ]),
+      h('span', { class: 'bowl' }),
+      h('span', { class: 'chopstick' }),
+      h('span', { class: 'spark' }, [
+        h('svg', { viewBox: '0 0 24 24', fill: 'currentColor' }, [
+          h('path', { d: 'M12 2 14 9.5 22 12l-8 2.5L12 22l-2-7.5L2 12l8-2.5L12 2Z' }),
+        ]),
+      ]),
+    ])
+  },
+})
+
 onMounted(() => {})
 </script>
 
 <style scoped>
-/* Hallmark · component: weekly meal planner · genre: warm utility · theme: kitchen ledger */
-.header-center {
-  flex: 1;
-  text-align: center;
-}
-
-/* ── Week Bar ── */
-.week-bar {
-  display: flex;
-  gap: var(--sp-1);
-  margin-bottom: var(--sp-6);
-}
-
-.week-day {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: var(--sp-2) 0;
-  border-radius: var(--r-sm);
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  transition: all var(--dur-base) var(--ease);
+.meal-shell {
+  --text: #2e241f;
+  --sub: #7a6a5f;
+  --muted: #a19489;
+  --cream: rgba(255, 250, 240, 0.76);
+  --coral: #e95645;
+  --orange: #e89a45;
+  --sage: #7ea36a;
+  --border: rgba(255, 255, 255, 0.62);
   position: relative;
-  -webkit-tap-highlight-color: transparent;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: clip;
+  color: var(--text);
+  background:
+    linear-gradient(180deg, rgba(255, 239, 214, 0.5), rgba(231, 171, 105, 0.2)),
+    var(--meal-bg) center top / cover fixed;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
-.week-day.active {
-  background: var(--color-text);
+.meal-warm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 9%, rgba(255, 255, 255, 0.76), transparent 34%),
+    radial-gradient(circle at 84% 30%, rgba(255, 234, 202, 0.2), transparent 34%),
+    linear-gradient(180deg, rgba(255, 243, 226, 0.42), rgba(150, 82, 30, 0.08));
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
-.week-day:active { transform: scale(0.95); }
-
-.week-day-label {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--color-text-3);
+.meal-phone {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 430px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: max(49px, env(safe-area-inset-top)) 22px calc(var(--tab-h, 82px) + 74px);
 }
 
-.week-day.active .week-day-label {
-  color: rgba(255, 255, 255, 0.6);
+.meal-topbar {
+  height: 56px;
+  display: grid;
+  grid-template-columns: 56px 1fr 56px;
+  align-items: center;
+  gap: 10px;
 }
 
-.week-day-num {
-  font-size: var(--text-md);
-  font-weight: 700;
-  color: var(--color-text);
-  line-height: 1.2;
+.meal-topbar h1 {
+  margin: 0;
+  color: #2f211b;
+  font-size: 25px;
+  font-weight: 950;
+  line-height: 1.1;
+  text-align: center;
+  letter-spacing: 0;
 }
 
-.week-day.active .week-day-num {
-  color: var(--color-text-inv);
+.nav-btn {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  border-radius: 16px;
+  color: #261c18;
+  background: rgba(255, 250, 240, 0.92);
+  box-shadow: 0 12px 26px rgba(80, 50, 30, 0.14);
+  cursor: pointer;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
 }
 
-.btn-ghost:disabled {
-  opacity: 0.45;
+.nav-btn:disabled {
+  opacity: 0.72;
   cursor: wait;
 }
 
-.week-day-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--color-accent);
-  position: absolute;
-  bottom: 4px;
+.nav-btn svg {
+  width: 28px;
+  height: 28px;
+  stroke-width: 2.4;
 }
 
-.planner-hero {
+.week-strip {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--sp-4);
-  align-items: end;
-  padding: var(--sp-5);
-  margin-bottom: var(--sp-5);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-lg);
-  background:
-    linear-gradient(135deg, var(--color-broth-soft), var(--color-surface) 58%),
-    var(--color-surface);
-  box-shadow: var(--shadow-sm);
-}
-
-.hero-kicker {
-  margin-bottom: var(--sp-1);
-  color: var(--color-tomato);
-  font-size: var(--text-xs);
-  font-weight: 800;
-}
-
-.hero-title {
-  color: var(--color-text);
-  font-family: var(--font-display);
-  font-size: var(--text-2xl);
-  font-weight: 750;
-  line-height: 1.12;
-}
-
-.hero-copy {
-  max-width: 24em;
-  margin-top: var(--sp-2);
-  color: var(--color-text-2);
-  font-size: var(--text-sm);
-  line-height: 1.65;
-}
-
-.hero-stats {
-  display: grid;
-  grid-template-columns: repeat(2, 64px);
-  overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  background: color-mix(in srgb, var(--color-surface) 78%, transparent);
-}
-
-.hero-stats div {
-  display: flex;
-  flex-direction: column;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   align-items: center;
-  justify-content: center;
-  min-height: 64px;
+  gap: 8px;
+  margin-top: 24px;
 }
 
-.hero-stats div + div {
-  border-left: 1px solid var(--color-border);
+.day {
+  position: relative;
+  min-width: 0;
+  height: 74px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 18px;
+  color: #2e241f;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 180ms ease, background 180ms ease, color 180ms ease, box-shadow 180ms ease;
 }
 
-.hero-stats strong {
-  color: var(--color-text);
-  font-family: var(--font-display);
-  font-size: var(--text-xl);
+.day small {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  color: rgba(46, 36, 31, 0.64);
+}
+
+.day strong {
+  font-size: 24px;
+  font-weight: 950;
   line-height: 1;
 }
 
-.hero-stats span {
-  margin-top: 3px;
-  color: var(--color-text-3);
-  font-size: var(--text-2xs);
-  font-weight: 700;
+.day.active {
+  color: #fff;
+  background: linear-gradient(135deg, #f26356, #e93f35);
+  box-shadow: 0 16px 28px rgba(233, 86, 69, 0.28);
 }
 
-.day-tools {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-3);
-  padding: var(--sp-4);
-  margin-bottom: var(--sp-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  background: var(--color-surface);
+.day.active small {
+  color: #fff;
 }
 
-.tool-copy {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.day-dot {
+  position: absolute;
+  bottom: 7px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.8;
 }
 
-.tool-copy span {
-  color: var(--color-text-3);
-  font-size: var(--text-xs);
-  font-weight: 700;
-}
-
-.tool-copy strong {
+.glass-card {
+  position: relative;
   overflow: hidden;
-  color: var(--color-text);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  text-overflow: ellipsis;
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  background: var(--cream);
+  box-shadow: 0 18px 40px rgba(80, 50, 30, 0.16);
+  backdrop-filter: blur(20px) saturate(1.08);
+  -webkit-backdrop-filter: blur(20px) saturate(1.08);
+}
+
+.smart-card {
+  min-height: 248px;
+  margin-top: 33px;
+  padding: 29px 22px 23px;
+}
+
+.smart-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    radial-gradient(circle at 12% 44%, rgba(255, 255, 255, 0.76), transparent 42%),
+    linear-gradient(90deg, rgba(255, 250, 240, 0.98) 0%, rgba(255, 250, 240, 0.95) 42%, rgba(255, 250, 240, 0.7) 62%, rgba(255, 250, 240, 0.2) 100%);
+}
+
+.smart-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--smart-meal-img) 28% center / cover no-repeat;
+  opacity: 0.72;
+}
+
+.smart-content {
+  position: relative;
+  z-index: 2;
+  max-width: 62%;
+}
+
+.smart-badge {
+  width: max-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 31px;
+  padding: 0 13px;
+  border-radius: 999px;
+  color: var(--coral);
+  background: rgba(255, 255, 255, 0.56);
+  font-size: 14px;
+  font-weight: 850;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
+}
+
+.smart-badge svg {
+  width: 17px;
+  height: 17px;
+  fill: rgba(233, 86, 69, 0.16);
+  stroke-width: 2.2;
+}
+
+.smart-card h2 {
+  margin: 27px 0 17px;
+  color: #30221d;
+  font-size: clamp(35px, 9vw, 43px);
+  font-weight: 950;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+.smart-card p {
+  margin: 0;
+  color: #806c5f;
+  font-size: 16px;
+  font-weight: 560;
+  line-height: 1.72;
+}
+
+.leaf-mark {
+  position: absolute;
+  left: 53%;
+  top: 48%;
+  z-index: 2;
+  width: 38px;
+  height: 28px;
+  color: rgba(126, 163, 106, 0.36);
+  transform: rotate(-14deg);
+}
+
+.stat-pill {
+  position: relative;
+  z-index: 2;
+  width: min(100%, 210px);
+  height: 62px;
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  align-items: center;
+  margin-top: 28px;
+  border-radius: 21px;
+  background: rgba(255, 250, 240, 0.74);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.stat-pill i {
+  width: 1px;
+  height: 34px;
+  background: rgba(142, 111, 91, 0.18);
+}
+
+.stat {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  align-items: center;
+  gap: 9px;
+  padding: 0 15px;
+  color: #6f5e54;
+}
+
+.stat svg {
+  width: 34px;
+  height: 34px;
+  stroke-width: 1.9;
+}
+
+.dish-icon {
+  color: var(--coral);
+}
+
+.basket-icon {
+  color: var(--sage);
+}
+
+.stat strong {
+  display: block;
+  color: #2e241f;
+  font-size: 22px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.stat span {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 760;
   white-space: nowrap;
 }
 
-.tool-btn,
-.dish-btn,
-.retry-btn {
-  transition:
-    transform var(--dur-fast) var(--ease),
-    background var(--dur-base) var(--ease),
-    border-color var(--dur-base) var(--ease),
-    color var(--dur-base) var(--ease);
+.state-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 295px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  margin-top: 24px;
+  padding: 28px 24px;
+  text-align: center;
 }
 
-.tool-btn {
-  min-height: 38px;
-  flex-shrink: 0;
-  padding: 0 var(--sp-4);
+.empty-art {
+  position: relative;
+  z-index: 1;
+  width: 138px;
+  height: 96px;
+  margin: 0 0 18px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.empty-art :deep(*) {
+  box-sizing: border-box;
+}
+
+.empty-art :deep(svg) {
+  display: block;
+}
+
+.empty-art :deep(.book) {
+  position: absolute;
+  left: 28px;
+  top: 14px;
+  width: 58px;
+  height: 62px;
+  border: 2px solid rgba(188, 128, 78, 0.52);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ffe7c8, #fff9ef);
+  box-shadow: 0 8px 15px rgba(120, 73, 32, 0.12);
+  transform: rotate(-6deg);
+}
+
+.empty-art :deep(.book)::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 0;
+  bottom: 0;
+  border-left: 2px solid rgba(155, 103, 67, 0.28);
+}
+
+.empty-art :deep(.book svg) {
+  position: absolute;
+  right: 11px;
+  top: 17px;
+  width: 21px;
+  height: 21px;
+  color: #ef8061;
+}
+
+.empty-art :deep(.bowl) {
+  position: absolute;
+  right: 18px;
+  top: 34px;
+  width: 61px;
+  height: 36px;
+  border-radius: 10px 10px 28px 28px;
+  background: linear-gradient(180deg, #fffdf7, #f6d39d);
+  box-shadow: inset 0 -8px 0 rgba(198, 124, 56, 0.15), 0 10px 15px rgba(124, 74, 35, 0.14);
+}
+
+.empty-art :deep(.bowl)::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: -6px;
+  height: 16px;
+  border: 2px solid rgba(191, 138, 87, 0.22);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 46%, #8fb170 0 3px, transparent 4px), #fff8e9;
+}
+
+.empty-art :deep(.chopstick) {
+  position: absolute;
+  right: 9px;
+  top: 21px;
+  width: 62px;
+  height: 3px;
+  border-radius: 999px;
+  background: #c98e4d;
+  transform: rotate(-38deg);
+}
+
+.empty-art :deep(.sprout) {
+  position: absolute;
+  left: 5px;
+  bottom: 10px;
+  width: 31px;
+  height: 48px;
+  color: #80a65d;
+}
+
+.empty-art :deep(.sprout svg),
+.empty-art :deep(.spark svg) {
+  width: 100%;
+  height: 100%;
+}
+
+.empty-art :deep(.spark) {
+  position: absolute;
+  right: 2px;
+  top: 10px;
+  width: 18px;
+  height: 18px;
+  color: #e8a657;
+}
+
+.state-card h2 {
+  position: relative;
+  z-index: 2;
+  margin: 0 0 13px;
+  color: #30221d;
+  font-size: 30px;
+  font-weight: 950;
+  line-height: 1.16;
+}
+
+.state-card p {
+  position: relative;
+  z-index: 2;
+  max-width: 304px;
+  margin: 0;
+  color: #806d62;
+  font-size: 16px;
+  font-weight: 560;
+  line-height: 1.72;
+}
+
+.primary-btn {
+  position: relative;
+  z-index: 2;
+  height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  margin-top: 24px;
+  padding: 0 35px;
   border: 0;
-  border-radius: var(--r-sm);
-  background: var(--color-text);
-  color: var(--color-text-inv);
-  font-size: var(--text-xs);
-  font-weight: 800;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(135deg, #ef6153, #e94c3c);
+  box-shadow: 0 12px 24px rgba(233, 86, 69, 0.25);
+  font-size: 19px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.primary-btn svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.4;
+}
+
+.generated-card {
+  margin-top: 24px;
+  padding: 18px 16px 19px;
+}
+
+.generated-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.generated-head span {
+  color: var(--coral);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.generated-head h2 {
+  margin: 0;
+  color: #2f211b;
+  font-size: 22px;
+  font-weight: 950;
+  line-height: 1.2;
+}
+
+.shopping-btn {
+  min-height: 40px;
+  flex: 0 0 auto;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(135deg, #ef6153, #e94c3c);
+  font-size: 13px;
+  font-weight: 850;
   cursor: pointer;
 }
 
-.tool-btn:hover {
-  background: var(--color-text-2);
-}
-
-.tool-btn:active,
-.dish-btn:active,
-.retry-btn:active {
-  transform: translateY(1px);
-}
-
-.tool-btn:disabled {
-  opacity: 0.45;
+.shopping-btn:disabled {
+  opacity: 0.52;
   cursor: not-allowed;
 }
 
-.inline-message {
-  margin: 0 0 var(--sp-4);
-  padding: var(--sp-3) var(--sp-4);
-  border: 1px solid var(--color-accent-soft);
-  border-radius: var(--r-sm);
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
-  font-size: var(--text-xs);
-  font-weight: 700;
+.inline-message,
+.data-note {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.56);
+  color: #8a5b3d;
+  font-size: 13px;
+  font-weight: 760;
+  line-height: 1.5;
 }
 
 .data-note {
-  margin-bottom: var(--sp-4);
-  padding: var(--sp-4);
-  border: 1px solid var(--color-warning-soft);
-  border-radius: var(--r-md);
-  background: var(--color-warning-soft);
-  color: var(--color-text-2);
-  font-size: var(--text-sm);
-  line-height: 1.6;
+  color: #9a5c24;
+  background: rgba(255, 236, 195, 0.62);
 }
 
-/* ── Empty ── */
-.empty-state {
-  text-align: center;
-  padding: var(--sp-12) 0;
-  color: var(--color-text-3);
-  font-size: var(--text-sm);
-}
-
-.empty-text {
-  color: var(--color-text-3);
-  line-height: 1.6;
-}
-
-.empty-title {
-  margin-bottom: var(--sp-2);
-  color: var(--color-text);
-  font-size: var(--text-md);
-  font-weight: 750;
-}
-
-.empty-panel {
-  padding: var(--sp-10) var(--sp-5);
-  border: 1px dashed var(--color-border-med);
-  border-radius: var(--r-lg);
-  background: var(--color-surface);
-}
-
-.retry-btn {
-  margin-top: var(--sp-4);
-  min-height: 40px;
-  padding: 0 var(--sp-5);
-  border: 0;
-  border-radius: var(--r-full);
-  background: var(--color-text);
-  color: var(--color-text-inv);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.loading-spinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid var(--color-surface-3);
-  border-top-color: var(--color-text-3);
-  border-radius: 50%;
-  margin: 0 auto var(--sp-3);
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* ── Timeline ── */
-.timeline {
-  padding-bottom: var(--sp-8);
-}
-
-.tl-item {
-  display: flex;
-  gap: var(--sp-4);
-}
-
-.tl-left {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 40px;
-  flex-shrink: 0;
-}
-
-.tl-time {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-text-3);
-  white-space: nowrap;
-}
-
-.tl-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin: var(--sp-2) 0;
-}
-
-.tl-dot.breakfast { background: var(--color-accent); }
-.tl-dot.lunch { background: var(--color-text); }
-.tl-dot.dinner { background: var(--color-text-2); }
-
-.tl-line {
-  width: 1.5px;
-  flex: 1;
-  background: var(--color-border);
-  min-height: 16px;
-}
-
-.tl-content {
-  flex: 1;
-  padding: 0 0 var(--sp-6);
-  min-width: 0;
-}
-
-.meal-head {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  margin-bottom: var(--sp-2);
-}
-
-.tl-type {
-  font-size: 11px;
-  font-weight: 600;
-  display: inline-block;
-  flex-shrink: 0;
-}
-
-.tl-type.breakfast { color: var(--color-accent); }
-.tl-type.lunch { color: var(--color-text); }
-.tl-type.dinner { color: var(--color-text-2); }
-
-.meal-reason {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--color-text-3);
-  font-size: var(--text-2xs);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tl-dish {
-  padding: var(--sp-4);
-  margin-bottom: var(--sp-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
-}
-
-.tl-dish:last-child {
-  margin-bottom: 0;
-}
-
-.dish-main {
+.meal-plan-list {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
-  gap: var(--sp-3);
-  align-items: center;
+  gap: 12px;
 }
 
-.dish-mark {
-  width: 44px;
-  height: 44px;
+.plan-meal-card {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.54);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.48);
+  box-shadow: 0 10px 22px rgba(80, 50, 30, 0.08);
+}
+
+.plan-meal-card header {
+  min-height: 52px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-radius: var(--r-sm);
-  background: var(--color-surface-2);
-  color: var(--color-text-2);
-  font-size: var(--text-2xs);
+  gap: 10px;
+  padding: 10px 12px;
+  color: #3b2a22;
+}
+
+.meal-icon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  color: #f3a12f;
+}
+
+.meal-icon svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.1;
+}
+
+.meal-icon.dinner {
+  color: #d48b3d;
+}
+
+.plan-meal-card strong {
+  display: block;
+  color: #3b2a22;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.plan-meal-card small {
+  color: #8a7a70;
+  font-size: 12px;
   font-weight: 800;
 }
 
-.dish-mark.breakfast {
-  background: var(--color-broth-soft);
-  color: var(--color-tomato);
+.dish-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  border-top: 1px solid rgba(141, 112, 92, 0.12);
 }
 
-.dish-mark.lunch {
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
+.dish-row h3 {
+  margin: 0;
+  color: #372720;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.2;
 }
 
-.dish-mark.dinner {
-  background: var(--color-water-soft);
-  color: var(--color-water);
+.dish-row p {
+  margin: 5px 0 0;
+  color: #7a6659;
+  font-size: 13px;
+  font-weight: 700;
 }
 
-.dish-body {
-  min-width: 0;
+.dish-row button {
+  min-width: 54px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--coral);
+  background: rgba(255, 246, 238, 0.82);
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
 }
 
-.tl-dish-name {
-  font-family: var(--font-display);
-  font-size: var(--text-md);
-  font-weight: 650;
-  color: var(--color-text);
-  line-height: 1.3;
-  overflow-wrap: anywhere;
-}
-
-.tl-dish-meta {
-  font-size: var(--text-xs);
-  color: var(--color-text-3);
-  margin-top: 2px;
+.dish-row button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .ingredient-row {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--sp-2);
-  margin-top: var(--sp-3);
+  gap: 6px;
+  padding: 0 12px 12px;
 }
 
-.ingredient-chip {
-  max-width: 100%;
-  padding: 5px 9px;
-  border-radius: var(--r-full);
-  background: var(--color-surface-2);
-  color: var(--color-text-2);
-  font-size: var(--text-2xs);
-  font-weight: 700;
-}
-
-.dish-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--sp-2);
-  margin-top: var(--sp-3);
-}
-
-.dish-btn {
-  min-height: 36px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-sm);
-  background: var(--color-text);
-  color: var(--color-text-inv);
-  font-size: var(--text-xs);
+.ingredient-row span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #6d7653;
+  background: rgba(226, 235, 203, 0.72);
+  font-size: 12px;
   font-weight: 800;
-  cursor: pointer;
 }
 
-.dish-btn:hover {
-  background: var(--color-text-2);
-}
-
-.dish-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.dish-btn--quiet {
-  background: var(--color-surface);
-  color: var(--color-text-2);
-}
-
-.dish-btn--quiet:hover {
-  border-color: var(--color-border-med);
-  background: var(--color-surface-2);
-}
-
-.meal-empty {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-1);
-  padding: var(--sp-4);
-  border: 1px dashed var(--color-border-med);
-  border-radius: var(--r-md);
-  background: var(--color-surface);
-}
-
-.meal-empty strong {
-  color: var(--color-text);
-  font-size: var(--text-sm);
-}
-
-.meal-empty span {
-  color: var(--color-text-3);
-  font-size: var(--text-xs);
+.meal-empty-text {
+  margin: 0;
+  padding: 0 12px 14px 50px;
+  color: #86746a;
+  font-size: 13px;
   line-height: 1.55;
 }
 
-/* ── Responsive ── */
-@media (min-width: 768px) {
-  .page {
-    max-width: 640px;
+.loading-spinner,
+.mini-spinner {
+  border-radius: 50%;
+  animation: spin 0.72s linear infinite;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 16px;
+  border: 3px solid rgba(233, 86, 69, 0.18);
+  border-top-color: var(--coral);
+}
+
+.mini-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(46, 36, 31, 0.12);
+  border-top-color: #2e241f;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
-@media (min-width: 1024px) {
-  .page {
-    max-width: 800px;
+.nav-btn:active,
+.day:active,
+.glass-card:active,
+.primary-btn:active,
+.shopping-btn:active,
+.dish-row button:active {
+  transform: scale(0.98);
+}
+
+@media (hover: hover) {
+  .nav-btn:hover,
+  .day:hover,
+  .primary-btn:hover,
+  .shopping-btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .primary-btn:hover {
+    box-shadow: 0 15px 28px rgba(233, 86, 69, 0.28);
   }
 }
 
-@media (max-width: 420px) {
-  .planner-hero {
-    grid-template-columns: 1fr;
-    align-items: stretch;
+@media (max-width: 380px) {
+  .meal-phone {
+    padding-left: 18px;
+    padding-right: 18px;
   }
 
-  .hero-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .week-strip {
+    gap: 5px;
   }
 
-  .day-tools {
-    align-items: stretch;
-    flex-direction: column;
+  .day strong {
+    font-size: 22px;
   }
 
-  .tool-btn {
-    width: 100%;
+  .smart-card {
+    padding-left: 20px;
+    padding-right: 20px;
   }
 
-  .tl-item {
-    gap: var(--sp-3);
+  .smart-content {
+    max-width: 66%;
   }
 
-  .tl-left {
-    width: 34px;
+  .smart-card h2 {
+    font-size: 34px;
   }
 
-  .dish-actions {
-    grid-template-columns: 1fr;
+  .stat-pill {
+    width: 198px;
+  }
+
+}
+
+@media (max-width: 350px) {
+  .smart-content {
+    max-width: 74%;
+  }
+
+  .smart-card::before {
+    background:
+      radial-gradient(circle at 12% 44%, rgba(255, 255, 255, 0.78), transparent 42%),
+      linear-gradient(90deg, rgba(255, 250, 240, 0.98), rgba(255, 250, 240, 0.76));
+  }
+
+  .smart-card::after {
+    opacity: 0.42;
+  }
+}
+
+@media (min-width: 431px) {
+  .meal-shell {
+    background-color: #ead7bd;
+  }
+
+  .meal-phone {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }
 </style>

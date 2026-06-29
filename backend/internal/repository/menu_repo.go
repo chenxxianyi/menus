@@ -17,6 +17,12 @@ func (r *MenuRepo) Create(menu *model.Menu) error {
 	return r.db.Create(menu).Error
 }
 
+func (r *MenuRepo) CountByUserID(userID uint) int64 {
+	var count int64
+	r.db.Model(&model.Menu{}).Where("user_id = ?", userID).Count(&count)
+	return count
+}
+
 func (r *MenuRepo) FindByUserID(userID uint, page, pageSize int) ([]model.Menu, int64, error) {
 	var menus []model.Menu
 	var total int64

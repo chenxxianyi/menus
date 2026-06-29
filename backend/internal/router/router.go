@@ -6,8 +6,8 @@ import (
 	"gorm.io/gorm"
 
 	"menu-recommend/config"
-	v1 "menu-recommend/internal/api/v1"
 	"menu-recommend/internal/api/admin"
+	v1 "menu-recommend/internal/api/v1"
 	"menu-recommend/internal/middleware"
 	"menu-recommend/internal/repository"
 	"menu-recommend/internal/service"
@@ -29,7 +29,7 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 	bannerRepo := repository.NewBannerRepo(db)
 	feedbackRepo := repository.NewFeedbackRepo(db)
 	ingredientRepo := repository.NewIngredientRepo(db)
-	_ = repository.NewMenuRepo(db)
+	menuRepo := repository.NewMenuRepo(db)
 	coupleRepo := repository.NewCoupleRepo(db)
 
 	// Services
@@ -47,6 +47,7 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 	// Handlers - v1
 	authHandler := v1.NewAuthHandler(authService)
 	userHandler := v1.NewUserHandler(userService)
+	userStatsHandler := v1.NewUserStatsHandler(favRepo, menuRepo, shoppingRepo)
 	homeHandler := v1.NewHomeHandler(recipeService, bannerService, categoryService)
 	recipeHandler := v1.NewRecipeHandler(recipeService)
 	categoryHandler := v1.NewCategoryHandler(categoryService)
@@ -84,6 +85,7 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 		auth.Use(middleware.AuthMiddleware(authService))
 		{
 			auth.GET("/user/info", userHandler.GetInfo)
+			auth.GET("/user/stats", userStatsHandler.Get)
 			auth.PUT("/user/profile", userHandler.UpdateProfile)
 			auth.GET("/user/preferences", userHandler.GetPreferences)
 			auth.PUT("/user/preferences", userHandler.UpdatePreferences)

@@ -1,0 +1,901 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>一周菜单 - Daily Kitchen H5 Demo</title>
+  <style>
+    :root {
+      --text: #2e241f;
+      --sub: #7a6a5f;
+      --muted: #a19489;
+      --cream: rgba(255, 250, 240, 0.76);
+      --cream-strong: rgba(255, 252, 246, 0.9);
+      --coral: #e95645;
+      --coral-2: #ef5548;
+      --orange: #e89a45;
+      --sage: #7ea36a;
+      --border: rgba(255, 255, 255, 0.62);
+      --shadow: 0 18px 40px rgba(80, 50, 30, 0.16);
+      --font: system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-height: 100%;
+      background: #f0d2ae;
+    }
+
+    body {
+      min-height: 100%;
+      margin: 0;
+      color: var(--text);
+      font-family: var(--font);
+      background:
+        linear-gradient(180deg, rgba(255, 239, 214, 0.5), rgba(231, 171, 105, 0.2)),
+        url("../web-user/src/assets/home/kitchen-bg.jpg") center top / cover fixed;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 9%, rgba(255, 255, 255, 0.76), transparent 34%),
+        radial-gradient(circle at 84% 30%, rgba(255, 234, 202, 0.2), transparent 34%),
+        linear-gradient(180deg, rgba(255, 243, 226, 0.42), rgba(150, 82, 30, 0.08));
+      backdrop-filter: blur(4px);
+    }
+
+    button {
+      font: inherit;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      width: min(100%, 430px);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 49px 22px 124px;
+    }
+
+    .topbar {
+      height: 56px;
+      display: grid;
+      grid-template-columns: 56px 1fr 56px;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-btn {
+      width: 52px;
+      height: 52px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.74);
+      border-radius: 16px;
+      color: #261c18;
+      background: rgba(255, 250, 240, 0.92);
+      box-shadow: 0 12px 26px rgba(80, 50, 30, 0.14);
+      backdrop-filter: blur(16px);
+      transition: transform 180ms ease, box-shadow 180ms ease;
+    }
+
+    .nav-btn svg {
+      width: 28px;
+      height: 28px;
+      stroke-width: 2.4;
+    }
+
+    .page-title {
+      margin: 0;
+      color: #2f211b;
+      font-size: 25px;
+      font-weight: 950;
+      line-height: 1.1;
+      text-align: center;
+      letter-spacing: 0;
+    }
+
+    .week-strip {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      align-items: center;
+      gap: 8px;
+      margin-top: 24px;
+    }
+
+    .day {
+      min-width: 0;
+      height: 74px;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 7px;
+      border: 0;
+      border-radius: 18px;
+      color: #2e241f;
+      background: transparent;
+      transition: transform 180ms ease, background 180ms ease, color 180ms ease, box-shadow 180ms ease;
+    }
+
+    .day small {
+      font-size: 15px;
+      font-weight: 800;
+      line-height: 1;
+      color: rgba(46, 36, 31, 0.64);
+    }
+
+    .day strong {
+      font-size: 24px;
+      font-weight: 950;
+      line-height: 1;
+    }
+
+    .day.active {
+      color: #fff;
+      background: linear-gradient(135deg, #f26356, #e93f35);
+      box-shadow: 0 16px 28px rgba(233, 86, 69, 0.28);
+    }
+
+    .day.active small {
+      color: #fff;
+    }
+
+    .glass-card {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      background: var(--cream);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(20px) saturate(1.08);
+      -webkit-backdrop-filter: blur(20px) saturate(1.08);
+    }
+
+    .smart-card {
+      min-height: 248px;
+      margin-top: 33px;
+      padding: 29px 22px 23px;
+    }
+
+    .smart-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background:
+        radial-gradient(circle at 12% 44%, rgba(255, 255, 255, 0.76), transparent 42%),
+        linear-gradient(90deg, rgba(255, 250, 240, 0.98) 0%, rgba(255, 250, 240, 0.95) 42%, rgba(255, 250, 240, 0.7) 62%, rgba(255, 250, 240, 0.2) 100%);
+    }
+
+    .smart-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background: url("https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=900&q=88") 28% center / cover no-repeat;
+      opacity: 0.72;
+    }
+
+    .smart-content {
+      position: relative;
+      z-index: 2;
+      max-width: 62%;
+    }
+
+    .badge {
+      width: max-content;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      height: 31px;
+      padding: 0 13px;
+      border-radius: 999px;
+      color: var(--coral);
+      background: rgba(255, 255, 255, 0.56);
+      font-size: 14px;
+      font-weight: 850;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
+    }
+
+    .badge svg {
+      width: 17px;
+      height: 17px;
+      fill: rgba(233, 86, 69, 0.16);
+      stroke-width: 2.2;
+    }
+
+    .smart-card h2 {
+      margin: 27px 0 17px;
+      color: #30221d;
+      font-size: clamp(35px, 9vw, 43px);
+      font-weight: 950;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    .smart-card p {
+      margin: 0;
+      color: #806c5f;
+      font-size: 16px;
+      font-weight: 560;
+      line-height: 1.72;
+    }
+
+    .leaf-mark {
+      position: absolute;
+      left: 53%;
+      top: 48%;
+      z-index: 2;
+      width: 38px;
+      height: 28px;
+      color: rgba(126, 163, 106, 0.36);
+      transform: rotate(-14deg);
+    }
+
+    .stat-pill {
+      position: relative;
+      z-index: 2;
+      width: min(100%, 210px);
+      height: 62px;
+      display: grid;
+      grid-template-columns: 1fr 1px 1fr;
+      align-items: center;
+      margin-top: 28px;
+      border-radius: 21px;
+      background: rgba(255, 250, 240, 0.74);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+    }
+
+    .stat-pill i {
+      width: 1px;
+      height: 34px;
+      background: rgba(142, 111, 91, 0.18);
+    }
+
+    .stat {
+      display: grid;
+      grid-template-columns: 38px 1fr;
+      align-items: center;
+      gap: 9px;
+      padding: 0 15px;
+      color: #6f5e54;
+    }
+
+    .stat svg {
+      width: 34px;
+      height: 34px;
+      stroke-width: 1.9;
+    }
+
+    .stat .dish {
+      color: var(--coral);
+    }
+
+    .stat .basket {
+      color: var(--sage);
+    }
+
+    .stat strong {
+      display: block;
+      color: #2e241f;
+      font-size: 22px;
+      font-weight: 950;
+      line-height: 1;
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 4px;
+      font-size: 14px;
+      font-weight: 760;
+      white-space: nowrap;
+    }
+
+    .empty-card {
+      position: relative;
+      isolation: isolate;
+      overflow: hidden;
+      min-height: 295px;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      margin-top: 24px;
+      padding: 28px 24px;
+      text-align: center;
+    }
+
+    .empty-art {
+      position: relative;
+      z-index: 1;
+      width: 138px;
+      height: 96px;
+      margin: 0 0 18px;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .empty-art * {
+      box-sizing: border-box;
+    }
+
+    .empty-art svg {
+      display: block;
+    }
+
+    .book {
+      position: absolute;
+      left: 28px;
+      top: 14px;
+      width: 58px;
+      height: 62px;
+      border: 2px solid rgba(188, 128, 78, 0.52);
+      border-radius: 8px;
+      background: linear-gradient(135deg, #ffe7c8, #fff9ef);
+      box-shadow: 0 8px 15px rgba(120, 73, 32, 0.12);
+      transform: rotate(-6deg);
+    }
+
+    .book::before {
+      content: "";
+      position: absolute;
+      left: 7px;
+      top: 0;
+      bottom: 0;
+      border-left: 2px solid rgba(155, 103, 67, 0.28);
+    }
+
+    .book svg {
+      position: absolute;
+      right: 11px;
+      top: 17px;
+      width: 21px;
+      height: 21px;
+      color: #ef8061;
+      fill: rgba(239, 128, 97, 0.18);
+    }
+
+    .bowl {
+      position: absolute;
+      right: 18px;
+      top: 34px;
+      width: 61px;
+      height: 36px;
+      border-radius: 10px 10px 28px 28px;
+      background: linear-gradient(180deg, #fffdf7, #f6d39d);
+      box-shadow: inset 0 -8px 0 rgba(198, 124, 56, 0.15), 0 10px 15px rgba(124, 74, 35, 0.14);
+    }
+
+    .bowl::before {
+      content: "";
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      top: -6px;
+      height: 16px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 46%, #8fb170 0 3px, transparent 4px), #fff8e9;
+      border: 2px solid rgba(191, 138, 87, 0.22);
+    }
+
+    .chopstick {
+      position: absolute;
+      right: 9px;
+      top: 21px;
+      width: 62px;
+      height: 3px;
+      border-radius: 999px;
+      background: #c98e4d;
+      transform: rotate(-38deg);
+    }
+
+    .sprout {
+      position: absolute;
+      left: 5px;
+      bottom: 10px;
+      width: 31px;
+      height: 48px;
+      color: #80a65d;
+    }
+
+    .spark {
+      position: absolute;
+      right: 2px;
+      top: 10px;
+      width: 18px;
+      height: 18px;
+      color: #e8a657;
+    }
+
+    .sprout svg,
+    .spark svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .empty-card h2 {
+      position: relative;
+      z-index: 2;
+      margin: 0 0 13px;
+      color: #30221d;
+      font-size: 30px;
+      font-weight: 950;
+      line-height: 1.16;
+    }
+
+    .empty-card p {
+      position: relative;
+      z-index: 2;
+      max-width: 304px;
+      margin: 0;
+      color: #806d62;
+      font-size: 16px;
+      font-weight: 560;
+      line-height: 1.72;
+    }
+
+    .primary-btn {
+      position: relative;
+      z-index: 2;
+      height: 56px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 11px;
+      margin-top: 24px;
+      padding: 0 35px;
+      border: 0;
+      border-radius: 999px;
+      color: #fff;
+      background: linear-gradient(135deg, #ef6153, #e94c3c);
+      box-shadow: 0 12px 24px rgba(233, 86, 69, 0.25);
+      font-size: 19px;
+      font-weight: 900;
+      transition: transform 180ms ease, box-shadow 180ms ease;
+    }
+
+    .primary-btn svg {
+      width: 22px;
+      height: 22px;
+      stroke-width: 2.4;
+    }
+
+    .examples {
+      margin-top: 24px;
+      padding: 18px 16px 19px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 15px;
+      color: #2f211b;
+      font-size: 22px;
+      font-weight: 950;
+      line-height: 1.2;
+    }
+
+    .section-title svg {
+      width: 20px;
+      height: 20px;
+      color: var(--sage);
+      fill: rgba(126, 163, 106, 0.14);
+    }
+
+    .meal-scroll {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(128px, 1fr));
+      gap: 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .meal-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .meal-card {
+      min-width: 128px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.54);
+      border-radius: 19px;
+      background: rgba(255, 255, 255, 0.48);
+      box-shadow: 0 10px 22px rgba(80, 50, 30, 0.08);
+    }
+
+    .meal-card header {
+      height: 43px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 11px;
+      color: #3b2a22;
+      font-size: 17px;
+      font-weight: 900;
+    }
+
+    .meal-card header svg {
+      width: 21px;
+      height: 21px;
+      color: #f3a12f;
+      stroke-width: 2.1;
+    }
+
+    .meal-card img {
+      width: 100%;
+      height: 76px;
+      display: block;
+      object-fit: cover;
+    }
+
+    .meal-copy {
+      padding: 10px 9px 12px;
+    }
+
+    .meal-copy h3 {
+      margin: 0;
+      color: #372720;
+      font-size: 15px;
+      font-weight: 900;
+      line-height: 1.18;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .meal-copy p {
+      margin: 8px 0 0;
+      color: #7a6659;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.3;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tabbar {
+      position: fixed;
+      left: 50%;
+      bottom: max(16px, env(safe-area-inset-bottom));
+      z-index: 20;
+      width: min(calc(100% - 50px), 376px);
+      height: 78px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      align-items: center;
+      padding: 8px 13px;
+      border: 1px solid rgba(255, 255, 255, 0.74);
+      border-radius: 999px;
+      background: rgba(255, 250, 240, 0.88);
+      box-shadow:
+        0 18px 40px rgba(80, 50, 30, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(22px) saturate(1.12);
+      -webkit-backdrop-filter: blur(22px) saturate(1.12);
+      transform: translateX(-50%);
+    }
+
+    .tab {
+      height: 62px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      border: 0;
+      border-radius: 999px;
+      color: #8b7d70;
+      background: transparent;
+      font-size: 13px;
+      font-weight: 800;
+      transition: color 180ms ease, transform 180ms ease;
+    }
+
+    .tab svg {
+      width: 25px;
+      height: 25px;
+      stroke-width: 2.2;
+    }
+
+    .tab.active {
+      color: var(--coral);
+    }
+
+    .nav-btn:active,
+    .day:active,
+    .glass-card:active,
+    .primary-btn:active,
+    .tab:active {
+      transform: scale(0.98);
+    }
+
+    @media (hover: hover) {
+      .nav-btn:hover,
+      .day:hover,
+      .primary-btn:hover,
+      .tab:hover {
+        transform: translateY(-1px);
+      }
+
+      .primary-btn:hover {
+        box-shadow: 0 15px 28px rgba(233, 86, 69, 0.28);
+      }
+    }
+
+    @media (max-width: 380px) {
+      .app {
+        padding-left: 18px;
+        padding-right: 18px;
+      }
+
+      .week-strip {
+        gap: 5px;
+      }
+
+      .day strong {
+        font-size: 22px;
+      }
+
+      .smart-card {
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+
+      .smart-content {
+        max-width: 66%;
+      }
+
+      .smart-card h2 {
+        font-size: 34px;
+      }
+
+      .stat-pill {
+        width: 198px;
+      }
+
+      .meal-scroll {
+        grid-template-columns: repeat(3, 128px);
+      }
+    }
+
+    @media (max-width: 350px) {
+      .smart-content {
+        max-width: 74%;
+      }
+
+      .smart-card::before {
+        background:
+          radial-gradient(circle at 12% 44%, rgba(255, 255, 255, 0.78), transparent 42%),
+          linear-gradient(90deg, rgba(255, 250, 240, 0.98), rgba(255, 250, 240, 0.76));
+      }
+
+      .smart-card::after {
+        opacity: 0.42;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <button class="nav-btn" type="button" aria-label="返回">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m15 18-6-6 6-6" />
+        </svg>
+      </button>
+      <h1 class="page-title">一周菜单</h1>
+      <button class="nav-btn generate-trigger" type="button" aria-label="新增菜单">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 5v14" />
+          <path d="M5 12h14" />
+        </svg>
+      </button>
+    </header>
+
+    <nav class="week-strip" aria-label="选择日期">
+      <button class="day active" type="button"><small>一</small><strong>29</strong></button>
+      <button class="day" type="button"><small>二</small><strong>30</strong></button>
+      <button class="day" type="button"><small>三</small><strong>1</strong></button>
+      <button class="day" type="button"><small>四</small><strong>2</strong></button>
+      <button class="day" type="button"><small>五</small><strong>3</strong></button>
+      <button class="day" type="button"><small>六</small><strong>4</strong></button>
+      <button class="day" type="button"><small>日</small><strong>5</strong></button>
+    </nav>
+
+    <section class="glass-card smart-card">
+      <div class="smart-content">
+        <span class="badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3 13.7 8.3 19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3Z" />
+            <path d="M19 16v4M21 18h-4" />
+          </svg>
+          智能周菜单
+        </span>
+        <h2>一键安排三餐</h2>
+        <p>根据菜谱库智能搭配均衡三餐<br />告别每天纠结，轻松吃得美味又健康</p>
+      </div>
+      <svg class="leaf-mark" viewBox="0 0 48 32" fill="currentColor" aria-hidden="true">
+        <path d="M24 29C19 17 9 18 3 21c3 7 11 11 21 8Z" />
+        <path d="M25 28C26 15 35 8 45 7c-1 10-8 19-20 21Z" />
+      </svg>
+      <div class="stat-pill">
+        <div class="stat">
+          <svg class="dish" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 17h16" />
+            <path d="M6 17a6 6 0 0 1 12 0" />
+            <path d="M12 6v2" />
+            <path d="M5 20h14" />
+          </svg>
+          <span><strong id="dish-count">0</strong>道菜</span>
+        </div>
+        <i></i>
+        <div class="stat">
+          <svg class="basket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 10h12l-1.2 10H7.2L6 10Z" />
+            <path d="M9 10a3 3 0 0 1 6 0" />
+            <path d="M9 14v2M12 14v2M15 14v2" />
+          </svg>
+          <span><strong id="ingredient-count">0</strong>食材</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass-card empty-card" id="empty-card">
+      <div class="empty-art" aria-hidden="true">
+        <span class="sprout">
+          <svg viewBox="0 0 32 52" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M16 49V22" />
+            <path d="M16 25C8 16 2 17 1 18c3 8 9 12 15 7Z" fill="currentColor" opacity=".32" />
+            <path d="M16 21C19 10 27 8 31 9c-2 8-8 13-15 12Z" fill="currentColor" opacity=".42" />
+          </svg>
+        </span>
+        <span class="book">
+          <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.8 4.6a5.4 5.4 0 0 0-7.6 0L12 5.8l-1.2-1.2a5.4 5.4 0 1 0-7.6 7.6L12 21l8.8-8.8a5.4 5.4 0 0 0 0-7.6Z" />
+          </svg>
+        </span>
+        <span class="bowl"></span>
+        <span class="chopstick"></span>
+        <span class="spark">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2 14 9.5 22 12l-8 2.5L12 22l-2-7.5L2 12l8-2.5L12 2Z" />
+          </svg>
+        </span>
+      </div>
+      <h2 id="empty-title">还没有周菜单</h2>
+      <p id="empty-copy">点击下方按钮，系统将为你生成一周三餐<br />营养均衡，安排省心，吃得更好</p>
+      <button class="primary-btn generate-trigger" type="button">
+        <span id="generate-label">生成一周菜单</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m9 18 6-6-6-6" />
+        </svg>
+      </button>
+    </section>
+
+    <section class="glass-card examples">
+      <h2 class="section-title">
+        看看一周餐食示例
+        <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 13c-4.7 0-7.7-3-7.7-7.7 0-.8-.9-1.3-1.5-.8C5.5 7.2 4 10.2 4 13.5 4 18.2 7.8 22 12.5 22c3.3 0 6.3-1.5 9-4.8.5-.6 0-1.5-.8-1.5H19c-.6 0-1-.4-1-1V13Z" />
+        </svg>
+      </h2>
+      <div class="meal-scroll">
+        <article class="meal-card">
+          <header>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v3M12 19v3M4.9 4.9 7 7M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1" />
+            </svg>
+            早餐
+          </header>
+          <img src="https://images.unsplash.com/photo-1517673132405-a56a62b18caf?auto=format&fit=crop&w=500&q=86" alt="皮蛋瘦肉粥" />
+          <div class="meal-copy">
+            <h3>皮蛋瘦肉粥</h3>
+            <p>+ 水煮蛋 + 清炒时蔬</p>
+          </div>
+        </article>
+
+        <article class="meal-card">
+          <header>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3v3M5.6 5.6 7.8 7.8M3 12h3M18 12h3M16.2 7.8l2.2-2.2" />
+              <path d="M7 17a5 5 0 0 1 10 0" />
+              <path d="M4 17h16" />
+              <path d="M6 20h12" />
+            </svg>
+            午餐
+          </header>
+          <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=500&q=86" alt="西兰花炒牛肉" />
+          <div class="meal-copy">
+            <h3>西兰花炒牛肉</h3>
+            <p>+ 米饭 + 番茄蛋汤</p>
+          </div>
+        </article>
+
+        <article class="meal-card">
+          <header>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 15.3A8 8 0 0 1 8.7 4 8.3 8.3 0 1 0 20 15.3Z" />
+              <path d="M18 4v3M19.5 5.5h-3" />
+            </svg>
+            晚餐
+          </header>
+          <img src="https://images.unsplash.com/photo-1534766555764-ce878a5e3a2b?auto=format&fit=crop&w=500&q=86" alt="清蒸鲈鱼" />
+          <div class="meal-copy">
+            <h3>清蒸鲈鱼</h3>
+            <p>+ 蒜蓉生菜 + 紫菜蛋花汤</p>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar" aria-label="底部导航">
+    <button class="tab" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5.5 9.5V21h13V9.5"></path><path d="M9.5 21v-6h5v6"></path></svg>
+      <span>首页</span>
+    </button>
+    <button class="tab" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H20v18H7.5A2.5 2.5 0 0 0 5 22V4.5Z"></path><path d="M5 4.5A2.5 2.5 0 0 0 2.5 2H4"></path><path d="M8 7h8M8 11h6"></path></svg>
+      <span>菜谱</span>
+    </button>
+    <button class="tab active" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="18" rx="2"></rect><path d="M9 8h6M9 12h6M9 16h4"></path><path d="M8 3V1.8M16 3V1.8"></path></svg>
+      <span>菜单推荐</span>
+    </button>
+    <button class="tab" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7.5" r="4"></circle><path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path></svg>
+      <span>我的</span>
+    </button>
+  </nav>
+
+  <script>
+    document.querySelectorAll(".day").forEach((day) => {
+      day.addEventListener("click", () => {
+        document.querySelectorAll(".day").forEach((item) => item.classList.remove("active"));
+        day.classList.add("active");
+      });
+    });
+
+    document.querySelectorAll(".tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach((item) => item.classList.remove("active"));
+        tab.classList.add("active");
+      });
+    });
+
+    document.querySelectorAll(".generate-trigger").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.getElementById("dish-count").textContent = "21";
+        document.getElementById("ingredient-count").textContent = "36";
+        document.getElementById("empty-title").textContent = "周菜单已生成";
+        document.getElementById("empty-copy").innerHTML = "已为你安排一周三餐<br />可以继续完善菜品和采购清单";
+        document.getElementById("generate-label").textContent = "重新生成菜单";
+        console.log("generate weekly meal plan");
+      });
+    });
+  </script>
+</body>
+</html>

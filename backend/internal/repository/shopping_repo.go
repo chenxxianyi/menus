@@ -19,6 +19,12 @@ func (r *ShoppingRepo) FindByUserID(userID uint) ([]model.ShoppingList, error) {
 	return lists, err
 }
 
+func (r *ShoppingRepo) CountByUserID(userID uint) int64 {
+	var count int64
+	r.db.Model(&model.ShoppingList{}).Where("user_id = ?", userID).Count(&count)
+	return count
+}
+
 func (r *ShoppingRepo) FindByID(id uint) (*model.ShoppingList, error) {
 	var list model.ShoppingList
 	err := r.db.First(&list, id).Error

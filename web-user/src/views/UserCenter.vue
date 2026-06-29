@@ -1,350 +1,665 @@
 <template>
-  <div class="page user-page">
-    <!-- Profile Header -->
-    <div class="profile-header anim-delay-1">
-      <div class="profile-avatar">{{ userInitial }}</div>
-      <div class="profile-info">
-        <h2 class="profile-name">{{ userName }}</h2>
-        <p class="profile-sub">加入食刻推荐第 128 天</p>
-      </div>
-      <svg class="edit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-      </svg>
-    </div>
+  <div class="profile-shell" :style="pageVars">
+    <div class="profile-warm-overlay" aria-hidden="true"></div>
 
-    <!-- Stats Card -->
-    <div class="stats-card anim-delay-2">
-      <div class="stat-item">
-        <div class="stat-num">{{ favoriteCount }}</div>
-        <div class="stat-label">我的收藏</div>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat-item">
-        <div class="stat-num">5</div>
-        <div class="stat-label">定制菜单</div>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat-item">
-        <div class="stat-num">3</div>
-        <div class="stat-label">购物清单</div>
-      </div>
-    </div>
+    <main class="profile-phone">
+      <section class="profile-header" aria-label="个人资料">
+        <div class="profile-avatar" aria-label="头像">
+          <img v-if="avatarUrl" :src="avatarUrl" alt="用户头像" />
+          <span v-else>{{ userInitial }}</span>
+        </div>
 
-    <!-- Menu List -->
-    <div class="menu-list anim-delay-3">
-      <div class="menu-row" @click="$router.push('/user/favorites')">
-        <div class="menu-icon red">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-          </svg>
+        <div class="profile-copy">
+          <h1>{{ displayName }}</h1>
+          <p>{{ joinText }}</p>
         </div>
-        <span class="menu-label">我的收藏</span>
-        <svg class="menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="m9 18 6-6-6-6"/>
-        </svg>
-      </div>
-      <div class="menu-row" @click="$router.push('/week-menu')">
-        <div class="menu-icon blue">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-            <polyline points="10 9 9 9 8 9"/>
-          </svg>
-        </div>
-        <span class="menu-label">我的菜单</span>
-        <svg class="menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="m9 18 6-6-6-6"/>
-        </svg>
-      </div>
-      <div class="menu-row" @click="$router.push('/shopping-list')">
-        <div class="menu-icon orange">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="9" cy="21" r="1"/>
-            <circle cx="20" cy="21" r="1"/>
-            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-          </svg>
-        </div>
-        <span class="menu-label">我的购物清单</span>
-        <svg class="menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="m9 18 6-6-6-6"/>
-        </svg>
-      </div>
-    </div>
 
-    <!-- Settings List -->
-    <div class="menu-list anim-delay-4">
-      <div class="menu-row" @click="$router.push('/user/preferences')">
-        <div class="menu-icon gray">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        <button class="edit-btn" type="button" aria-label="编辑个人资料" @click="handleEditProfile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M18.4 2.6a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4Z" />
           </svg>
-        </div>
-        <span class="menu-label">饮食偏好设置</span>
-        <svg class="menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="m9 18 6-6-6-6"/>
-        </svg>
-      </div>
-      <div class="menu-row">
-        <div class="menu-icon green">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12 6 12 12 16 14"/>
-          </svg>
-        </div>
-        <span class="menu-label">浏览历史</span>
-        <svg class="menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="m9 18 6-6-6-6"/>
-        </svg>
-      </div>
-      <div class="menu-row">
-        <div class="menu-icon gray">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="16" x2="12" y2="12"/>
-            <line x1="12" y1="8" x2="12.01" y2="8"/>
-          </svg>
-        </div>
-        <span class="menu-label">关于我们</span>
-        <svg class="menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="m9 18 6-6-6-6"/>
-        </svg>
-      </div>
-    </div>
+        </button>
+      </section>
 
-    <button class="logout-btn anim-delay-5" @click="handleLogout">退出登录</button>
+      <section class="glass-card stats-card" aria-label="个人数据统计">
+        <button
+          v-for="stat in stats"
+          :key="stat.label"
+          class="stat-item"
+          type="button"
+          @click="goPath(stat.path)"
+        >
+          <span class="stat-value">{{ stat.value }}</span>
+          <span class="stat-label">{{ stat.label }}</span>
+        </button>
+      </section>
+
+      <section class="glass-card menu-group" aria-label="我的内容">
+        <button
+          v-for="item in contentItems"
+          :key="item.label"
+          class="menu-item"
+          type="button"
+          :style="{ '--item-color': item.color, '--item-bg': item.bg }"
+          @click="goPath(item.path)"
+        >
+          <span class="icon-badge" aria-hidden="true">
+            <ProfileIcon :name="item.icon" />
+          </span>
+          <span class="menu-label">{{ item.label }}</span>
+          <ChevronIcon />
+        </button>
+      </section>
+
+      <section class="glass-card menu-group" aria-label="偏好与更多">
+        <button
+          v-for="item in settingItems"
+          :key="item.label"
+          class="menu-item"
+          type="button"
+          :style="{ '--item-color': item.color, '--item-bg': item.bg }"
+          @click="handleSettingAction(item)"
+        >
+          <span class="icon-badge" aria-hidden="true">
+            <ProfileIcon :name="item.icon" />
+          </span>
+          <span class="menu-label">{{ item.label }}</span>
+          <ChevronIcon />
+        </button>
+      </section>
+
+      <button class="logout-btn" type="button" @click="handleLogout">退出登录</button>
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, defineComponent, h, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { getFavoriteCount } from '@/api/user'
+import { getUserStats } from '@/api/user'
+import kitchenBg from '@/assets/home/kitchen-bg.jpg'
+
+type IconName = 'heart' | 'file' | 'cart' | 'bowl' | 'clock' | 'info'
+
+interface MenuItem {
+  label: string
+  icon: IconName
+  color: string
+  bg: string
+  path?: string
+  action?: 'history' | 'about'
+}
+
+interface ProfileStats {
+  favorite_count: number
+  menu_count: number
+  shopping_list_count: number
+}
 
 const router = useRouter()
 const userStore = useUserStore()
 
-const favoriteCount = ref(0)
+const profileStats = ref<ProfileStats | null>(null)
 
-const userName = computed(() => userStore.userInfo?.nickname || userStore.userInfo?.username || '用户')
-const userInitial = computed(() => userName.value.charAt(0))
+const pageVars = computed(() => ({
+  '--profile-bg': `url(${kitchenBg})`,
+}))
+
+const displayName = computed(() => {
+  const user = userStore.userInfo
+  return user?.email || user?.nickname || user?.username || '用户'
+})
+
+const avatarUrl = computed(() => userStore.userInfo?.avatar || '')
+
+const userInitial = computed(() => {
+  const name = displayName.value.trim()
+  if (!name) return 'U'
+  return name.charAt(0).toUpperCase()
+})
+
+const joinText = computed(() => {
+  const createdAt = userStore.userInfo?.created_at
+  if (!createdAt) return '欢迎回来，今天也好好吃饭'
+  const joinedTime = new Date(createdAt).getTime()
+  if (!Number.isFinite(joinedTime)) return '欢迎回来，今天也好好吃饭'
+  const days = Math.max(1, Math.floor((Date.now() - joinedTime) / 86400000) + 1)
+  return `加入食刻推荐第 ${days} 天`
+})
+
+function statValue(key: keyof ProfileStats) {
+  return profileStats.value ? profileStats.value[key] : '--'
+}
+
+const stats = computed(() => [
+  { label: '我的收藏', value: statValue('favorite_count'), path: '/user/favorites' },
+  { label: '定制菜单', value: statValue('menu_count'), path: '/week-menu' },
+  { label: '购物清单', value: statValue('shopping_list_count'), path: '/shopping-list' },
+])
+
+const contentItems: MenuItem[] = [
+  {
+    label: '我的收藏',
+    icon: 'heart',
+    color: '#e95645',
+    bg: 'rgba(233, 86, 69, 0.14)',
+    path: '/user/favorites',
+  },
+  {
+    label: '我的菜单',
+    icon: 'file',
+    color: '#5f8df7',
+    bg: 'rgba(95, 141, 247, 0.15)',
+    path: '/week-menu',
+  },
+  {
+    label: '我的购物清单',
+    icon: 'cart',
+    color: '#f28a2e',
+    bg: 'rgba(242, 138, 46, 0.16)',
+    path: '/shopping-list',
+  },
+]
+
+const settingItems: MenuItem[] = [
+  {
+    label: '饮食偏好设置',
+    icon: 'bowl',
+    color: '#6f8b65',
+    bg: 'rgba(143, 167, 131, 0.22)',
+    path: '/user/preferences',
+  },
+  {
+    label: '浏览历史',
+    icon: 'clock',
+    color: '#9a7957',
+    bg: 'rgba(210, 170, 120, 0.20)',
+    action: 'history',
+  },
+  {
+    label: '关于我们',
+    icon: 'info',
+    color: '#8b715e',
+    bg: 'rgba(160, 130, 100, 0.18)',
+    action: 'about',
+  },
+]
+
+function handleEditProfile() {
+  console.log('edit profile')
+}
+
+function goPath(path?: string) {
+  if (path) router.push(path)
+}
+
+function handleSettingAction(item: MenuItem) {
+  if (item.path) {
+    router.push(item.path)
+    return
+  }
+  console.log('profile action:', item.action || item.label)
+}
 
 function handleLogout() {
+  if (!window.confirm('确认退出登录吗？')) return
   userStore.logout()
   router.replace('/login')
 }
 
 onMounted(async () => {
-  // 获取用户信息
   if (!userStore.userInfo) {
     await userStore.fetchUserInfo()
   }
-  // 获取收藏数
+
   try {
-    const res: any = await getFavoriteCount()
-    favoriteCount.value = res?.count || 0
+    const res: any = await getUserStats()
+    profileStats.value = {
+      favorite_count: Number(res?.favorite_count ?? 0),
+      menu_count: Number(res?.menu_count ?? 0),
+      shopping_list_count: Number(res?.shopping_list_count ?? 0),
+    }
   } catch {
-    favoriteCount.value = 0
+    profileStats.value = null
   }
+})
+
+const ChevronIcon = defineComponent({
+  name: 'ChevronIcon',
+  setup() {
+    return () => h('svg', {
+      class: 'chevron',
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round',
+      'aria-hidden': 'true',
+    }, [
+      h('path', { d: 'm9 18 6-6-6-6' }),
+    ])
+  },
+})
+
+const ProfileIcon = defineComponent({
+  name: 'ProfileIcon',
+  props: {
+    name: { type: String, required: true },
+  },
+  setup(props) {
+    return () => {
+      const common = {
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke: 'currentColor',
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round',
+        'aria-hidden': 'true',
+      }
+
+      if (props.name === 'heart') {
+        return h('svg', common, [
+          h('path', { d: 'M19.5 12.6 12 20l-7.5-7.4A5 5 0 1 1 12 6.1a5 5 0 1 1 7.5 6.5Z' }),
+        ])
+      }
+
+      if (props.name === 'file') {
+        return h('svg', common, [
+          h('path', { d: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z' }),
+          h('path', { d: 'M14 2v6h6' }),
+          h('path', { d: 'M8 13h8M8 17h6M8 9h2' }),
+        ])
+      }
+
+      if (props.name === 'cart') {
+        return h('svg', common, [
+          h('circle', { cx: '8', cy: '21', r: '1' }),
+          h('circle', { cx: '19', cy: '21', r: '1' }),
+          h('path', { d: 'M2.1 2.1h3l2.2 12.4a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 1.9-1.5L21 7H6.2' }),
+        ])
+      }
+
+      if (props.name === 'bowl') {
+        return h('svg', common, [
+          h('path', { d: 'M4 14h16' }),
+          h('path', { d: 'M6 14a6 6 0 0 1 12 0' }),
+          h('path', { d: 'M12 5v2' }),
+          h('path', { d: 'M8.5 7 10 8.5M15.5 7 14 8.5' }),
+          h('path', { d: 'M6 17h12' }),
+          h('path', { d: 'M8 20h8' }),
+        ])
+      }
+
+      if (props.name === 'clock') {
+        return h('svg', common, [
+          h('circle', { cx: '12', cy: '12', r: '9' }),
+          h('path', { d: 'M12 7v5l3 2' }),
+        ])
+      }
+
+      return h('svg', common, [
+        h('circle', { cx: '12', cy: '12', r: '9' }),
+        h('path', { d: 'M12 11v5' }),
+        h('path', { d: 'M12 8h.01' }),
+      ])
+    }
+  },
 })
 </script>
 
 <style scoped>
-.user-page {
-  padding-top: var(--sp-8);
-  padding-bottom: var(--sp-8);
+.profile-shell {
+  --text: #2e241f;
+  --sub: #7a6a5f;
+  --cream: rgba(255, 250, 240, 0.78);
+  --coral: #e95645;
+  --line: rgba(120, 100, 80, 0.14);
+  --border: rgba(255, 255, 255, 0.62);
+  --shadow: 0 18px 40px rgba(80, 50, 30, 0.15);
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: clip;
+  color: var(--text);
+  background:
+    linear-gradient(180deg, rgba(255, 238, 211, 0.4), rgba(255, 246, 233, 0.52) 44%, rgba(234, 192, 145, 0.22)),
+    var(--profile-bg) center top / cover fixed;
 }
 
-/* ── Profile Header ── */
+.profile-warm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 15% 11%, rgba(255, 255, 255, 0.72), transparent 31%),
+    radial-gradient(circle at 79% 3%, rgba(255, 235, 204, 0.34), transparent 30%),
+    linear-gradient(180deg, rgba(255, 240, 218, 0.56), rgba(255, 250, 242, 0.28) 50%, rgba(139, 83, 39, 0.1));
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.profile-phone {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 430px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 70px 24px 126px;
+}
+
 .profile-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr) 54px;
   align-items: center;
-  gap: var(--sp-4);
-  margin-bottom: var(--sp-8);
+  gap: 20px;
 }
 
 .profile-avatar {
-  width: 64px;
-  height: 64px;
+  width: 78px;
+  height: 78px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.76);
   border-radius: 50%;
-  background: var(--color-surface);
-  border: 4px solid var(--color-surface);
-  box-shadow: var(--shadow-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--color-text);
-  flex-shrink: 0;
+  color: #2e241f;
+  background:
+    radial-gradient(circle at 35% 26%, rgba(255, 255, 255, 0.96), rgba(255, 248, 237, 0.86)),
+    rgba(255, 250, 240, 0.88);
+  box-shadow:
+    0 14px 30px rgba(80, 50, 30, 0.13),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
 }
 
-.profile-info {
-  flex: 1;
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 
-.profile-name {
-  font-size: var(--text-lg);
-  font-weight: 700;
-  color: var(--color-text);
+.profile-avatar span {
+  font-size: 31px;
+  font-weight: 900;
+  line-height: 1;
 }
 
-.profile-sub {
-  font-size: var(--text-xs);
-  color: var(--color-text-3);
-  margin-top: 4px;
+.profile-copy {
+  min-width: 0;
 }
 
-.edit-icon {
-  width: 24px;
-  height: 24px;
-  color: var(--color-text-3);
+.profile-copy h1 {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: clamp(26px, 7vw, 30px);
+  font-weight: 950;
+  line-height: 1.12;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-copy p {
+  margin: 11px 0 0;
+  color: var(--sub);
+  font-size: 16px;
+  font-weight: 690;
+  line-height: 1.2;
+}
+
+.edit-btn {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 18px;
+  color: #8b7d70;
+  background: rgba(255, 250, 240, 0.84);
+  box-shadow:
+    0 12px 26px rgba(80, 50, 30, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, color 180ms ease;
 }
 
-/* ── Stats Card ── */
+.edit-btn svg {
+  width: 29px;
+  height: 29px;
+  stroke-width: 2.25;
+}
+
+.glass-card {
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  background: var(--cream);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(20px) saturate(1.08);
+  -webkit-backdrop-filter: blur(20px) saturate(1.08);
+}
+
 .stats-card {
-  display: flex;
+  height: 96px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: center;
-  justify-content: space-around;
-  background: var(--color-surface);
-  border-radius: var(--r-lg);
-  padding: var(--sp-4);
-  margin-bottom: var(--sp-6);
-  box-shadow: var(--shadow-sm);
+  margin-top: 28px;
+  overflow: hidden;
 }
 
 .stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
+  position: relative;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 9px;
+  border: 0;
+  color: var(--sub);
+  background: transparent;
+  cursor: pointer;
+  transition: transform 180ms ease, background 180ms ease;
 }
 
-.stat-num {
-  font-size: var(--text-lg);
-  font-weight: 700;
-  color: var(--color-text);
+.stat-item + .stat-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 24px;
+  width: 1px;
+  height: 48px;
+  background: rgba(120, 100, 80, 0.16);
+}
+
+.stat-value {
+  display: block;
+  color: var(--text);
+  font-size: 30px;
+  font-weight: 950;
+  line-height: 1;
 }
 
 .stat-label {
-  font-size: 10px;
-  color: var(--color-text-3);
+  display: block;
+  color: #76665a;
+  font-size: 14px;
+  font-weight: 760;
+  line-height: 1;
 }
 
-.stat-divider {
-  width: 1px;
-  height: 32px;
-  background: var(--color-border);
-}
-
-/* ── Menu List ── */
-.menu-list {
-  background: var(--color-surface);
-  border-radius: var(--r-lg);
+.menu-group {
   overflow: hidden;
-  margin-bottom: var(--sp-4);
-  box-shadow: var(--shadow-sm);
+  margin-top: 27px;
 }
 
-.menu-row {
+.menu-group + .menu-group {
+  margin-top: 26px;
+}
+
+.menu-item {
+  position: relative;
+  width: 100%;
+  height: 74px;
   display: flex;
   align-items: center;
-  gap: var(--sp-3);
-  padding: var(--sp-4);
+  padding: 0 23px;
+  border: 0;
+  color: var(--text);
+  background: transparent;
+  text-align: left;
   cursor: pointer;
-  transition: background var(--dur-fast) var(--ease);
+  transition: transform 180ms ease, background 180ms ease, opacity 180ms ease;
 }
 
-.menu-row:hover {
-  background: var(--color-surface-2);
+.menu-item + .menu-item::before {
+  content: "";
+  position: absolute;
+  left: 80px;
+  right: 23px;
+  top: 0;
+  height: 1px;
+  background: var(--line);
 }
 
-.menu-row:active {
-  background: var(--color-surface-3);
+.icon-badge {
+  width: 50px;
+  height: 50px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--item-color);
+  background: var(--item-bg);
 }
 
-.menu-row + .menu-row {
-  border-top: 1px solid var(--color-border);
-}
-
-.menu-icon {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.menu-icon svg {
-  width: 20px;
-  height: 20px;
-}
-
-.menu-icon.red {
-  color: #EF4444;
-}
-
-.menu-icon.blue {
-  color: #3B82F6;
-}
-
-.menu-icon.orange {
-  color: #F97316;
-}
-
-.menu-icon.gray {
-  color: #6B7280;
-}
-
-.menu-icon.green {
-  color: #10B981;
+.icon-badge svg {
+  width: 28px;
+  height: 28px;
+  stroke-width: 2.25;
 }
 
 .menu-label {
-  flex: 1;
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--color-text);
+  margin-left: 18px;
+  color: #2e241f;
+  font-size: 21px;
+  font-weight: 860;
+  letter-spacing: 0;
 }
 
-.menu-chevron {
-  width: 16px;
-  height: 16px;
-  color: var(--color-text-3);
+.chevron {
+  width: 24px;
+  height: 24px;
+  margin-left: auto;
+  color: #8b7d70;
+  stroke-width: 2.4;
 }
 
-/* ── Logout ── */
 .logout-btn {
   width: 100%;
-  padding: var(--sp-3);
-  border-radius: var(--r-md);
-  border: none;
+  min-height: 42px;
+  margin-top: 40px;
+  border: 0;
+  color: var(--coral);
   background: transparent;
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: #EF4444;
+  font-size: 21px;
+  font-weight: 850;
+  letter-spacing: 0;
   cursor: pointer;
-  margin-top: var(--sp-4);
-  transition: background var(--dur-fast) var(--ease);
+  transition: transform 180ms ease, opacity 180ms ease;
 }
 
-.logout-btn:hover {
-  background: #FEE2E2;
-}
-
+.edit-btn:active,
+.stat-item:active,
+.menu-item:active,
 .logout-btn:active {
-  background: #FECACA;
+  transform: scale(0.98);
 }
 
-/* ── Responsive ── */
-@media (min-width: 768px) {
-  .page {
-    max-width: 640px;
+.menu-item:active,
+.stat-item:active {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+@media (hover: hover) {
+  .edit-btn:hover {
+    color: var(--coral);
+    transform: translateY(-1px);
+    box-shadow:
+      0 15px 30px rgba(80, 50, 30, 0.14),
+      inset 0 1px 0 rgba(255, 255, 255, 0.94);
+  }
+
+  .menu-item:hover,
+  .stat-item:hover {
+    background: rgba(255, 255, 255, 0.22);
+  }
+
+  .logout-btn:hover {
+    opacity: 0.82;
+  }
+}
+
+@media (max-width: 380px) {
+  .profile-phone {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .profile-header {
+    grid-template-columns: 72px minmax(0, 1fr) 50px;
+    gap: 16px;
+  }
+
+  .profile-avatar {
+    width: 72px;
+    height: 72px;
+  }
+
+  .profile-copy h1 {
+    font-size: 25px;
+  }
+
+  .profile-copy p {
+    font-size: 15px;
+  }
+
+  .edit-btn {
+    width: 50px;
+    height: 50px;
+  }
+
+  .menu-item {
+    padding: 0 20px;
+  }
+
+  .menu-item + .menu-item::before {
+    left: 76px;
+    right: 20px;
+  }
+
+  .menu-label {
+    font-size: 20px;
+  }
+}
+
+@media (min-width: 431px) {
+  .profile-phone {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }
 </style>

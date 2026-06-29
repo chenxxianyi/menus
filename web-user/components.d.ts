@@ -15,7 +15,6 @@ declare module 'vue' {
     BottomTabBar: typeof import('./src/components/BottomTabBar.vue')['default']
     EmptyState: typeof import('./src/components/EmptyState.vue')['default']
     GlassCard: typeof import('./src/components/GlassCard.vue')['default']
-    HelloWorld: typeof import('./src/components/HelloWorld.vue')['default']
     RecipeCard: typeof import('./src/components/RecipeCard.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
