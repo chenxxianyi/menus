@@ -18,6 +18,7 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 	r.Use(gin.Recovery())
 	r.Use(middleware.LoggerMiddleware(logger))
 	r.Use(middleware.CORSMiddleware(cfg.CORS.Origins))
+	r.Static("/uploads", cfg.Upload.Dir)
 
 	// Repositories
 	userRepo := repository.NewUserRepo(db)
@@ -63,6 +64,7 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 	feedbackHandler := v1.NewFeedbackHandler(feedbackService)
 	recommendHandler := v1.NewRecommendHandler(recommendService)
 	coupleHandler := v1.NewCoupleHandler(coupleService)
+	uploadHandler := v1.NewUploadHandler(&cfg.Upload)
 
 	// Handlers - admin
 	adminAuthHandler := admin.NewAuthHandler(authService, db)
@@ -94,6 +96,7 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 			auth.GET("/user/info", userHandler.GetInfo)
 			auth.GET("/user/stats", userStatsHandler.Get)
 			auth.PUT("/user/profile", userHandler.UpdateProfile)
+			auth.POST("/upload/avatar", uploadHandler.Avatar)
 			auth.GET("/user/preferences", userHandler.GetPreferences)
 			auth.PUT("/user/preferences", userHandler.UpdatePreferences)
 			auth.POST("/recipes/:id/favorite", favoriteHandler.Add)

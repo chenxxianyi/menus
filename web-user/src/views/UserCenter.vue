@@ -94,10 +94,20 @@
             <input v-model.trim="editForm.nickname" type="text" maxlength="20" placeholder="输入昵称" />
           </label>
 
-          <label class="edit-field">
-            <span>头像链接</span>
-            <input v-model.trim="editForm.avatar" type="url" placeholder="输入头像图片链接" />
-          </label>
+          <div class="edit-field">
+            <span>头像</span>
+            <label class="avatar-uploader" :class="{ uploading: uploadingAvatar }">
+              <input type="file" accept="image/png,image/jpeg,image/webp" @change="handleAvatarChange" />
+              <span class="avatar-preview">
+                <img v-if="editForm.avatar" :src="editForm.avatar" alt="头像预览" />
+                <span v-else>{{ userInitial }}</span>
+              </span>
+              <span class="avatar-upload-copy">
+                <strong>{{ uploadingAvatar ? '上传中...' : '选择头像图片' }}</strong>
+                <small>支持 JPG、PNG、WebP</small>
+              </span>
+            </label>
+          </div>
 
           <div class="edit-field">
             <span>性别</span>
@@ -131,7 +141,7 @@
 import { computed, defineComponent, h, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { getUserStats, updateProfile } from '@/api/user'
+import { getUserStats, updateProfile, uploadAvatar } from '@/api/user'
 import kitchenBg from '@/assets/home/kitchen-bg.jpg'
 
 type IconName = 'heart' | 'file' | 'cart' | 'bowl' | 'clock' | 'info'
@@ -157,6 +167,7 @@ const userStore = useUserStore()
 const profileStats = ref<ProfileStats | null>(null)
 const editVisible = ref(false)
 const savingProfile = ref(false)
+const uploadingAvatar = ref(false)
 const editForm = reactive({
   nickname: '',
   avatar: '',
@@ -262,8 +273,24 @@ function handleEditProfile() {
 }
 
 function closeEditDialog() {
-  if (savingProfile.value) return
+  if (savingProfile.value || uploadingAvatar.value) return
   editVisible.value = false
+}
+
+async function handleAvatarChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  if (!file.type.startsWith('image/')) return
+
+  uploadingAvatar.value = true
+  try {
+    const res = await uploadAvatar(file)
+    editForm.avatar = res.url
+  } finally {
+    uploadingAvatar.value = false
+  }
 }
 
 async function submitProfile() {
@@ -650,6 +677,83 @@ const ProfileIcon = defineComponent({
   color: #ab9d92;
 }
 
+.avatar-uploader {
+  min-height: 92px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px dashed rgba(160, 120, 90, 0.28);
+  border-radius: 20px;
+  color: var(--text);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.56), rgba(255, 250, 242, 0.42));
+  box-shadow:
+    0 10px 24px rgba(80, 50, 30, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, opacity 180ms ease;
+}
+
+.avatar-uploader input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.avatar-uploader.uploading {
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.avatar-preview {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  flex: 0 0 64px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 22px;
+  color: #2e241f;
+  background:
+    radial-gradient(circle at 35% 26%, rgba(255, 255, 255, 0.96), rgba(255, 248, 237, 0.86)),
+    rgba(255, 250, 240, 0.88);
+  box-shadow: 0 10px 20px rgba(80, 50, 30, 0.1);
+  font-size: 25px;
+  font-weight: 900;
+}
+
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.avatar-upload-copy {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.avatar-upload-copy strong {
+  color: #2e241f;
+  font-size: 17px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.avatar-upload-copy small {
+  color: var(--sub);
+  font-size: 13px;
+  font-weight: 620;
+  line-height: 1;
+}
+
 .gender-group {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -681,11 +785,10 @@ const ProfileIcon = defineComponent({
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  margin-top: 22px;
-  padding-top: 12px;
-  background:
-    linear-gradient(180deg, rgba(255, 250, 240, 0), rgba(255, 250, 240, 0.96) 26%),
-    rgba(255, 250, 240, 0.82);
+  margin: 24px -2px 0;
+  padding: 16px 0 0;
+  border-top: 1px solid rgba(120, 100, 80, 0.1);
+  background: transparent;
 }
 
 .secondary-btn,
@@ -701,8 +804,11 @@ const ProfileIcon = defineComponent({
 
 .secondary-btn {
   color: #7a6a5f;
-  background: rgba(255, 255, 255, 0.68);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 251, 245, 0.62));
+  box-shadow:
+    0 8px 18px rgba(80, 50, 30, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .primary-btn {
@@ -872,6 +978,7 @@ const ProfileIcon = defineComponent({
   }
 
   .dialog-close:hover,
+  .avatar-uploader:hover,
   .gender-chip:hover,
   .secondary-btn:hover,
   .primary-btn:hover:not(:disabled) {

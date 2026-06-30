@@ -9,6 +9,12 @@ export function updateProfile(data: Partial<{ nickname: string; avatar: string; 
   return api.put('/user/profile', data)
 }
 
+export function uploadAvatar(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return api.post('/upload/avatar', formData) as Promise<{ url: string }>
+}
+
 export function getPreferences() {
   return api.get('/user/preferences')
 }
