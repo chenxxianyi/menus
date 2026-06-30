@@ -3,6 +3,7 @@ export interface UserInfo {
   username: string
   nickname: string
   avatar: string
+  gender?: number
   email?: string
   phone?: string
   bio?: string

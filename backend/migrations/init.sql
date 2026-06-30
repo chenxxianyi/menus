@@ -129,6 +129,21 @@ CREATE TABLE IF NOT EXISTS `recommend_logs` (
   INDEX `idx_type` (`recommend_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `browse_histories` (
+  `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+  `user_id` BIGINT NOT NULL,
+  `recipe_id` BIGINT NOT NULL,
+  `viewed_at` DATETIME NOT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`recipe_id`) REFERENCES `recipes`(`id`) ON DELETE CASCADE,
+  UNIQUE INDEX `idx_user_recipe_history` (`user_id`, `recipe_id`),
+  INDEX `idx_user_id` (`user_id`),
+  INDEX `idx_recipe_id` (`recipe_id`),
+  INDEX `idx_viewed_at` (`viewed_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `feedback` (
   `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
   `user_id` BIGINT,
@@ -151,6 +166,17 @@ CREATE TABLE IF NOT EXISTS `banners` (
   `status` TINYINT DEFAULT 1,
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   INDEX `idx_sort_status` (`sort`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `app_configs` (
+  `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+  `config_key` VARCHAR(100) NOT NULL,
+  `config_value` TEXT,
+  `status` TINYINT DEFAULT 1,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE INDEX `idx_config_key` (`config_key`),
+  INDEX `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `admin_users` (

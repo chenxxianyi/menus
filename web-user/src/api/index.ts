@@ -1,9 +1,12 @@
 import axios from 'axios'
+import router from '@/router'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   timeout: 10000,
 })
+
+let handlingUnauthorized = false
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
@@ -24,7 +27,12 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
-      window.location.href = '/login'
+      if (!handlingUnauthorized && router.currentRoute.value.name !== 'Login') {
+        handlingUnauthorized = true
+        router.replace({ name: 'Login' }).finally(() => {
+          handlingUnauthorized = false
+        })
+      }
     }
     return Promise.reject(error)
   }

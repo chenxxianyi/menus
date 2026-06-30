@@ -1,4 +1,4 @@
-.PHONY: build run test seed clean docker-up docker-down
+.PHONY: build run test clean docker-up docker-down
 
 build:
 	go build -o bin/server.exe ./cmd/server
@@ -8,9 +8,6 @@ run:
 
 test:
 	go test ./... -v
-
-seed:
-	go run ./migrations/seed.go
 
 clean:
 	rm -rf bin/

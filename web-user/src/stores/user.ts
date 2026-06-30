@@ -23,7 +23,7 @@ export const useUserStore = defineStore('user', () => {
       const res: any = await getUserInfo()
       userInfo.value = res
     } catch {
-      // ignore
+      logout()
     }
   }
 

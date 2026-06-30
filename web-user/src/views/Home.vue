@@ -435,7 +435,7 @@ svg {
 .couple-copy {
   position: relative;
   z-index: 1;
-  padding: 27px 0 0 29px;
+  padding: 25px 0 0 29px;
 }
 
 .couple-copy h2 {
@@ -453,10 +453,10 @@ svg {
 }
 
 .couple-copy p {
-  margin: 12px 0 16px;
+  margin: 9px 0 10px;
   color: #735f53;
   font-size: 15px;
-  line-height: 1.45;
+  line-height: 1.38;
 }
 
 .primary-pill {

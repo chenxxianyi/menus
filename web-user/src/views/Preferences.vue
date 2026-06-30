@@ -1,348 +1,861 @@
 <template>
-  <div class="page preferences-page">
-    <header class="page-header">
-      <button class="back-btn" @click="$router.back()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
-      </button>
-      <h1 class="page-title">偏好设置</h1>
-      <button class="save-btn" @click="handleSave" :disabled="saving">
-        {{ saving ? '保存中...' : '保存' }}
-      </button>
-    </header>
-
-    <div class="form-section">
-      <!-- 口味偏好 -->
-      <div class="form-group">
-        <label class="form-label">口味偏好</label>
-        <div class="tag-grid">
-          <button
-            v-for="t in tasteOptions"
-            :key="t"
-            class="tag-btn"
-            :class="{ active: form.taste_preference.includes(t) }"
-            @click="toggleTaste(t)"
-          >
-            {{ t }}
-          </button>
-        </div>
-      </div>
-
-      <!-- 饮食目标 -->
-      <div class="form-group">
-        <label class="form-label">饮食目标</label>
-        <div class="tag-grid">
-          <button
-            v-for="g in goalOptions"
-            :key="g.value"
-            class="tag-btn"
-            :class="{ active: form.health_goal === g.value }"
-            @click="form.health_goal = g.value"
-          >
-            {{ g.label }}
-          </button>
-        </div>
-      </div>
-
-      <!-- 忌口食材 -->
-      <div class="form-group">
-        <label class="form-label">忌口食材</label>
-        <div class="tag-input-wrap">
-          <div class="tag-list">
-            <span v-for="(item, idx) in form.avoid_ingredients" :key="idx" class="tag-chip">
-              {{ item }}
-              <button class="tag-remove" @click="form.avoid_ingredients.splice(idx, 1)">×</button>
-            </span>
-          </div>
-          <input
-            v-model="avoidInput"
-            class="tag-input"
-            placeholder="输入食材后回车添加"
-            @keyup.enter="addAvoid"
-          />
-        </div>
-      </div>
-
-      <!-- 常用人数 -->
-      <div class="form-group">
-        <label class="form-label">常用用餐人数</label>
-        <div class="people-picker">
-          <button class="people-btn" @click="form.people_count = Math.max(1, form.people_count - 1)">-</button>
-          <span class="people-num">{{ form.people_count }}</span>
-          <button class="people-btn" @click="form.people_count = Math.min(10, form.people_count + 1)">+</button>
-        </div>
+  <main class="preferences-shell" :style="pageVars">
+    <div class="status-bar" aria-hidden="true">
+      <span>9:41</span>
+      <div class="status-icons">
+        <span class="cell-bars"><i></i><i></i><i></i><i></i></span>
+        <svg class="wifi" viewBox="0 0 24 18">
+          <path d="M2.8 5.8a14.5 14.5 0 0 1 18.4 0" />
+          <path d="M6.8 9.8a8.6 8.6 0 0 1 10.4 0" />
+          <path d="M10.3 13.5a3 3 0 0 1 3.4 0" />
+        </svg>
+        <span class="battery"></span>
       </div>
     </div>
 
-    <div v-if="showToast" class="toast">保存成功</div>
-  </div>
+    <header class="page-header" aria-label="页面顶部">
+      <button class="back-btn" type="button" aria-label="返回" @click="router.back()">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m15 18-6-6 6-6" />
+        </svg>
+      </button>
+      <h1 class="page-title">偏好设置</h1>
+      <button class="save-btn" type="button" :disabled="saving" @click="handleSave">
+        {{ saving ? '保存中' : '保存' }}
+      </button>
+    </header>
+
+    <section class="settings-card" aria-labelledby="taste-title">
+      <div class="card-title-row">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20.8 4.6a5.4 5.4 0 0 0-7.6 0L12 5.8l-1.2-1.2a5.4 5.4 0 1 0-7.6 7.6L12 21l8.8-8.8a5.4 5.4 0 0 0 0-7.6Z" />
+        </svg>
+        <h2 class="card-title" id="taste-title">口味偏好</h2>
+      </div>
+      <p class="card-desc">选择你喜欢的口味，我们会更懂你的喜好</p>
+      <div class="taste-grid">
+        <button
+          v-for="taste in tasteOptions"
+          :key="taste"
+          class="taste-chip"
+          :class="{ active: form.taste_preference.includes(taste) }"
+          type="button"
+          @click="toggleTaste(taste)"
+        >
+          {{ taste }}
+        </button>
+      </div>
+    </section>
+
+    <section class="settings-card" aria-labelledby="goal-title">
+      <div class="card-title-row">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="8" />
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 2v3" />
+          <path d="M12 19v3" />
+          <path d="M2 12h3" />
+          <path d="M19 12h3" />
+        </svg>
+        <h2 class="card-title" id="goal-title">饮食目标</h2>
+      </div>
+      <p class="card-desc">根据目标推荐更合适的菜谱和搭配</p>
+      <div class="goal-scroll">
+        <button
+          v-for="goal in goalOptions"
+          :key="goal.value"
+          class="goal-chip"
+          :class="{ active: form.health_goal === goal.value }"
+          type="button"
+          @click="form.health_goal = goal.value"
+        >
+          {{ goal.label }}
+        </button>
+      </div>
+    </section>
+
+    <section class="settings-card" aria-labelledby="avoid-title">
+      <div class="card-title-row">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" />
+          <path d="m5.7 5.7 12.6 12.6" />
+        </svg>
+        <h2 class="card-title" id="avoid-title">忌口食材</h2>
+      </div>
+      <p class="card-desc">添加你不吃的食材，避免为你推荐</p>
+      <label class="avoid-input" aria-label="添加忌口食材">
+        <input
+          v-model="avoidInput"
+          type="text"
+          placeholder="输入食材后回车添加"
+          @keydown.enter.prevent="addAvoidIngredient"
+        />
+        <button class="add-ingredient" type="button" aria-label="添加食材" @click="addAvoidIngredient">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 5v14" />
+            <path d="M5 12h14" />
+          </svg>
+        </button>
+      </label>
+      <div v-if="form.avoid_ingredients.length" class="avoid-tags">
+        <span v-for="name in form.avoid_ingredients" :key="name" class="ingredient-tag">
+          {{ name }}
+          <button type="button" :aria-label="`删除${name}`" @click="removeAvoidIngredient(name)">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </span>
+      </div>
+    </section>
+
+    <section class="settings-card" aria-labelledby="serving-title">
+      <div class="card-title-row">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.9" />
+          <path d="M16 3.1a4 4 0 0 1 0 7.8" />
+        </svg>
+        <h2 class="card-title" id="serving-title">常用用餐人数</h2>
+      </div>
+      <p class="card-desc">推荐适合份量的菜谱</p>
+      <div class="stepper" aria-label="常用用餐人数">
+        <button class="step-btn" type="button" aria-label="减少人数" :disabled="form.people_count <= 1" @click="adjustPeople(-1)">-</button>
+        <strong class="serving-count">{{ form.people_count }}</strong>
+        <button class="step-btn" type="button" aria-label="增加人数" :disabled="form.people_count >= 12" @click="adjustPeople(1)">+</button>
+      </div>
+    </section>
+
+    <p class="save-tip">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+        <path d="m9 12 2 2 4-5" />
+      </svg>
+      <span>保存后会用于个性化推荐，随时可修改</span>
+    </p>
+
+    <div class="toast" :class="{ show: !!toastText }">{{ toastText }}</div>
+  </main>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import kitchenBg from '@/assets/home/kitchen-bg.jpg'
 import { getPreferences, updatePreferences } from '@/api/user'
 
-const saving = ref(false)
-const showToast = ref(false)
-const avoidInput = ref('')
+type HealthGoal = '普通' | '减脂' | '增肌' | '控糖' | '儿童营养'
+
+interface PreferenceForm {
+  taste_preference: string[]
+  health_goal: HealthGoal
+  avoid_ingredients: string[]
+  people_count: number
+}
+
+const router = useRouter()
 
 const tasteOptions = ['咸鲜', '酸甜', '麻辣', '清淡', '香辣', '酸辣', '甜味', '原味']
-const goalOptions = [
-  { value: 'normal', label: '普通' },
-  { value: 'lose', label: '减脂' },
-  { value: 'gain', label: '增肌' },
-  { value: 'sugar', label: '控糖' },
-  { value: 'child', label: '儿童营养' },
+const goalOptions: { value: HealthGoal; label: string; legacy: string[] }[] = [
+  { value: '普通', label: '普通', legacy: ['normal', '普通'] },
+  { value: '减脂', label: '减脂', legacy: ['lose', '减脂'] },
+  { value: '增肌', label: '增肌', legacy: ['gain', '增肌'] },
+  { value: '控糖', label: '控糖', legacy: ['sugar', '控糖'] },
+  { value: '儿童营养', label: '儿童营养', legacy: ['child', '儿童营养'] },
 ]
 
-const form = reactive({
-  taste_preference: [] as string[],
-  health_goal: 'normal',
-  avoid_ingredients: [] as string[],
+const saving = ref(false)
+const avoidInput = ref('')
+const toastText = ref('')
+let toastTimer: ReturnType<typeof setTimeout> | null = null
+
+const form = reactive<PreferenceForm>({
+  taste_preference: [],
+  health_goal: '普通',
+  avoid_ingredients: [],
   people_count: 2,
 })
 
-function toggleTaste(t: string) {
-  const idx = form.taste_preference.indexOf(t)
-  if (idx >= 0) {
-    form.taste_preference.splice(idx, 1)
+const pageVars = computed(() => ({
+  '--preference-bg': `url(${kitchenBg})`,
+}))
+
+function normalizeArray(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+      }
+    } catch {
+      return value
+        .split(/[,，、]/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+    }
+  }
+  return []
+}
+
+function normalizeGoal(value: unknown): HealthGoal {
+  const text = typeof value === 'string' ? value : ''
+  return goalOptions.find((goal) => goal.legacy.includes(text))?.value || '普通'
+}
+
+function normalizePeopleCount(value: unknown) {
+  const count = Number(value)
+  if (!Number.isFinite(count)) return 2
+  return Math.min(12, Math.max(1, Math.round(count)))
+}
+
+function showToast(message: string) {
+  toastText.value = message
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {
+    toastText.value = ''
+  }, 1500)
+}
+
+function toggleTaste(taste: string) {
+  const index = form.taste_preference.indexOf(taste)
+  if (index >= 0) {
+    form.taste_preference.splice(index, 1)
   } else {
-    form.taste_preference.push(t)
+    form.taste_preference.push(taste)
   }
 }
 
-function addAvoid() {
-  const val = avoidInput.value.trim()
-  if (val && !form.avoid_ingredients.includes(val)) {
-    form.avoid_ingredients.push(val)
+function addAvoidIngredient() {
+  const value = avoidInput.value.trim().slice(0, 10)
+  if (!value) return
+  if (form.avoid_ingredients.includes(value)) {
+    showToast('已经添加过该食材')
+    avoidInput.value = ''
+    return
   }
+  form.avoid_ingredients.push(value)
   avoidInput.value = ''
 }
 
+function removeAvoidIngredient(name: string) {
+  const index = form.avoid_ingredients.indexOf(name)
+  if (index >= 0) {
+    form.avoid_ingredients.splice(index, 1)
+  }
+}
+
+function adjustPeople(delta: number) {
+  form.people_count = Math.min(12, Math.max(1, form.people_count + delta))
+}
+
+async function loadPreferences() {
+  try {
+    const res: any = await getPreferences()
+    if (!res) return
+    form.taste_preference = normalizeArray(res.taste_preference)
+    form.health_goal = normalizeGoal(res.health_goal)
+    form.avoid_ingredients = normalizeArray(res.avoid_ingredients)
+    form.people_count = normalizePeopleCount(res.people_count)
+  } catch {
+    showToast('偏好读取失败')
+  }
+}
+
 async function handleSave() {
+  if (saving.value) return
   saving.value = true
   try {
-    await updatePreferences(form as any)
-    showToast.value = true
-    setTimeout(() => { showToast.value = false }, 2000)
+    await updatePreferences({
+      taste_preference: [...form.taste_preference],
+      health_goal: form.health_goal,
+      avoid_ingredients: [...form.avoid_ingredients],
+      favorite_ingredients: [],
+      cook_time_preference: '',
+      default_servings: form.people_count,
+      people_count: form.people_count,
+    } as any)
+    showToast('偏好已保存')
   } catch {
-    // ignore
+    showToast('保存失败，请稍后再试')
   } finally {
     saving.value = false
   }
 }
 
-onMounted(async () => {
-  try {
-    const res: any = await getPreferences()
-    if (res) {
-      form.taste_preference = res.taste_preference || []
-      form.health_goal = res.health_goal || 'normal'
-      form.avoid_ingredients = res.avoid_ingredients || []
-      form.people_count = res.people_count || 2
-    }
-  } catch {
-    // ignore
-  }
+onMounted(() => {
+  loadPreferences()
+})
+
+onUnmounted(() => {
+  if (toastTimer) clearTimeout(toastTimer)
 })
 </script>
 
 <style scoped>
-.preferences-page {
-  min-height: 100vh;
-  background: var(--color-bg);
-  padding-bottom: var(--sp-8);
+.preferences-shell {
+  --text: #2e241f;
+  --sub: #7a6a5f;
+  --muted: #a19489;
+  --cream: rgba(255, 250, 240, 0.8);
+  --coral: #e95645;
+  --coral-2: #ef5548;
+  --brown: #7a5942;
+  --brown-soft: #ffebd2;
+  --sage: #8fa783;
+  --border: rgba(255, 255, 255, 0.62);
+  --shadow: 0 18px 42px rgba(80, 50, 30, 0.15);
+  position: relative;
+  width: min(100%, 430px);
+  min-height: calc(100vh + var(--tab-h, 64px) + var(--safe-bottom, 34px) + 160px);
+  min-height: calc(100dvh + var(--tab-h, 64px) + var(--safe-bottom, 34px) + 160px);
+  margin: 0 auto;
+  padding: max(18px, env(safe-area-inset-top)) 24px calc(38px + env(safe-area-inset-bottom));
+  overflow-x: clip;
+  color: var(--text);
+  background:
+    linear-gradient(180deg, rgba(255, 237, 205, 0.32), rgba(255, 247, 233, 0.2)),
+    var(--preference-bg) center top / cover fixed;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
-.page-header {
+.preferences-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 5%, rgba(255, 255, 255, 0.74), transparent 29%),
+    radial-gradient(circle at 88% 16%, rgba(236, 143, 71, 0.22), transparent 33%),
+    radial-gradient(circle at 12% 92%, rgba(233, 86, 69, 0.16), transparent 31%),
+    linear-gradient(90deg, rgba(255, 239, 214, 0.55), rgba(255, 245, 230, 0.16) 55%, rgba(172, 91, 33, 0.18));
+  backdrop-filter: blur(4px) saturate(1.12);
+  -webkit-backdrop-filter: blur(4px) saturate(1.12);
+}
+
+.status-bar,
+.page-header,
+.settings-card,
+.save-tip {
+  position: relative;
+  z-index: 1;
+}
+
+button,
+input {
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+}
+
+svg {
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.status-bar {
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--sp-3) var(--sp-4);
+  padding: 0 4px;
+  color: #1e1713;
+  font-size: 17px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.status-icons {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.cell-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 18px;
+}
+
+.cell-bars i {
+  width: 4px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.cell-bars i:nth-child(1) { height: 7px; }
+.cell-bars i:nth-child(2) { height: 10px; }
+.cell-bars i:nth-child(3) { height: 13px; }
+.cell-bars i:nth-child(4) { height: 16px; }
+
+.wifi {
+  width: 23px;
+  height: 17px;
+}
+
+.wifi path {
+  stroke-width: 2.7;
+}
+
+.battery {
+  position: relative;
+  width: 30px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-radius: 5px;
+}
+
+.battery::before {
+  content: "";
+  position: absolute;
+  right: -5px;
+  top: 4px;
+  width: 3px;
+  height: 6px;
+  border-radius: 0 2px 2px 0;
+  background: currentColor;
+}
+
+.battery::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 20px;
+  height: 6px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+.page-header {
+  position: relative;
+  height: 96px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.back-btn,
+.save-btn {
+  position: absolute;
+  top: 14px;
+  height: 52px;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 16px;
+  background: rgba(255, 250, 240, 0.86);
+  box-shadow:
+    0 12px 28px rgba(80, 50, 30, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
 }
 
 .back-btn {
-  width: 34px; height: 34px;
-  display: flex; align-items: center; justify-content: center;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-sm);
-  background: var(--color-surface);
-  color: var(--color-text-2);
-  cursor: pointer;
-  transition: background var(--dur-fast) var(--ease);
+  left: 0;
+  width: 52px;
+  display: grid;
+  place-items: center;
+  color: #4a352a;
 }
 
-.back-btn:hover { background: var(--color-surface-2); }
-.back-btn:active { background: var(--color-surface-3); }
-.back-btn svg { width: 18px; height: 18px; }
-
-.page-title {
-  font-size: var(--text-base);
-  font-weight: 600;
-  color: var(--color-text);
+.back-btn svg {
+  width: 28px;
+  height: 28px;
+  stroke-width: 2.55;
 }
 
 .save-btn {
-  padding: var(--sp-2) var(--sp-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-sm);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--dur-fast) var(--ease);
+  right: 0;
+  min-width: 74px;
+  padding: 0 18px;
+  color: var(--coral);
+  font-size: 17px;
+  font-weight: 880;
+  letter-spacing: 0;
 }
 
-.save-btn:hover { background: var(--color-surface-2); }
-.save-btn:active { background: var(--color-surface-3); }
-.save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.form-section {
-  padding: 0 var(--sp-4);
+.save-btn:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
 }
 
-.form-group {
-  margin-bottom: var(--sp-6);
+.page-title {
+  margin: 12px 0 0;
+  color: var(--text);
+  font-size: 28px;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0;
 }
 
-.form-label {
-  display: block;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: var(--sp-3);
+.settings-card {
+  margin-top: 22px;
+  padding: 24px 22px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 255, 255, 0.54), transparent 42%),
+    rgba(255, 250, 240, 0.8);
+  box-shadow:
+    var(--shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.84);
+  backdrop-filter: blur(20px) saturate(1.08);
+  -webkit-backdrop-filter: blur(20px) saturate(1.08);
 }
 
-.tag-grid {
+.card-title-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
+  align-items: center;
+  gap: 11px;
+  color: var(--text);
 }
 
-.tag-btn {
-  padding: var(--sp-2) var(--sp-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-sm);
-  background: var(--color-surface);
-  color: var(--color-text-2);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--dur-fast) var(--ease);
+.card-title-row svg {
+  width: 25px;
+  height: 25px;
+  flex: 0 0 25px;
+  color: var(--coral);
+  stroke-width: 2.4;
 }
 
-.tag-btn:hover {
-  border-color: var(--color-border-med);
+.card-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 25px;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0;
 }
 
-.tag-btn.active {
-  background: var(--color-text);
-  border-color: var(--color-text);
-  color: var(--color-text-inv);
+.card-desc {
+  margin: 13px 0 0;
+  color: var(--sub);
+  font-size: 16px;
+  font-weight: 580;
+  line-height: 1.55;
 }
 
-.tag-input-wrap {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  padding: var(--sp-3);
+.taste-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 24px;
 }
 
-.tag-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
-  margin-bottom: var(--sp-2);
-}
-
-.tag-chip {
+.taste-chip,
+.goal-chip {
   display: inline-flex;
   align-items: center;
-  gap: var(--sp-1);
-  padding: 2px 8px;
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
-  border-radius: var(--r-sm);
-  font-size: var(--text-xs);
-  font-weight: 600;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  color: #6b5142;
+  background: rgba(255, 248, 236, 0.58);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.54);
+  font-weight: 850;
+  white-space: nowrap;
+  transition: transform 180ms ease, background 180ms ease, color 180ms ease, box-shadow 180ms ease;
 }
 
-.tag-remove {
-  background: none;
-  border: none;
-  color: var(--color-accent);
-  font-size: 14px;
-  cursor: pointer;
-  padding: 0 2px;
+.taste-chip {
+  min-width: 0;
+  height: 58px;
+  border-radius: 17px;
+  font-size: 18px;
 }
 
-.tag-input {
-  width: 100%;
-  border: none;
-  background: transparent;
-  color: var(--color-text);
-  font-size: var(--text-sm);
-  outline: none;
+.taste-chip.active {
+  border-color: transparent;
+  color: #fff;
+  background: linear-gradient(135deg, #f06152, #e9473a);
+  box-shadow: 0 12px 24px rgba(233, 86, 69, 0.24);
 }
 
-.tag-input::placeholder {
-  color: var(--color-text-3);
+.goal-scroll {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
-.people-picker {
+.goal-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.goal-chip {
+  height: 54px;
+  flex: 0 0 auto;
+  padding: 0 20px;
+  border-radius: 17px;
+  font-size: 17px;
+}
+
+.goal-chip.active {
+  border-color: transparent;
+  color: #fff;
+  background: var(--brown);
+  box-shadow: 0 12px 24px rgba(90, 60, 40, 0.2);
+}
+
+.avoid-input {
+  height: 62px;
   display: flex;
   align-items: center;
-  gap: var(--sp-4);
+  gap: 12px;
+  margin-top: 22px;
+  padding: 0 16px 0 18px;
+  border: 1px solid rgba(120, 90, 65, 0.16);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
-.people-btn {
-  width: 36px;
-  height: 36px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-sm);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-size: var(--text-lg);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--dur-fast) var(--ease);
+.avoid-input input {
+  width: 0;
+  flex: 1 1 auto;
+  border: 0;
+  outline: 0;
+  color: var(--text);
+  background: transparent;
+  font-size: 16px;
+  font-weight: 650;
 }
 
-.people-btn:hover { background: var(--color-surface-2); }
-.people-btn:active { background: var(--color-surface-3); }
+.avoid-input input::placeholder {
+  color: var(--muted);
+  font-weight: 650;
+}
 
-.people-num {
-  font-family: var(--font-outlier);
-  font-size: var(--text-xl);
-  font-weight: 750;
-  color: var(--color-text);
-  min-width: 32px;
+.add-ingredient {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  flex: 0 0 34px;
+  place-items: center;
+  border: 1px solid rgba(120, 90, 65, 0.24);
+  border-radius: 999px;
+  color: #9a7957;
+  background: rgba(255, 250, 240, 0.34);
+  transition: transform 180ms ease, color 180ms ease;
+}
+
+.add-ingredient svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 2.4;
+}
+
+.avoid-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.ingredient-tag {
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border-radius: 14px;
+  color: #7a4b25;
+  background: var(--brown-soft);
+  font-size: 16px;
+  font-weight: 760;
+  line-height: 1;
+}
+
+.ingredient-tag button {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  margin-right: -4px;
+  color: #7a4b25;
+  background: transparent;
+}
+
+.ingredient-tag svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2.6;
+}
+
+.stepper {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 24px;
+  padding: 0 22px;
+  border: 1px solid rgba(120, 90, 65, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.34);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.52);
+}
+
+.step-btn {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #5a4032;
+  background: rgba(255, 248, 236, 0.76);
+  font-size: 26px;
+  font-weight: 850;
+  line-height: 1;
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.step-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.serving-count {
+  color: var(--text);
+  font-size: 40px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.save-tip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 22px 0 0;
+  color: var(--sub);
+  font-size: 15px;
+  font-weight: 650;
   text-align: center;
+}
+
+.save-tip svg {
+  width: 23px;
+  height: 23px;
+  flex: 0 0 23px;
+  color: var(--sage);
+  stroke-width: 2.2;
 }
 
 .toast {
   position: fixed;
-  top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  padding: var(--sp-4) var(--sp-6);
-  background: var(--color-text);
-  color: var(--color-text-inv);
-  border-radius: var(--r-md);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  z-index: 100;
-  animation: fadeInOut 1.5s ease;
+  bottom: calc(34px + env(safe-area-inset-bottom));
+  z-index: 6;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(46, 36, 31, 0.78);
+  box-shadow: 0 12px 24px rgba(46, 36, 31, 0.18);
+  font-size: 14px;
+  font-weight: 740;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 12px);
+  transition: opacity 180ms ease, transform 180ms ease;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  white-space: nowrap;
 }
 
-@keyframes fadeInOut {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
-  15% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  85% { opacity: 1; }
-  100% { opacity: 0; }
+.toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
-@media (min-width: 768px) {
-  .preferences-page { max-width: 640px; margin: 0 auto; }
+.back-btn:active,
+.save-btn:active,
+.taste-chip:active,
+.goal-chip:active,
+.add-ingredient:active,
+.ingredient-tag button:active,
+.step-btn:active {
+  transform: scale(0.98);
+}
+
+@media (hover: hover) {
+  .back-btn:hover,
+  .save-btn:hover,
+  .taste-chip:hover,
+  .goal-chip:hover,
+  .add-ingredient:hover,
+  .step-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+}
+
+@media (max-width: 380px) {
+  .preferences-shell {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+
+  .settings-card {
+    padding: 23px 18px;
+    border-radius: 28px;
+  }
+
+  .taste-grid {
+    gap: 12px;
+  }
+
+  .taste-chip {
+    height: 56px;
+    font-size: 17px;
+  }
+
+  .goal-chip {
+    padding: 0 18px;
+  }
+}
+
+@media (max-width: 350px) {
+  .taste-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .page-title {
+    font-size: 26px;
+  }
+
+  .save-btn {
+    min-width: 68px;
+    padding: 0 15px;
+  }
+}
+
+@media (min-width: 431px) {
+  .preferences-shell {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
 </style>

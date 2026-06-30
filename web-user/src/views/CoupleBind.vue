@@ -1,76 +1,163 @@
 <template>
-  <div class="page couple-bind">
-    <header class="page-header">
-      <button class="back-btn" @click="$router.back()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+  <main class="couple-bind-page" :style="pageVars">
+    <header class="page-header" aria-label="页面顶部">
+      <button class="back-btn" type="button" aria-label="返回" @click="router.back()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m15 18-6-6 6-6" />
+        </svg>
       </button>
       <h1 class="page-title">情侣绑定</h1>
-      <div style="width:34px"></div>
     </header>
 
-    <!-- Tab switch -->
-    <div class="tab-bar">
-      <button class="tab-item" :class="{ active: mode === 'share' }" @click="mode = 'share'">分享邀请码</button>
-      <button class="tab-item" :class="{ active: mode === 'join' }" @click="mode = 'join'">输入邀请码</button>
-    </div>
+    <nav class="segment" aria-label="绑定方式切换">
+      <button class="tab-btn" :class="{ active: mode === 'share' }" type="button" @click="switchMode('share')">分享邀请码</button>
+      <button class="tab-btn" :class="{ active: mode === 'join' }" type="button" @click="switchMode('join')">输入邀请码</button>
+    </nav>
 
-    <!-- Share mode -->
-    <div v-if="mode === 'share'" class="bind-card">
-      <div class="bind-icon">&#10084;</div>
-      <p class="bind-desc">将邀请码发给你的另一半，TA 输入后即可绑定</p>
-      <div class="code-box" v-if="inviteCode">
-        <span class="code-text">{{ inviteCode }}</span>
-        <button class="copy-btn" @click="copyCode">复制</button>
+    <section class="bind-card" aria-label="情侣绑定内容">
+      <div v-show="mode === 'share'" class="panel">
+        <div class="heart-art" aria-hidden="true">
+          <i class="sparkle s1"></i>
+          <i class="sparkle s2"></i>
+          <i class="sparkle s3"></i>
+          <i class="mini-heart one"></i>
+          <i class="mini-heart two"></i>
+          <i class="mini-heart three"></i>
+          <i class="heart-core"></i>
+          <i class="heart-ring"></i>
+        </div>
+
+        <p class="desc">将邀请码发给你的另一半，TA 输入后即可绑定</p>
+
+        <div class="code-box">
+          <span class="code-label">你的邀请码</span>
+          <strong class="code-value">{{ inviteCode || 'A8K9P2' }}</strong>
+          <button class="copy-btn" type="button" :disabled="!inviteCode" @click="copyCode">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="11" height="11" rx="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+            <span>{{ copied ? '已复制' : '复制' }}</span>
+          </button>
+        </div>
+
+        <button class="primary-btn" type="button" :disabled="loading" @click="generateCode">
+          {{ loading ? '生成中...' : inviteCode ? '重新生成邀请码' : '生成邀请码' }}
+        </button>
+
+        <button class="wechat-btn" type="button" :disabled="!inviteCode" @click="shareToWechat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 8.9 8.9 0 0 1-3.5-.7L3 21l1.8-4.5A8 8 0 0 1 3 11.5a8.4 8.4 0 0 1 8.5-8.3 8.4 8.4 0 0 1 8.5 8.3Z" />
+            <path d="M8.7 10.2h.01M14.9 10.2h.01" />
+          </svg>
+          <span>分享给微信好友</span>
+        </button>
+
+        <p v-if="waitingBind" class="status-text">等待对方绑定中...</p>
+
+        <p class="hint">
+          <ShieldCheckIcon />
+          <span>绑定后可一起规划菜单、共享购物清单</span>
+        </p>
       </div>
-      <button v-else class="gen-btn" @click="generateCode" :disabled="loading">
-        {{ loading ? '生成中...' : '生成邀请码' }}
-      </button>
-      <p v-if="copied" class="copied-hint">已复制到剪贴板</p>
-      <p v-if="waitingBind" class="waiting-hint">等待对方绑定中...</p>
-    </div>
 
-    <!-- Join mode -->
-    <div v-else class="bind-card">
-      <div class="bind-icon">&#128150;</div>
-      <p class="bind-desc">输入对方分享的 6 位邀请码</p>
-      <div class="input-row">
+      <div v-show="mode === 'join'" class="panel">
+        <div class="heart-art" aria-hidden="true">
+          <i class="sparkle s1"></i>
+          <i class="sparkle s2"></i>
+          <i class="sparkle s3"></i>
+          <i class="mini-heart one"></i>
+          <i class="mini-heart two"></i>
+          <i class="mini-heart three"></i>
+          <i class="heart-core"></i>
+          <i class="heart-ring"></i>
+        </div>
+
+        <p class="desc">输入另一半发来的邀请码，确认后即可绑定</p>
+
         <input
           v-model="inputCode"
-          class="code-input"
+          class="invite-input"
           type="text"
+          inputmode="text"
           maxlength="6"
-          placeholder="请输入邀请码"
+          placeholder="请输入 6 位邀请码"
+          @input="normalizeInput"
           @keyup.enter="handleBind"
         />
-      </div>
-      <button class="gen-btn" @click="handleBind" :disabled="loading || inputCode.length < 6">
-        {{ loading ? '绑定中...' : '绑定' }}
-      </button>
-      <p v-if="error" class="error-hint">{{ error }}</p>
-    </div>
+        <p class="error-text" :class="{ show: !!error }">{{ error || '请输入完整邀请码' }}</p>
 
-    <!-- Success Dialog -->
+        <button class="primary-btn" type="button" :disabled="loading" @click="handleBind">
+          {{ loading ? '绑定中...' : '确认绑定' }}
+        </button>
+
+        <button class="wechat-btn" type="button" @click="askInviteCode">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 8.9 8.9 0 0 1-3.5-.7L3 21l1.8-4.5A8 8 0 0 1 3 11.5a8.4 8.4 0 0 1 8.5-8.3 8.4 8.4 0 0 1 8.5 8.3Z" />
+            <path d="M8.7 10.2h.01M14.9 10.2h.01" />
+          </svg>
+          <span>向 TA 索要邀请码</span>
+        </button>
+
+        <p class="hint">
+          <ShieldCheckIcon />
+          <span>绑定后可一起规划菜单、共享购物清单</span>
+        </p>
+      </div>
+    </section>
+
+    <div class="toast" :class="{ show: !!toastText }">{{ toastText }}</div>
+
     <div v-if="showSuccess" class="dialog-overlay">
       <div class="dialog-box">
-        <div class="success-icon">&#10084;</div>
+        <div class="heart-art compact" aria-hidden="true">
+          <i class="sparkle s1"></i>
+          <i class="sparkle s2"></i>
+          <i class="sparkle s3"></i>
+          <i class="mini-heart one"></i>
+          <i class="mini-heart two"></i>
+          <i class="mini-heart three"></i>
+          <i class="heart-core"></i>
+          <i class="heart-ring"></i>
+        </div>
         <h3 class="success-title">绑定成功！</h3>
         <p class="success-desc">{{ successMessage }}</p>
-        <button class="success-btn" @click="goToCouple">进入情侣主页</button>
+        <button class="success-btn" type="button" @click="goToCouple">进入情侣主页</button>
       </div>
     </div>
-  </div>
+  </main>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, defineComponent, h, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getInviteCode, bindCouple, getCoupleInfo } from '@/api/couple'
 import { useCoupleStore } from '@/stores/couple'
+import kitchenBg from '@/assets/home/kitchen-bg.jpg'
+
+type BindMode = 'share' | 'join'
+
+const ShieldCheckIcon = defineComponent({
+  name: 'ShieldCheckIcon',
+  setup() {
+    return () => h('svg', {
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round',
+      'aria-hidden': 'true',
+    }, [
+      h('path', { d: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z' }),
+      h('path', { d: 'm9 12 2 2 4-5' }),
+    ])
+  },
+})
 
 const router = useRouter()
 const coupleStore = useCoupleStore()
 
-const mode = ref<'share' | 'join'>('share')
+const mode = ref<BindMode>('share')
 const inviteCode = ref('')
 const inputCode = ref('')
 const loading = ref(false)
@@ -79,37 +166,105 @@ const error = ref('')
 const waitingBind = ref(false)
 const showSuccess = ref(false)
 const successMessage = ref('')
+const toastText = ref('')
 
 let pollTimer: ReturnType<typeof setInterval> | null = null
+let toastTimer: ReturnType<typeof setTimeout> | null = null
+let copiedTimer: ReturnType<typeof setTimeout> | null = null
+
+const pageVars = computed(() => ({
+  '--kitchen-bg': 'url(' + kitchenBg + ')',
+}))
+
+function switchMode(nextMode: BindMode) {
+  mode.value = nextMode
+  error.value = ''
+}
+
+function showToast(message: string) {
+  toastText.value = message
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {
+    toastText.value = ''
+  }, 1500)
+}
 
 async function generateCode() {
   loading.value = true
+  error.value = ''
   try {
     const res: any = await getInviteCode()
     inviteCode.value = res.invite_code
     waitingBind.value = true
     startPolling()
-  } catch {
-    error.value = '生成邀请码失败'
+    showToast(inviteCode.value ? '已生成邀请码' : '生成邀请码失败')
+  } catch (e: any) {
+    error.value = e.message || '生成邀请码失败'
+    showToast(error.value)
   } finally {
     loading.value = false
   }
 }
 
-function copyCode() {
-  navigator.clipboard.writeText(inviteCode.value)
+async function copyCode() {
+  if (!inviteCode.value) {
+    showToast('请先生成邀请码')
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(inviteCode.value)
+    showToast('已复制邀请码')
+  } catch {
+    showToast('邀请码：' + inviteCode.value)
+  }
   copied.value = true
-  setTimeout(() => { copied.value = false }, 2000)
+  if (copiedTimer) clearTimeout(copiedTimer)
+  copiedTimer = setTimeout(() => {
+    copied.value = false
+  }, 1500)
 }
 
-// 轮询检测对方是否已绑定
+async function shareToWechat() {
+  if (!inviteCode.value) {
+    showToast('请先生成邀请码')
+    return
+  }
+  const shareText = `我的情侣绑定邀请码：${inviteCode.value}`
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title: '情侣绑定邀请码',
+        text: shareText,
+      })
+      showToast('分享成功')
+      return
+    }
+    await navigator.clipboard.writeText(shareText)
+    showToast('已复制邀请码，可发送给对方')
+  } catch {
+    showToast('分享未完成')
+  }
+}
+
+function askInviteCode() {
+  console.log('ask partner invite code')
+  showToast('已生成索要邀请码提示')
+}
+
+function normalizeInput() {
+  inputCode.value = inputCode.value
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 6)
+  error.value = ''
+}
+
 function startPolling() {
   stopPolling()
   pollTimer = setInterval(async () => {
     try {
       const res: any = await getCoupleInfo()
       if (res && res.couple_id) {
-        // 对方已绑定成功
         stopPolling()
         waitingBind.value = false
         await coupleStore.fetchCoupleInfo()
@@ -117,7 +272,7 @@ function startPolling() {
         showSuccess.value = true
       }
     } catch {
-      // ignore
+      // Keep polling while the invite is waiting.
     }
   }, 3000)
 }
@@ -130,16 +285,23 @@ function stopPolling() {
 }
 
 async function handleBind() {
-  if (inputCode.value.length < 6) return
+  normalizeInput()
+  if (inputCode.value.length < 6) {
+    error.value = '请输入完整邀请码'
+    showToast(error.value)
+    return
+  }
+
   loading.value = true
   error.value = ''
   try {
-    const res: any = await bindCouple(inputCode.value.toUpperCase())
+    const res: any = await bindCouple(inputCode.value)
     await coupleStore.fetchCoupleInfo()
     successMessage.value = `你和 ${res.partner?.nickname || '对方'} 已成功绑定情侣关系`
     showSuccess.value = true
   } catch (e: any) {
     error.value = e.message || '绑定失败'
+    showToast(error.value)
   } finally {
     loading.value = false
   }
@@ -159,291 +321,751 @@ onMounted(async () => {
 
 onUnmounted(() => {
   stopPolling()
+  if (toastTimer) clearTimeout(toastTimer)
+  if (copiedTimer) clearTimeout(copiedTimer)
 })
 </script>
 
 <style scoped>
-.couple-bind {
-  min-height: 100vh;
-  background: var(--color-bg);
+.couple-bind-page {
+  --text: #2e241f;
+  --sub: #7a6a5f;
+  --muted: #a19489;
+  --cream: rgba(255, 250, 240, 0.78);
+  --coral: #e95645;
+  --coral-2: #ef5548;
+  --coral-deep: #df4437;
+  --sage: #8fa783;
+  --border: rgba(255, 255, 255, 0.62);
+  position: relative;
+  width: min(100%, 430px);
+  min-height: calc(100vh + var(--tab-h, 64px) + var(--safe-bottom, 34px));
+  min-height: calc(100dvh + var(--tab-h, 64px) + var(--safe-bottom, 34px));
+  margin: 0 auto;
+  padding: max(52px, env(safe-area-inset-top)) 24px calc(34px + env(safe-area-inset-bottom));
+  overflow-x: clip;
+  color: var(--text);
+  background:
+    linear-gradient(180deg, rgba(255, 237, 205, 0.34), rgba(255, 247, 233, 0.2)),
+    var(--kitchen-bg) center top / cover fixed;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--sp-3) var(--sp-4);
+.couple-bind-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 22% 8%, rgba(255, 255, 255, 0.68), transparent 30%),
+    radial-gradient(circle at 88% 14%, rgba(236, 143, 71, 0.24), transparent 32%),
+    radial-gradient(circle at 12% 92%, rgba(232, 154, 69, 0.2), transparent 31%),
+    linear-gradient(90deg, rgba(255, 238, 212, 0.56), rgba(255, 244, 228, 0.18) 52%, rgba(203, 118, 55, 0.18));
+  backdrop-filter: blur(4px) saturate(1.15);
+  -webkit-backdrop-filter: blur(4px) saturate(1.15);
 }
 
-.back-btn {
-  width: 34px; height: 34px;
-  display: flex; align-items: center; justify-content: center;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-sm);
-  background: var(--color-surface);
-  color: var(--color-text-2);
-  cursor: pointer;
-}
-
-.back-btn svg { width: 18px; height: 18px; }
-
-.page-title {
-  font-size: var(--text-base);
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.tab-bar {
-  display: flex;
-  gap: var(--sp-2);
-  padding: 0 var(--sp-4);
-  margin-bottom: var(--sp-6);
-}
-
-.tab-item {
-  flex: 1;
-  padding: var(--sp-3) 0;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-sm);
-  background: var(--color-surface);
-  color: var(--color-text-3);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--dur-fast) var(--ease),
-              color var(--dur-fast) var(--ease),
-              border-color var(--dur-fast) var(--ease),
-              box-shadow var(--dur-fast) var(--ease);
-}
-
-.tab-item:hover:not(.active) {
-  border-color: var(--color-border-med);
-  box-shadow: var(--shadow-sm);
-}
-
-.tab-item.active {
-  background: var(--color-text);
-  border-color: var(--color-text);
-  color: var(--color-text-inv);
-  box-shadow: var(--shadow-md);
-}
-
+.page-header,
+.segment,
 .bind-card {
-  margin: 0 var(--sp-4);
-  padding: var(--sp-8) var(--sp-6);
-  background: var(--color-surface);
-  border-radius: var(--r-lg);
-  border: 1px solid var(--color-border);
-  text-align: center;
+  position: relative;
+  z-index: 1;
 }
 
-.bind-icon {
-  font-size: 48px;
-  margin-bottom: var(--sp-4);
+button,
+input {
+  font: inherit;
 }
 
-.bind-desc {
-  color: var(--color-text-3);
-  font-size: var(--text-sm);
-  margin-bottom: var(--sp-6);
-  line-height: 1.6;
-}
-
-.code-box {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-3);
-  padding: var(--sp-5);
-  background: var(--color-surface-2);
-  border-radius: var(--r-md);
-  margin-bottom: var(--sp-4);
-}
-
-.code-text {
-  font-size: var(--text-2xl);
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  color: var(--color-text);
-  font-family: var(--font-display);
-}
-
-.copy-btn {
-  padding: var(--sp-2) var(--sp-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-sm);
-  background: var(--color-surface);
-  color: var(--color-text-2);
-  font-size: var(--text-xs);
-  font-weight: 600;
+button {
+  border: 0;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.gen-btn {
-  width: 100%;
-  padding: var(--sp-4);
-  border: none;
-  border-radius: var(--r-md);
-  background: var(--color-text);
-  color: var(--color-text-inv);
-  font-size: var(--text-base);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--dur-fast) var(--ease),
-              transform var(--dur-fast) var(--ease),
-              box-shadow var(--dur-fast) var(--ease);
-}
-
-.gen-btn:hover:not(:disabled) {
-  background: var(--color-text-2);
-  box-shadow: var(--shadow-md);
-}
-
-.gen-btn:active:not(:disabled) {
-  transform: translateY(1px);
-  box-shadow: none;
-}
-
-.gen-btn:disabled {
-  opacity: 0.35;
+button:disabled {
   cursor: not-allowed;
 }
 
-.input-row {
-  margin-bottom: var(--sp-4);
+svg {
+  display: block;
 }
 
-.code-input {
-  width: 100%;
-  padding: var(--sp-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  background: var(--color-surface-2);
-  color: var(--color-text);
-  font-size: var(--text-xl);
-  font-weight: 700;
-  text-align: center;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  outline: none;
-  transition: border-color var(--dur-fast) var(--ease);
-}
-
-.code-input:focus {
-  border-color: var(--color-text);
-}
-
-.code-input::placeholder {
-  font-size: var(--text-sm);
-  letter-spacing: 0;
-  font-weight: 500;
-  color: var(--color-text-3);
-}
-
-.copied-hint {
-  margin-top: var(--sp-3);
-  color: var(--color-success);
-  font-size: var(--text-xs);
-  font-weight: 600;
-}
-
-.error-hint {
-  margin-top: var(--sp-3);
-  color: var(--color-error);
-  font-size: var(--text-xs);
-  font-weight: 600;
-}
-
-.waiting-hint {
-  margin-top: var(--sp-4);
-  color: var(--color-accent);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-/* Dialog */
-.dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(28, 25, 21, 0.55);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+.page-header {
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
-  animation: fadeIn 0.2s ease;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.back-btn {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 16px;
+  color: #4a352a;
+  background: rgba(255, 250, 240, 0.86);
+  box-shadow:
+    0 12px 28px rgba(80, 50, 30, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.back-btn svg {
+  width: 28px;
+  height: 28px;
+  stroke-width: 2.55;
+}
+
+.page-title {
+  margin: 0;
+  color: #2e241f;
+  font-size: 27px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.segment {
+  height: 66px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 36px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 999px;
+  background: rgba(255, 250, 240, 0.68);
+  box-shadow:
+    0 14px 30px rgba(80, 50, 30, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.76);
+  backdrop-filter: blur(18px) saturate(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
+}
+
+.tab-btn {
+  position: relative;
+  z-index: 1;
+  border-radius: 999px;
+  color: #6f5b4d;
+  background: transparent;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 0;
+  transition: color 180ms ease, transform 180ms ease;
+}
+
+.tab-btn.active {
+  color: var(--coral);
+}
+
+.tab-btn.active::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgba(255, 250, 240, 0.88);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.tab-btn.active::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  width: 42px;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--coral), var(--coral-2));
+  transform: translateX(-50%);
+}
+
+.bind-card {
+  min-height: 560px;
+  margin-top: 28px;
+  padding: 34px 24px 28px;
+  border: 1px solid var(--border);
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.76), transparent 36%),
+    rgba(255, 250, 240, 0.78);
+  box-shadow:
+    0 22px 50px rgba(80, 50, 30, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(22px) saturate(1.1);
+  -webkit-backdrop-filter: blur(22px) saturate(1.1);
+}
+
+.heart-art {
+  position: relative;
+  width: min(220px, 68vw);
+  height: 170px;
+  margin: 1px auto 0;
+}
+
+.heart-art.compact {
+  width: 150px;
+  height: 112px;
+  margin-top: -6px;
+  transform: scale(0.68);
+  transform-origin: center;
+}
+
+.heart-art::before {
+  content: "";
+  position: absolute;
+  left: 24px;
+  right: 16px;
+  top: 60px;
+  height: 62px;
+  border: 2px solid rgba(242, 126, 96, 0.26);
+  border-radius: 50%;
+  transform: rotate(-13deg);
+}
+
+.heart-core,
+.heart-ring,
+.mini-heart {
+  position: absolute;
+  transform: rotate(45deg);
+}
+
+.heart-core {
+  left: 55px;
+  top: 46px;
+  width: 88px;
+  height: 88px;
+  border-radius: 18px 18px 20px 18px;
+  background:
+    radial-gradient(circle at 32% 22%, rgba(255, 255, 255, 0.72), transparent 23%),
+    linear-gradient(135deg, #ff9b80 0%, #ff705e 45%, #e64b39 100%);
+  box-shadow:
+    0 18px 30px rgba(214, 68, 48, 0.28),
+    inset -12px -12px 22px rgba(166, 45, 33, 0.12),
+    inset 12px 12px 18px rgba(255, 255, 255, 0.2);
+}
+
+.heart-core::before,
+.heart-core::after,
+.heart-ring::before,
+.heart-ring::after,
+.mini-heart::before,
+.mini-heart::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+}
+
+.heart-core::before {
+  width: 88px;
+  height: 88px;
+  left: -44px;
+  top: 0;
+  background: inherit;
+}
+
+.heart-core::after {
+  width: 88px;
+  height: 88px;
+  left: 0;
+  top: -44px;
+  background: inherit;
+}
+
+.heart-ring {
+  left: 121px;
+  top: 75px;
+  width: 57px;
+  height: 57px;
+  border: 12px solid #fff0da;
+  border-radius: 15px;
+  background: transparent;
+  box-shadow:
+    0 13px 24px rgba(148, 88, 50, 0.18),
+    inset 0 0 0 1px rgba(169, 92, 49, 0.08);
+}
+
+.heart-ring::before,
+.heart-ring::after {
+  width: 57px;
+  height: 57px;
+  border: 12px solid #fff0da;
+  background: transparent;
+}
+
+.heart-ring::before {
+  left: -40px;
+  top: -12px;
+}
+
+.heart-ring::after {
+  left: -12px;
+  top: -40px;
+}
+
+.mini-heart {
+  width: 21px;
+  height: 21px;
+  border-radius: 5px;
+  background: linear-gradient(135deg, #ffad95, #ef5a4d);
+  box-shadow: 0 7px 15px rgba(233, 86, 69, 0.2);
+}
+
+.mini-heart::before,
+.mini-heart::after {
+  width: 21px;
+  height: 21px;
+  background: inherit;
+}
+
+.mini-heart::before {
+  left: -10px;
+  top: 0;
+}
+
+.mini-heart::after {
+  left: 0;
+  top: -10px;
+}
+
+.mini-heart.one {
+  left: 20px;
+  top: 66px;
+  transform: rotate(35deg) scale(0.72);
+}
+
+.mini-heart.two {
+  right: 16px;
+  top: 28px;
+  transform: rotate(31deg) scale(0.82);
+}
+
+.mini-heart.three {
+  left: 57px;
+  bottom: 22px;
+  transform: rotate(36deg) scale(0.68);
+}
+
+.sparkle {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  color: rgba(239, 166, 124, 0.64);
+}
+
+.sparkle::before,
+.sparkle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 999px;
+  background: currentColor;
+  transform: translate(-50%, -50%);
+}
+
+.sparkle::before {
+  width: 3px;
+  height: 22px;
+}
+
+.sparkle::after {
+  width: 22px;
+  height: 3px;
+}
+
+.sparkle.s1 {
+  left: 11px;
+  top: 42px;
+  transform: scale(0.65);
+}
+
+.sparkle.s2 {
+  right: 7px;
+  top: 98px;
+  transform: scale(0.88);
+}
+
+.sparkle.s3 {
+  left: 20px;
+  top: 104px;
+  transform: rotate(15deg) scale(0.78);
+}
+
+.desc {
+  margin: 24px 0 0;
+  color: var(--sub);
+  font-size: 14.8px;
+  font-weight: 540;
+  line-height: 1.6;
+  text-align: center;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.code-box {
+  position: relative;
+  height: 128px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 28px;
+  border: 1.5px dashed rgba(120, 90, 65, 0.22);
+  border-radius: 22px;
+  background: rgba(255, 248, 236, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.56);
+}
+
+.code-label {
+  position: absolute;
+  top: 23px;
+  left: 0;
+  right: 0;
+  color: #7a6a5f;
+  font-size: 15px;
+  font-weight: 740;
+  text-align: center;
+}
+
+.code-value {
+  margin-top: 32px;
+  color: #6b5142;
+  font-size: clamp(30px, 9vw, 36px);
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 7px;
+  transform: translate(-23px, 4px);
+}
+
+.copy-btn {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 2px;
+  color: #7a6a5f;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 720;
+  transform: translateY(-50%);
+  transition: color 180ms ease, transform 180ms ease, opacity 180ms ease;
+}
+
+.copy-btn:disabled {
+  opacity: 0.48;
+}
+
+.copy-btn svg {
+  width: 27px;
+  height: 27px;
+  stroke-width: 2.1;
+}
+
+.primary-btn,
+.wechat-btn {
+  width: 100%;
+  height: 60px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  border-radius: 18px;
+  transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+}
+
+.primary-btn {
+  margin-top: 32px;
+  color: #fff;
+  background: linear-gradient(135deg, #f06152, #e9473a);
+  box-shadow: 0 16px 30px rgba(233, 86, 69, 0.28);
+  font-size: 21px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.wechat-btn {
+  margin-top: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  color: #6b5142;
+  background: rgba(255, 255, 255, 0.46);
+  box-shadow:
+    0 12px 24px rgba(80, 50, 30, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.68);
+  font-size: 18px;
+  font-weight: 820;
+}
+
+.primary-btn:disabled,
+.wechat-btn:disabled {
+  opacity: 0.58;
+}
+
+.wechat-btn svg {
+  width: 29px;
+  height: 29px;
+  stroke-width: 2.1;
+}
+
+.status-text {
+  margin: 14px 0 -6px;
+  color: var(--coral-deep);
+  font-size: 13px;
+  font-weight: 760;
+  text-align: center;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 26px 0 0;
+  color: var(--sub);
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.hint svg {
+  width: 23px;
+  height: 23px;
+  flex: 0 0 23px;
+  color: var(--sage);
+  stroke-width: 2.2;
+}
+
+.invite-input {
+  width: 100%;
+  height: 64px;
+  margin-top: 28px;
+  border: 1px solid rgba(120, 90, 65, 0.14);
+  border-radius: 18px;
+  outline: 0;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
+  font-size: 22px;
+  font-weight: 850;
+  letter-spacing: 4px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.invite-input::placeholder {
+  color: #aa9d92;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.error-text {
+  min-height: 22px;
+  margin: 10px 0 -8px;
+  color: var(--coral-deep);
+  font-size: 14px;
+  font-weight: 740;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.error-text.show {
+  opacity: 1;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(32px + env(safe-area-inset-bottom));
+  z-index: 9;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(46, 36, 31, 0.78);
+  box-shadow: 0 12px 24px rgba(46, 36, 31, 0.18);
+  font-size: 14px;
+  font-weight: 740;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 12px);
+  transition: opacity 180ms ease, transform 180ms ease;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(46, 36, 31, 0.38);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .dialog-box {
-  width: 80%;
-  max-width: 300px;
-  background: var(--color-surface);
-  border-radius: var(--r-xl);
-  padding: var(--sp-8) var(--sp-6);
+  width: min(100%, 320px);
+  padding: 22px 22px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.66);
+  border-radius: 28px;
+  background: rgba(255, 250, 240, 0.88);
+  box-shadow: 0 22px 48px rgba(80, 50, 30, 0.2);
   text-align: center;
-  animation: scaleIn 0.3s var(--ease-out);
-}
-
-@keyframes scaleIn {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-.success-icon {
-  font-size: 56px;
-  margin-bottom: var(--sp-4);
-  animation: heartbeat 1s ease-in-out;
-}
-
-@keyframes heartbeat {
-  0% { transform: scale(0.8); }
-  25% { transform: scale(1.1); }
-  50% { transform: scale(0.95); }
-  75% { transform: scale(1.05); }
-  100% { transform: scale(1); }
 }
 
 .success-title {
-  font-family: var(--font-display);
-  font-size: var(--text-xl);
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: var(--sp-2);
+  margin: -12px 0 8px;
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 900;
 }
 
 .success-desc {
-  color: var(--color-text-3);
-  font-size: var(--text-sm);
-  margin-bottom: var(--sp-6);
-  line-height: 1.5;
+  margin: 0 0 20px;
+  color: var(--sub);
+  font-size: 14px;
+  line-height: 1.55;
 }
 
 .success-btn {
   width: 100%;
-  padding: var(--sp-4);
-  border: none;
-  border-radius: var(--r-md);
-  background: var(--color-text);
-  color: var(--color-text-inv);
-  font-size: var(--text-base);
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity var(--dur-fast) var(--ease);
+  height: 52px;
+  border-radius: 16px;
+  color: #fff;
+  background: linear-gradient(135deg, #f06152, #e9473a);
+  font-size: 17px;
+  font-weight: 860;
 }
 
+.back-btn:active,
+.tab-btn:active,
+.primary-btn:active,
+.wechat-btn:active,
 .success-btn:active {
-  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+.copy-btn:active {
+  transform: translateY(-50%) scale(0.96);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.52; }
+}
+
+@media (hover: hover) {
+  .back-btn:hover,
+  .tab-btn:hover,
+  .primary-btn:hover,
+  .wechat-btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .primary-btn:hover {
+    box-shadow: 0 18px 34px rgba(233, 86, 69, 0.32);
+  }
+
+  .copy-btn:hover {
+    color: var(--coral);
+  }
+}
+
+@media (max-width: 380px) {
+  .couple-bind-page {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .segment {
+    margin-top: 30px;
+  }
+
+  .bind-card {
+    padding: 30px 18px 26px;
+    border-radius: 30px;
+  }
+
+  .tab-btn {
+    font-size: 18px;
+  }
+
+  .desc {
+    font-size: 13.8px;
+  }
+
+  .code-value {
+    letter-spacing: 6px;
+  }
+
+  .copy-btn {
+    right: 12px;
+  }
+
+  .hint {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 350px) {
+  .page-title {
+    font-size: 25px;
+  }
+
+  .back-btn {
+    width: 48px;
+    height: 48px;
+  }
+
+  .segment {
+    height: 62px;
+  }
+
+  .heart-art {
+    transform: scale(0.9);
+    transform-origin: center top;
+    margin-bottom: -12px;
+  }
+
+  .desc {
+    font-size: 13px;
+  }
+}
+
+@media (min-width: 431px) {
+  .couple-bind-page {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
 </style>

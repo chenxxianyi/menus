@@ -71,14 +71,67 @@
 
       <button class="logout-btn" type="button" @click="handleLogout">退出登录</button>
     </main>
+
+    <Teleport to="body">
+      <div v-if="editVisible" class="edit-mask" @click.self="closeEditDialog">
+        <section class="edit-dialog glass-card" aria-label="编辑个人资料">
+          <div class="sheet-handle" aria-hidden="true"></div>
+          <header class="edit-header">
+            <div>
+              <h2>编辑资料</h2>
+              <p>修改后会同步到你的账号信息</p>
+            </div>
+            <button class="dialog-close" type="button" aria-label="关闭" @click="closeEditDialog">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
+          </header>
+
+          <label class="edit-field">
+            <span>昵称</span>
+            <input v-model.trim="editForm.nickname" type="text" maxlength="20" placeholder="输入昵称" />
+          </label>
+
+          <label class="edit-field">
+            <span>头像链接</span>
+            <input v-model.trim="editForm.avatar" type="url" placeholder="输入头像图片链接" />
+          </label>
+
+          <div class="edit-field">
+            <span>性别</span>
+            <div class="gender-group">
+              <button
+                v-for="option in genderOptions"
+                :key="option.value"
+                class="gender-chip"
+                :class="{ active: editForm.gender === option.value }"
+                type="button"
+                @click="editForm.gender = option.value"
+              >
+                {{ option.label }}
+              </button>
+            </div>
+          </div>
+
+          <div class="dialog-actions">
+            <button class="secondary-btn" type="button" @click="closeEditDialog">取消</button>
+            <button class="primary-btn" type="button" :disabled="savingProfile" @click="submitProfile">
+              {{ savingProfile ? '保存中' : '保存修改' }}
+            </button>
+          </div>
+        </section>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, defineComponent, h, onMounted, ref } from 'vue'
+import { computed, defineComponent, h, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { getUserStats } from '@/api/user'
+import { getUserStats, updateProfile } from '@/api/user'
 import kitchenBg from '@/assets/home/kitchen-bg.jpg'
 
 type IconName = 'heart' | 'file' | 'cart' | 'bowl' | 'clock' | 'info'
@@ -102,6 +155,19 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const profileStats = ref<ProfileStats | null>(null)
+const editVisible = ref(false)
+const savingProfile = ref(false)
+const editForm = reactive({
+  nickname: '',
+  avatar: '',
+  gender: 0,
+})
+
+const genderOptions = [
+  { label: '保密', value: 0 },
+  { label: '男', value: 1 },
+  { label: '女', value: 2 },
+]
 
 const pageVars = computed(() => ({
   '--profile-bg': `url(${kitchenBg})`,
@@ -176,19 +242,44 @@ const settingItems: MenuItem[] = [
     icon: 'clock',
     color: '#9a7957',
     bg: 'rgba(210, 170, 120, 0.20)',
-    action: 'history',
+    path: '/user/history',
   },
   {
     label: '关于我们',
     icon: 'info',
     color: '#8b715e',
     bg: 'rgba(160, 130, 100, 0.18)',
-    action: 'about',
+    path: '/about',
   },
 ]
 
 function handleEditProfile() {
-  console.log('edit profile')
+  const user = userStore.userInfo
+  editForm.nickname = user?.nickname || ''
+  editForm.avatar = user?.avatar || ''
+  editForm.gender = Number(user?.gender || 0)
+  editVisible.value = true
+}
+
+function closeEditDialog() {
+  if (savingProfile.value) return
+  editVisible.value = false
+}
+
+async function submitProfile() {
+  if (savingProfile.value) return
+  savingProfile.value = true
+  try {
+    await updateProfile({
+      nickname: editForm.nickname,
+      avatar: editForm.avatar,
+      gender: editForm.gender,
+    })
+    await userStore.fetchUserInfo()
+    editVisible.value = false
+  } finally {
+    savingProfile.value = false
+  }
 }
 
 function goPath(path?: string) {
@@ -444,6 +535,187 @@ const ProfileIcon = defineComponent({
   -webkit-backdrop-filter: blur(20px) saturate(1.08);
 }
 
+.edit-mask {
+  position: fixed;
+  inset: 0 0 calc(106px + var(--safe-bottom, 0px));
+  z-index: 90;
+  display: grid;
+  align-items: center;
+  padding: 24px;
+  background:
+    linear-gradient(180deg, rgba(46, 36, 31, 0.12), rgba(46, 36, 31, 0.34)),
+    rgba(46, 36, 31, 0.2);
+  backdrop-filter: blur(12px) saturate(1.04);
+  -webkit-backdrop-filter: blur(12px) saturate(1.04);
+}
+
+.edit-dialog {
+  width: min(100%, 430px);
+  max-height: min(74dvh, 620px);
+  display: flex;
+  flex-direction: column;
+  justify-self: center;
+  overflow-y: auto;
+  padding: 10px 22px 24px;
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(255, 255, 255, 0.54), transparent 42%),
+    rgba(255, 250, 240, 0.94);
+  box-shadow:
+    0 24px 70px rgba(80, 50, 30, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  overscroll-behavior: contain;
+}
+
+.sheet-handle {
+  width: 48px;
+  height: 5px;
+  flex: 0 0 auto;
+  margin: 2px auto 18px;
+  border-radius: 999px;
+  background: rgba(122, 106, 95, 0.22);
+}
+
+.edit-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.edit-header h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.edit-header p {
+  margin: 8px 0 0;
+  color: var(--sub);
+  font-size: 14px;
+  font-weight: 620;
+  line-height: 1.4;
+}
+
+.dialog-close {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 14px;
+  color: #8b7d70;
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+}
+
+.dialog-close svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.2;
+}
+
+.edit-field {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.edit-field span {
+  color: #5d4b40;
+  font-size: 15px;
+  font-weight: 760;
+  line-height: 1;
+}
+
+.edit-field input {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 16px;
+  border: 1px solid rgba(120, 100, 80, 0.14);
+  border-radius: 16px;
+  outline: 0;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.64);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 620;
+}
+
+.edit-field input::placeholder {
+  color: #ab9d92;
+}
+
+.gender-group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.gender-chip {
+  min-height: 48px;
+  border: 1px solid rgba(120, 100, 80, 0.14);
+  border-radius: 16px;
+  color: #6f6054;
+  background: rgba(255, 255, 255, 0.58);
+  font-size: 15px;
+  font-weight: 760;
+  cursor: pointer;
+  transition: transform 180ms ease, background 180ms ease, color 180ms ease;
+}
+
+.gender-chip.active {
+  border-color: transparent;
+  color: #fff;
+  background: linear-gradient(135deg, #f06152, #e9473a);
+  box-shadow: 0 12px 24px rgba(233, 86, 69, 0.18);
+}
+
+.dialog-actions {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 22px;
+  padding-top: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 250, 240, 0), rgba(255, 250, 240, 0.96) 26%),
+    rgba(255, 250, 240, 0.82);
+}
+
+.secondary-btn,
+.primary-btn {
+  min-height: 52px;
+  border: 0;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 820;
+  cursor: pointer;
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.secondary-btn {
+  color: #7a6a5f;
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+.primary-btn {
+  color: #fff;
+  background: linear-gradient(135deg, #f06152, #e9473a);
+  box-shadow: 0 14px 26px rgba(233, 86, 69, 0.24);
+}
+
+.primary-btn:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
 .stats-card {
   height: 96px;
   display: grid;
@@ -575,9 +847,13 @@ const ProfileIcon = defineComponent({
 }
 
 .edit-btn:active,
+.dialog-close:active,
 .stat-item:active,
 .menu-item:active,
-.logout-btn:active {
+.logout-btn:active,
+.gender-chip:active,
+.secondary-btn:active,
+.primary-btn:active {
   transform: scale(0.98);
 }
 
@@ -595,6 +871,13 @@ const ProfileIcon = defineComponent({
       inset 0 1px 0 rgba(255, 255, 255, 0.94);
   }
 
+  .dialog-close:hover,
+  .gender-chip:hover,
+  .secondary-btn:hover,
+  .primary-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
   .menu-item:hover,
   .stat-item:hover {
     background: rgba(255, 255, 255, 0.22);
@@ -606,6 +889,25 @@ const ProfileIcon = defineComponent({
 }
 
 @media (max-width: 380px) {
+  .edit-mask {
+    inset: 0 0 calc(98px + var(--safe-bottom, 0px));
+    padding: 16px;
+  }
+
+  .edit-dialog {
+    max-height: 72dvh;
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+
+  .edit-header h2 {
+    font-size: 22px;
+  }
+
+  .dialog-actions {
+    grid-template-columns: 1fr;
+  }
+
   .profile-phone {
     padding-left: 20px;
     padding-right: 20px;

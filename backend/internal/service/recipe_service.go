@@ -9,10 +9,11 @@ type RecipeService struct {
 	recipeRepo   *repository.RecipeRepo
 	categoryRepo *repository.CategoryRepo
 	favRepo      *repository.FavoriteRepo
+	historyRepo  *repository.BrowseHistoryRepo
 }
 
-func NewRecipeService(recipeRepo *repository.RecipeRepo, categoryRepo *repository.CategoryRepo, favRepo *repository.FavoriteRepo) *RecipeService {
-	return &RecipeService{recipeRepo: recipeRepo, categoryRepo: categoryRepo, favRepo: favRepo}
+func NewRecipeService(recipeRepo *repository.RecipeRepo, categoryRepo *repository.CategoryRepo, favRepo *repository.FavoriteRepo, historyRepo *repository.BrowseHistoryRepo) *RecipeService {
+	return &RecipeService{recipeRepo: recipeRepo, categoryRepo: categoryRepo, favRepo: favRepo, historyRepo: historyRepo}
 }
 
 func (s *RecipeService) ListRecipes(keyword string, categoryID uint, taste, cookTime, difficulty, healthTags string, page, pageSize int) ([]model.Recipe, int64, error) {
@@ -33,6 +34,7 @@ func (s *RecipeService) GetRecipeDetail(id uint, userID uint) (*model.Recipe, er
 
 	if userID > 0 {
 		recipe.IsFavorited = s.favRepo.Exists(userID, id)
+		_ = s.historyRepo.Record(userID, id)
 	}
 
 	return recipe, nil

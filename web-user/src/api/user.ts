@@ -5,7 +5,7 @@ export function getUserInfo() {
   return api.get('/user/info')
 }
 
-export function updateProfile(data: Partial<{ nickname: string; avatar: string; bio: string }>) {
+export function updateProfile(data: Partial<{ nickname: string; avatar: string; bio: string; gender: number }>) {
   return api.put('/user/profile', data)
 }
 
@@ -27,4 +27,12 @@ export function getUserStats() {
 
 export function getUserFavorites(page = 1, pageSize = 10) {
   return api.get('/user/favorites', { params: { page, page_size: pageSize } })
+}
+
+export function getBrowseHistory(page = 1, pageSize = 20) {
+  return api.get('/user/history', { params: { page, page_size: pageSize } })
+}
+
+export function clearBrowseHistory() {
+  return api.delete('/user/history')
 }
