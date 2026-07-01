@@ -1,12 +1,9 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"strings"
 
 	"menu-recommend/internal/model"
@@ -84,49 +81,15 @@ func (c *AIClient) GenerateRecipeDraft(ctx context.Context, dishName string) (*A
 		ResponseFormat: &responseFormat{Type: "json_object"},
 	}
 
-	encoded, err := json.Marshal(reqBody)
+	content, err := c.chatCompletion(ctx, reqBody, 1<<20)
 	if err != nil {
 		return nil, err
 	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/chat/completions", bytes.NewReader(encoded))
+	draft, err := parseAIRecipeDraft(content, dishName)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.apiKey)
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("%w: status %d %s", ErrAIInvalidResponse, resp.StatusCode, strings.TrimSpace(string(body)))
-	}
-
-	var completion chatCompletionResponse
-	if err := json.Unmarshal(body, &completion); err != nil {
-		return nil, fmt.Errorf("%w: decode completion: %v", ErrAIInvalidResponse, err)
-	}
-	if len(completion.Choices) == 0 {
-		return nil, ErrAIInvalidResponse
-	}
-
-	var draft AIRecipeDraft
-	content := strings.TrimSpace(completion.Choices[0].Message.Content)
-	if err := json.Unmarshal([]byte(content), &draft); err != nil {
-		return nil, fmt.Errorf("%w: decode recipe content: %v", ErrAIInvalidResponse, err)
-	}
-	if err := normalizeAIRecipeDraft(&draft, dishName); err != nil {
-		return nil, err
-	}
-	return &draft, nil
+	return draft, nil
 }
 
 func (d *AIRecipeDraft) ToRecipe(categoryID uint) (*model.Recipe, error) {
@@ -299,6 +262,281 @@ func normalizeAIRecipeDraft(draft *AIRecipeDraft, fallbackTitle string) error {
 		draft.Nutrition.Fiber = 0
 	}
 	return nil
+}
+
+func parseAIRecipeDraft(content string, fallbackTitle string) (*AIRecipeDraft, error) {
+	raw, err := decodeAIJSONContent(content)
+	if err != nil {
+		return nil, err
+	}
+	raw = unwrapAIObject(raw, "recipes", "title", "name", "ingredients", "steps", "recipe")
+
+	var draft AIRecipeDraft
+	adapted := false
+	if err := json.Unmarshal(raw, &draft); err != nil {
+		if adaptedDraft, ok := adaptAIRecipeDraft(raw, fallbackTitle); ok {
+			draft = adaptedDraft
+			adapted = true
+		} else {
+			return nil, fmt.Errorf("%w: decode recipe content: %v", ErrAIInvalidResponse, err)
+		}
+	} else if draft.Title == "" || len(draft.Ingredients) == 0 || len(draft.Steps) == 0 {
+		if adaptedDraft, ok := adaptAIRecipeDraft(raw, fallbackTitle); ok {
+			draft = adaptedDraft
+			adapted = true
+		}
+	}
+	if err := normalizeAIRecipeDraft(&draft, fallbackTitle); err != nil {
+		if !adapted {
+			if adaptedDraft, ok := adaptAIRecipeDraft(raw, fallbackTitle); ok {
+				if normalizeErr := normalizeAIRecipeDraft(&adaptedDraft, fallbackTitle); normalizeErr == nil {
+					return &adaptedDraft, nil
+				}
+			}
+		}
+		return nil, err
+	}
+	return &draft, nil
+}
+
+func adaptAIRecipeDraft(raw json.RawMessage, fallbackTitle string) (AIRecipeDraft, bool) {
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		return AIRecipeDraft{}, false
+	}
+
+	if recipeRaw := rawValue(obj, "recipe", "recipe_detail", "detail", "菜谱", "做法"); len(recipeRaw) > 0 && isJSONObject(recipeRaw) {
+		var nested map[string]json.RawMessage
+		if err := json.Unmarshal(recipeRaw, &nested); err == nil && hasAnyRawKey(nested, "title", "name", "ingredients", "steps") {
+			obj = nested
+			raw = recipeRaw
+		}
+	}
+
+	draft := AIRecipeDraft{
+		Title:       firstNonEmpty(rawString(obj, "title", "name", "dish_name", "recipe_name", "菜名", "菜谱名称", "菜品名称"), fallbackTitle),
+		Description: rawString(obj, "description", "desc", "intro", "summary", "介绍", "描述"),
+		CookTime:    rawInt(obj, "cook_time", "cookTime", "cooking_time", "time", "烹饪时间", "制作时间"),
+		Difficulty:  rawString(obj, "difficulty", "level", "难度"),
+		PeopleCount: rawInt(obj, "people_count", "peopleCount", "servings", "portion", "人数", "份量"),
+		Taste:       rawString(obj, "taste", "flavor", "口味"),
+		HealthTags:  rawStringList(obj, 6, "health_tags", "healthTags", "tags", "nutrition_tags", "健康标签", "标签"),
+		Tips:        rawString(obj, "tips", "tip", "notes", "小贴士", "提示"),
+		Nutrition: AIRecipeNutrition{
+			Calories: rawIntFromNested(obj, []string{"nutrition", "营养"}, "calories", "kcal", "热量"),
+			Protein:  rawFloatFromNested(obj, []string{"nutrition", "营养"}, "protein", "蛋白质"),
+			Fat:      rawFloatFromNested(obj, []string{"nutrition", "营养"}, "fat", "脂肪"),
+			Carbs:    rawFloatFromNested(obj, []string{"nutrition", "营养"}, "carbs", "carbohydrate", "碳水", "碳水化合物"),
+			Fiber:    rawFloatFromNested(obj, []string{"nutrition", "营养"}, "fiber", "膳食纤维"),
+		},
+	}
+
+	draft.Ingredients = adaptAIRecipeIngredients(rawValue(obj, "ingredients", "ingredient", "食材", "主料", "食材清单"))
+	draft.Seasonings = adaptAIRecipeSeasonings(rawValue(obj, "seasonings", "seasoning", "condiments", "调料", "调味料", "辅料"))
+	draft.Steps = adaptAIRecipeSteps(rawValue(obj, "steps", "instructions", "method", "directions", "做法", "步骤"))
+
+	return draft, draft.Title != "" || len(draft.Ingredients) > 0 || len(draft.Steps) > 0 || len(raw) > 0
+}
+
+func rawIntFromNested(obj map[string]json.RawMessage, parents []string, keys ...string) int {
+	for _, parent := range parents {
+		if nested := rawValue(obj, parent); len(nested) > 0 {
+			var nestedObj map[string]json.RawMessage
+			if err := json.Unmarshal(nested, &nestedObj); err == nil {
+				if value := rawInt(nestedObj, keys...); value != 0 {
+					return value
+				}
+			}
+		}
+	}
+	return rawInt(obj, keys...)
+}
+
+func rawFloatFromNested(obj map[string]json.RawMessage, parents []string, keys ...string) float64 {
+	for _, parent := range parents {
+		if nested := rawValue(obj, parent); len(nested) > 0 {
+			var nestedObj map[string]json.RawMessage
+			if err := json.Unmarshal(nested, &nestedObj); err == nil {
+				if value := rawFloat(nestedObj, keys...); value != 0 {
+					return value
+				}
+			}
+		}
+	}
+	return rawFloat(obj, keys...)
+}
+
+func adaptAIRecipeIngredients(raw json.RawMessage) []AIRecipeIngredient {
+	raw = bytesTrimSpace(raw)
+	if len(raw) == 0 {
+		return nil
+	}
+	if isJSONArray(raw) {
+		var items []json.RawMessage
+		if err := json.Unmarshal(raw, &items); err != nil {
+			return nil
+		}
+		result := make([]AIRecipeIngredient, 0, len(items))
+		for _, item := range items {
+			if ingredient, ok := adaptAIRecipeIngredient(item); ok {
+				result = append(result, ingredient)
+			}
+		}
+		return result
+	}
+	return adaptAIRecipeIngredientsFromText(rawToString(raw))
+}
+
+func adaptAIRecipeIngredient(raw json.RawMessage) (AIRecipeIngredient, bool) {
+	if isJSONObject(raw) {
+		var obj map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &obj); err != nil {
+			return AIRecipeIngredient{}, false
+		}
+		name := rawString(obj, "name", "title", "ingredient", "食材", "名称")
+		amount := firstNonEmpty(rawString(obj, "amount", "quantity", "qty", "用量", "数量"), "适量")
+		unit := rawString(obj, "unit", "单位")
+		return AIRecipeIngredient{
+			Name:     name,
+			Amount:   amount,
+			Unit:     unit,
+			Emoji:    rawString(obj, "emoji"),
+			Category: rawString(obj, "category", "type", "分类", "类别"),
+			Price:    rawFloat(obj, "price", "价格"),
+		}, name != ""
+	}
+	text := rawToString(raw)
+	name, amount, unit := parseIngredientText(text)
+	return AIRecipeIngredient{Name: name, Amount: amount, Unit: unit}, name != ""
+}
+
+func adaptAIRecipeIngredientsFromText(text string) []AIRecipeIngredient {
+	parts := splitAITextList(text)
+	result := make([]AIRecipeIngredient, 0, len(parts))
+	for _, part := range parts {
+		name, amount, unit := parseIngredientText(part)
+		if name != "" {
+			result = append(result, AIRecipeIngredient{Name: name, Amount: amount, Unit: unit})
+		}
+	}
+	return result
+}
+
+func parseIngredientText(text string) (string, string, string) {
+	text = cleanAIListItem(text)
+	if text == "" {
+		return "", "", ""
+	}
+	text = strings.ReplaceAll(text, "：", ":")
+	text = strings.ReplaceAll(text, "，", " ")
+	text = strings.ReplaceAll(text, "、", " ")
+	parts := strings.SplitN(text, ":", 2)
+	if len(parts) == 2 {
+		return strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]), ""
+	}
+	fields := strings.Fields(text)
+	if len(fields) >= 2 {
+		return fields[0], strings.Join(fields[1:], ""), ""
+	}
+	return text, "适量", ""
+}
+
+func adaptAIRecipeSeasonings(raw json.RawMessage) []AIRecipeSeasoning {
+	raw = bytesTrimSpace(raw)
+	if len(raw) == 0 {
+		return nil
+	}
+	if isJSONArray(raw) {
+		var items []json.RawMessage
+		if err := json.Unmarshal(raw, &items); err != nil {
+			return nil
+		}
+		result := make([]AIRecipeSeasoning, 0, len(items))
+		for _, item := range items {
+			if seasoning, ok := adaptAIRecipeSeasoning(item); ok {
+				result = append(result, seasoning)
+			}
+		}
+		return result
+	}
+	parts := splitAITextList(rawToString(raw))
+	result := make([]AIRecipeSeasoning, 0, len(parts))
+	for _, part := range parts {
+		name, amount, _ := parseIngredientText(part)
+		if name != "" {
+			result = append(result, AIRecipeSeasoning{Name: name, Amount: firstNonEmpty(amount, "适量")})
+		}
+	}
+	return result
+}
+
+func adaptAIRecipeSeasoning(raw json.RawMessage) (AIRecipeSeasoning, bool) {
+	if isJSONObject(raw) {
+		var obj map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &obj); err != nil {
+			return AIRecipeSeasoning{}, false
+		}
+		name := rawString(obj, "name", "title", "seasoning", "调料", "名称")
+		amount := firstNonEmpty(rawString(obj, "amount", "quantity", "qty", "用量", "数量"), "适量")
+		return AIRecipeSeasoning{Name: name, Amount: amount}, name != ""
+	}
+	text := rawToString(raw)
+	name, amount, _ := parseIngredientText(text)
+	return AIRecipeSeasoning{Name: name, Amount: firstNonEmpty(amount, "适量")}, name != ""
+}
+
+func adaptAIRecipeSteps(raw json.RawMessage) []AIRecipeStep {
+	raw = bytesTrimSpace(raw)
+	if len(raw) == 0 {
+		return nil
+	}
+	if isJSONArray(raw) {
+		var items []json.RawMessage
+		if err := json.Unmarshal(raw, &items); err != nil {
+			return nil
+		}
+		result := make([]AIRecipeStep, 0, len(items))
+		for _, item := range items {
+			if step, ok := adaptAIRecipeStep(item, len(result)+1); ok {
+				result = append(result, step)
+			}
+		}
+		return result
+	}
+	parts := splitAITextList(rawToString(raw))
+	result := make([]AIRecipeStep, 0, len(parts))
+	for _, part := range parts {
+		part = cleanAIListItem(part)
+		if part != "" {
+			result = append(result, AIRecipeStep{Step: len(result) + 1, Description: part})
+		}
+	}
+	return result
+}
+
+func adaptAIRecipeStep(raw json.RawMessage, fallbackStep int) (AIRecipeStep, bool) {
+	if isJSONObject(raw) {
+		var obj map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &obj); err != nil {
+			return AIRecipeStep{}, false
+		}
+		description := rawString(obj, "description", "text", "content", "instruction", "做法", "步骤", "说明")
+		step := rawInt(obj, "step", "index", "order", "序号")
+		if step <= 0 {
+			step = fallbackStep
+		}
+		return AIRecipeStep{
+			Step:        step,
+			Description: description,
+			Tip:         rawString(obj, "tip", "tips", "提示", "小贴士"),
+		}, description != ""
+	}
+	description := cleanAIListItem(rawToString(raw))
+	return AIRecipeStep{Step: fallbackStep, Description: description}, description != ""
+}
+
+func bytesTrimSpace(raw json.RawMessage) json.RawMessage {
+	return json.RawMessage(strings.TrimSpace(string(raw)))
 }
 
 func normalizeStringList(values []string, limit int) []string {

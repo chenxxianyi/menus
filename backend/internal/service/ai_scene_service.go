@@ -1,12 +1,9 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"strings"
 )
 
@@ -97,49 +94,15 @@ func (c *AIClient) GenerateSceneRecipeDrafts(ctx context.Context, scene AISceneR
 		ResponseFormat: &responseFormat{Type: "json_object"},
 	}
 
-	encoded, err := json.Marshal(reqBody)
+	content, err := c.chatCompletion(ctx, reqBody, 2<<20)
 	if err != nil {
 		return nil, err
 	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/chat/completions", bytes.NewReader(encoded))
+	draft, err := parseAISceneRecommendDraft(content, scene)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.apiKey)
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("%w: status %d %s", ErrAIInvalidResponse, resp.StatusCode, strings.TrimSpace(string(body)))
-	}
-
-	var completion chatCompletionResponse
-	if err := json.Unmarshal(body, &completion); err != nil {
-		return nil, fmt.Errorf("%w: decode completion: %v", ErrAIInvalidResponse, err)
-	}
-	if len(completion.Choices) == 0 {
-		return nil, ErrAIInvalidResponse
-	}
-
-	content := strings.TrimSpace(completion.Choices[0].Message.Content)
-	var draft AISceneRecommendDraft
-	if err := json.Unmarshal([]byte(content), &draft); err != nil {
-		return nil, fmt.Errorf("%w: decode scene content: %v", ErrAIInvalidResponse, err)
-	}
-	if err := normalizeAISceneRecommendDraft(&draft, scene); err != nil {
-		return nil, err
-	}
-	return &draft, nil
+	return draft, nil
 }
 
 func normalizeAISceneRecommendDraft(draft *AISceneRecommendDraft, scene AISceneRecommendContext) error {
@@ -176,6 +139,112 @@ func normalizeAISceneRecommendDraft(draft *AISceneRecommendDraft, scene AISceneR
 	}
 	draft.Dishes = dishes
 	return nil
+}
+
+func parseAISceneRecommendDraft(content string, scene AISceneRecommendContext) (*AISceneRecommendDraft, error) {
+	raw, err := decodeAIJSONContent(content)
+	if err != nil {
+		return nil, err
+	}
+	raw = unwrapAIObject(raw, "dishes", "dishes", "recipes", "items", "menu_name", "menuName", "菜品")
+
+	var draft AISceneRecommendDraft
+	adapted := false
+	if err := json.Unmarshal(raw, &draft); err != nil {
+		if adaptedDraft, ok := adaptAISceneRecommendDraft(raw, scene); ok {
+			draft = adaptedDraft
+			adapted = true
+		} else {
+			return nil, fmt.Errorf("%w: decode scene content: %v", ErrAIInvalidResponse, err)
+		}
+	} else if len(draft.Dishes) == 0 {
+		if adaptedDraft, ok := adaptAISceneRecommendDraft(raw, scene); ok {
+			draft = adaptedDraft
+			adapted = true
+		}
+	}
+	if err := normalizeAISceneRecommendDraft(&draft, scene); err != nil {
+		if !adapted {
+			if adaptedDraft, ok := adaptAISceneRecommendDraft(raw, scene); ok {
+				if normalizeErr := normalizeAISceneRecommendDraft(&adaptedDraft, scene); normalizeErr == nil {
+					return &adaptedDraft, nil
+				}
+			}
+		}
+		return nil, err
+	}
+	return &draft, nil
+}
+
+func adaptAISceneRecommendDraft(raw json.RawMessage, scene AISceneRecommendContext) (AISceneRecommendDraft, bool) {
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		return AISceneRecommendDraft{}, false
+	}
+
+	draft := AISceneRecommendDraft{
+		MenuName: firstNonEmpty(
+			rawString(obj, "menu_name", "menuName", "name", "title", "菜单名称", "推荐菜单"),
+			scene.SceneLabel+" AI 菜单",
+		),
+		Reason: firstNonEmpty(rawString(obj, "reason", "summary", "description", "推荐理由", "说明")),
+	}
+
+	dishRaw := rawValue(obj, "dishes", "recipes", "items", "menu", "菜品", "菜谱", "推荐菜品")
+	if len(dishRaw) == 0 {
+		return draft, false
+	}
+	if isJSONObject(dishRaw) {
+		var dishObj map[string]json.RawMessage
+		if err := json.Unmarshal(dishRaw, &dishObj); err == nil {
+			for _, key := range []string{"dishes", "recipes", "items", "菜品", "菜谱"} {
+				if nested := rawValue(dishObj, key); len(nested) > 0 {
+					dishRaw = nested
+					break
+				}
+			}
+		}
+	}
+
+	var rawItems []json.RawMessage
+	if err := json.Unmarshal(dishRaw, &rawItems); err != nil {
+		return draft, false
+	}
+	for _, rawItem := range rawItems {
+		if dish, ok := adaptAISceneRecipeDraft(rawItem, scene); ok {
+			draft.Dishes = append(draft.Dishes, dish)
+		}
+	}
+	return draft, len(draft.Dishes) > 0
+}
+
+func adaptAISceneRecipeDraft(raw json.RawMessage, scene AISceneRecommendContext) (AISceneRecipeDraft, bool) {
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		return AISceneRecipeDraft{}, false
+	}
+	dish := AISceneRecipeDraft{
+		Type:   rawString(obj, "type", "dish_type", "category", "类型", "菜品类型"),
+		Reason: rawString(obj, "reason", "why", "description", "推荐理由", "说明"),
+	}
+
+	recipeRaw := rawValue(obj, "recipe", "recipe_detail", "detail", "菜谱", "做法")
+	if len(recipeRaw) == 0 {
+		recipeRaw = raw
+	}
+	recipe, ok := adaptAIRecipeDraft(recipeRaw, fallbackAISceneRecipeTitle(obj, scene))
+	if !ok {
+		return AISceneRecipeDraft{}, false
+	}
+	dish.Recipe = recipe
+	return dish, true
+}
+
+func fallbackAISceneRecipeTitle(obj map[string]json.RawMessage, scene AISceneRecommendContext) string {
+	return firstNonEmpty(
+		rawString(obj, "title", "name", "dish_name", "recipe_name", "菜名", "菜品名称", "菜谱名称"),
+		scene.SceneLabel+"推荐菜",
+	)
 }
 
 func normalizeSceneDishType(value string) string {

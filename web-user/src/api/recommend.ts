@@ -1,4 +1,4 @@
-import api from './index'
+import api, { AI_GENERATION_TIMEOUT } from './index'
 import type {
   IngredientOption,
   RecommendByIngredientsRequest,
@@ -30,5 +30,5 @@ export function recommendSceneByAI(data: {
   cook_time_preference?: string
   health_goal?: string
 }) {
-  return api.post('/recommend/menu-ai', data)
+  return api.post('/recommend/menu-ai', data, { timeout: AI_GENERATION_TIMEOUT })
 }

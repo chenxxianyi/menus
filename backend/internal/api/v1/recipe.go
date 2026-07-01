@@ -95,6 +95,8 @@ func (h *RecipeHandler) GenerateByAI(c *gin.Context) {
 			response.Error(c, errcode.ErrParam, "AI 未配置，请先配置 AI_BASE_URL、AI_API_KEY 和 AI_MODEL")
 		case errors.Is(err, service.ErrAIInvalidResponse):
 			response.Error(c, errcode.ErrServer, "AI 返回的菜谱格式无效")
+		case errors.Is(err, service.ErrAIUpstream):
+			response.Error(c, errcode.ErrServer, "AI 服务暂时不可用或返回错误，请稍后重试")
 		default:
 			response.Error(c, errcode.ErrServer, "AI 生成菜谱失败")
 		}

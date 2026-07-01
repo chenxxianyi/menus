@@ -1,4 +1,4 @@
-import api from './index'
+import api, { AI_GENERATION_TIMEOUT } from './index'
 
 export interface ShoppingItem {
   name: string
@@ -63,5 +63,5 @@ export function generateShoppingListByDish(dishName: string, preview = false): P
 }
 
 export function generateShoppingListByAI(dishName: string, preview = false): Promise<GenerateShoppingByDishResult & { source: 'ai' }> {
-  return api.post('/shopping-list/generate-by-ai', { dish_name: dishName, preview }) as unknown as Promise<GenerateShoppingByDishResult & { source: 'ai' }>
+  return api.post('/shopping-list/generate-by-ai', { dish_name: dishName, preview }, { timeout: AI_GENERATION_TIMEOUT }) as unknown as Promise<GenerateShoppingByDishResult & { source: 'ai' }>
 }

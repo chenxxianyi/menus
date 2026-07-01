@@ -1,9 +1,12 @@
 import axios from 'axios'
 import router from '@/router'
 
+export const DEFAULT_REQUEST_TIMEOUT = 10000
+export const AI_GENERATION_TIMEOUT = 75000
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
-  timeout: 10000,
+  timeout: DEFAULT_REQUEST_TIMEOUT,
 })
 
 let handlingUnauthorized = false
@@ -32,6 +35,18 @@ api.interceptors.response.use(
         router.replace({ name: 'Login' }).finally(() => {
           handlingUnauthorized = false
         })
+      }
+    }
+    if (axios.isAxiosError(error)) {
+      const isTimeout =
+        error.code === 'ECONNABORTED' ||
+        error.code === 'ETIMEDOUT' ||
+        error.message.toLowerCase().includes('timeout')
+      if (isTimeout) {
+        return Promise.reject(new Error('请求等待时间较长，请稍后重试；如果是 AI 生成，请检查 AI 服务响应速度。'))
+      }
+      if (!error.response) {
+        return Promise.reject(new Error('网络连接异常，请确认后端服务正常运行。'))
       }
     }
     return Promise.reject(error)

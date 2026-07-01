@@ -16,6 +16,7 @@ import (
 
 var ErrAIConfigMissing = errors.New("ai config missing")
 var ErrAIInvalidResponse = errors.New("ai invalid response")
+var ErrAIUpstream = errors.New("ai upstream error")
 
 type AIClient struct {
 	baseURL     string
@@ -79,44 +80,14 @@ func (c *AIClient) SuggestShoppingItems(ctx context.Context, dishName string) ([
 		ResponseFormat: &responseFormat{Type: "json_object"},
 	}
 
-	encoded, err := json.Marshal(reqBody)
+	content, err := c.chatCompletion(ctx, reqBody, 1<<20)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/chat/completions", bytes.NewReader(encoded))
+	suggestion, err := parseAIShoppingSuggestion(content)
 	if err != nil {
 		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.apiKey)
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("%w: status %d %s", ErrAIInvalidResponse, resp.StatusCode, strings.TrimSpace(string(body)))
-	}
-
-	var completion chatCompletionResponse
-	if err := json.Unmarshal(body, &completion); err != nil {
-		return nil, fmt.Errorf("%w: decode completion: %v", ErrAIInvalidResponse, err)
-	}
-	if len(completion.Choices) == 0 {
-		return nil, ErrAIInvalidResponse
-	}
-
-	content := strings.TrimSpace(completion.Choices[0].Message.Content)
-	var suggestion AIShoppingSuggestion
-	if err := json.Unmarshal([]byte(content), &suggestion); err != nil {
-		return nil, fmt.Errorf("%w: decode content: %v", ErrAIInvalidResponse, err)
 	}
 
 	items := normalizeAIShoppingItems(suggestion.Items)
@@ -124,6 +95,168 @@ func (c *AIClient) SuggestShoppingItems(ctx context.Context, dishName string) ([
 		return nil, ErrAIInvalidResponse
 	}
 	return items, nil
+}
+
+func parseAIShoppingSuggestion(content string) (*AIShoppingSuggestion, error) {
+	raw, err := decodeAIJSONContent(content)
+	if err != nil {
+		return nil, err
+	}
+	raw = unwrapAIObject(raw, "items", "items", "ingredients", "shopping_list", "采购清单", "食材")
+
+	var suggestion AIShoppingSuggestion
+	adapted := false
+	if err := json.Unmarshal(raw, &suggestion); err != nil {
+		if adaptedSuggestion, ok := adaptAIShoppingSuggestion(raw); ok {
+			suggestion = adaptedSuggestion
+			adapted = true
+		} else {
+			return nil, fmt.Errorf("%w: decode content: %v", ErrAIInvalidResponse, err)
+		}
+	} else if len(suggestion.Items) == 0 {
+		if adaptedSuggestion, ok := adaptAIShoppingSuggestion(raw); ok {
+			suggestion = adaptedSuggestion
+			adapted = true
+		}
+	}
+	if !adapted && len(suggestion.Items) > 0 && len(normalizeAIShoppingItems(suggestion.Items)) == 0 {
+		if adaptedSuggestion, ok := adaptAIShoppingSuggestion(raw); ok {
+			suggestion = adaptedSuggestion
+		}
+	}
+	return &suggestion, nil
+}
+
+func adaptAIShoppingSuggestion(raw json.RawMessage) (AIShoppingSuggestion, bool) {
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		return AIShoppingSuggestion{}, false
+	}
+	itemsRaw := rawValue(obj, "items", "ingredients", "shopping_list", "list", "采购清单", "食材")
+	if len(itemsRaw) == 0 {
+		return AIShoppingSuggestion{}, false
+	}
+
+	var rawItems []json.RawMessage
+	if err := json.Unmarshal(itemsRaw, &rawItems); err != nil {
+		if textItems := adaptAIShoppingItemsFromText(rawToString(itemsRaw)); len(textItems) > 0 {
+			return AIShoppingSuggestion{Items: textItems}, true
+		}
+		return AIShoppingSuggestion{}, false
+	}
+
+	items := make([]DishShoppingItem, 0, len(rawItems))
+	for _, rawItem := range rawItems {
+		if item, ok := adaptAIShoppingItem(rawItem); ok {
+			items = append(items, item)
+		}
+	}
+	return AIShoppingSuggestion{Items: items}, len(items) > 0
+}
+
+func adaptAIShoppingItem(raw json.RawMessage) (DishShoppingItem, bool) {
+	if isJSONObject(raw) {
+		var obj map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &obj); err != nil {
+			return DishShoppingItem{}, false
+		}
+		name := rawString(obj, "name", "title", "ingredient", "食材", "名称")
+		amount := firstNonEmpty(rawString(obj, "amount", "quantity", "qty", "用量", "数量"), "适量")
+		return DishShoppingItem{
+			Name:     name,
+			Amount:   amount,
+			Emoji:    rawString(obj, "emoji"),
+			Category: rawString(obj, "category", "type", "分类", "类别"),
+			Price:    rawFloat(obj, "price", "价格"),
+			Checked:  false,
+		}, name != ""
+	}
+	text := rawToString(raw)
+	name, amount, _ := parseIngredientText(text)
+	return DishShoppingItem{Name: name, Amount: firstNonEmpty(amount, "适量")}, name != ""
+}
+
+func adaptAIShoppingItemsFromText(text string) []DishShoppingItem {
+	parts := splitAITextList(text)
+	items := make([]DishShoppingItem, 0, len(parts))
+	for _, part := range parts {
+		name, amount, _ := parseIngredientText(part)
+		if name != "" {
+			items = append(items, DishShoppingItem{Name: name, Amount: firstNonEmpty(amount, "适量")})
+		}
+	}
+	return items
+}
+
+func (c *AIClient) chatCompletion(ctx context.Context, reqBody chatCompletionRequest, bodyLimit int64) (string, error) {
+	content, statusCode, body, err := c.doChatCompletion(ctx, reqBody, bodyLimit)
+	if err == nil {
+		return content, nil
+	}
+	if reqBody.ResponseFormat != nil && statusCode > 0 && isResponseFormatUnsupported(body) {
+		reqBody.ResponseFormat = nil
+		return c.chatCompletion(ctx, reqBody, bodyLimit)
+	}
+	return "", err
+}
+
+func (c *AIClient) doChatCompletion(ctx context.Context, reqBody chatCompletionRequest, bodyLimit int64) (string, int, []byte, error) {
+	encoded, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", 0, nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/chat/completions", bytes.NewReader(encoded))
+	if err != nil {
+		return "", 0, nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", 0, nil, fmt.Errorf("%w: %v", ErrAIUpstream, err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, bodyLimit))
+	if err != nil {
+		return "", resp.StatusCode, body, err
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", resp.StatusCode, body, fmt.Errorf("%w: status %d %s", ErrAIUpstream, resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var completion chatCompletionResponse
+	if err := json.Unmarshal(body, &completion); err != nil {
+		return "", resp.StatusCode, body, fmt.Errorf("%w: decode completion: %v", ErrAIInvalidResponse, err)
+	}
+	if len(completion.Choices) == 0 {
+		return "", resp.StatusCode, body, ErrAIInvalidResponse
+	}
+	content := strings.TrimSpace(chatContentAsString(completion.Choices[0].Message.Content))
+	if content == "" {
+		return "", resp.StatusCode, body, ErrAIInvalidResponse
+	}
+	return content, resp.StatusCode, body, nil
+}
+
+func isResponseFormatUnsupported(body []byte) bool {
+	text := strings.ToLower(string(body))
+	return strings.Contains(text, "response_format") &&
+		(strings.Contains(text, "unsupported") ||
+			strings.Contains(text, "not support") ||
+			strings.Contains(text, "not supported") ||
+			strings.Contains(text, "unrecognized") ||
+			strings.Contains(text, "unknown"))
+}
+
+func chatContentAsString(raw json.RawMessage) string {
+	var text string
+	if err := json.Unmarshal(raw, &text); err == nil {
+		return text
+	}
+	return string(raw)
 }
 
 func normalizeAIShoppingItems(items []DishShoppingItem) []DishShoppingItem {
@@ -190,6 +323,8 @@ type responseFormat struct {
 
 type chatCompletionResponse struct {
 	Choices []struct {
-		Message chatMessage `json:"message"`
+		Message struct {
+			Content json.RawMessage `json:"content"`
+		} `json:"message"`
 	} `json:"choices"`
 }

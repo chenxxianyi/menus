@@ -1,4 +1,4 @@
-import api from './index'
+import api, { AI_GENERATION_TIMEOUT } from './index'
 import type { RecipeQuery } from '@/types/recipe'
 
 export function getRecipes(params: RecipeQuery) {
@@ -26,5 +26,5 @@ export function getRecipeFilterOptions() {
 }
 
 export function generateRecipeByAI(dishName: string): Promise<{ recipe: any; created: boolean }> {
-  return api.post('/recipes/generate-by-ai', { dish_name: dishName }) as unknown as Promise<{ recipe: any; created: boolean }>
+  return api.post('/recipes/generate-by-ai', { dish_name: dishName }, { timeout: AI_GENERATION_TIMEOUT }) as unknown as Promise<{ recipe: any; created: boolean }>
 }

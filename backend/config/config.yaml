@@ -44,5 +44,5 @@ ai:
   base_url: ""
   api_key: ""
   model: ""
-  timeout_secs: 30
+  timeout_secs: 60
   temperature: 0.2

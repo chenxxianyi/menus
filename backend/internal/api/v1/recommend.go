@@ -48,6 +48,8 @@ func (h *RecommendHandler) MenuAI(c *gin.Context) {
 			response.Error(c, errcode.ErrServer, "AI 未配置，请先配置 AI 服务后再生成")
 		case errors.Is(err, service.ErrAIInvalidResponse):
 			response.Error(c, errcode.ErrServer, "AI 返回的场景推荐格式无效，请稍后重试")
+		case errors.Is(err, service.ErrAIUpstream):
+			response.Error(c, errcode.ErrServer, "AI 服务暂时不可用或返回错误，请稍后重试")
 		default:
 			response.Error(c, errcode.ErrServer, "AI 场景推荐失败")
 		}
