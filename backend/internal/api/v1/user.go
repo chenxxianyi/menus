@@ -58,6 +58,16 @@ func (h *UserHandler) GetPreferences(c *gin.Context) {
 	response.Success(c, pref)
 }
 
+func (h *UserHandler) GetPreferenceStatus(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+	status, err := h.userService.GetPreferenceStatus(userID)
+	if err != nil {
+		response.Error(c, errcode.ErrServer, "获取偏好状态失败")
+		return
+	}
+	response.Success(c, status)
+}
+
 type UpdatePreferencesRequest struct {
 	TastePreference     model.JSON `json:"taste_preference"`
 	HealthGoal          string     `json:"health_goal"`

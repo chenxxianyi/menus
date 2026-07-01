@@ -97,6 +97,7 @@ import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { login as loginApi, register as registerApi } from '@/api/auth'
+import { getPreferenceStatus } from '@/api/user'
 import loginKitchenReference from '@/assets/login-kitchen-reference.png'
 
 const router = useRouter()
@@ -139,12 +140,25 @@ async function handleSubmit() {
     } else {
       await userStore.login({ username: form.username, password: form.password })
     }
-    router.replace('/')
+    await goAfterAuth()
   } catch (e: any) {
     error.value = e.message || '操作失败'
   } finally {
     loading.value = false
   }
+}
+
+async function goAfterAuth() {
+  try {
+    const status = await getPreferenceStatus()
+    if (!status.completed) {
+      router.replace({ path: '/user/preferences', query: { guide: '1' } })
+      return
+    }
+  } catch {
+    // 偏好状态读取失败时不阻塞登录。
+  }
+  router.replace('/')
 }
 </script>
 

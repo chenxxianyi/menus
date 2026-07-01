@@ -12,11 +12,16 @@ import (
 )
 
 type RecipeHandler struct {
-	recipeService *service.RecipeService
+	recipeService         *service.RecipeService
+	recipeFeedbackService *service.UserRecipeFeedbackService
 }
 
 func NewRecipeHandler(recipeService *service.RecipeService) *RecipeHandler {
 	return &RecipeHandler{recipeService: recipeService}
+}
+
+func (h *RecipeHandler) SetRecipeFeedbackService(recipeFeedbackService *service.UserRecipeFeedbackService) {
+	h.recipeFeedbackService = recipeFeedbackService
 }
 
 func (h *RecipeHandler) List(c *gin.Context) {
@@ -88,7 +93,8 @@ func (h *RecipeHandler) GenerateByAI(c *gin.Context) {
 		return
 	}
 
-	result, err := h.recipeService.GenerateRecipeByAI(c.Request.Context(), req.DishName)
+	userID := middleware.GetUserID(c)
+	result, err := h.recipeService.GenerateRecipeByAI(c.Request.Context(), userID, req.DishName)
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrAIConfigMissing):
@@ -103,4 +109,82 @@ func (h *RecipeHandler) GenerateByAI(c *gin.Context) {
 		return
 	}
 	response.Success(c, result)
+}
+
+type RecipeFeedbackRequest struct {
+	Type   string `json:"type" binding:"required"`
+	Source string `json:"source"`
+}
+
+func (h *RecipeHandler) SetFeedback(c *gin.Context) {
+	if h.recipeFeedbackService == nil {
+		response.Error(c, errcode.ErrServer, "菜谱反馈服务不可用")
+		return
+	}
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.Error(c, errcode.ErrParam, "无效的菜谱ID")
+		return
+	}
+
+	var req RecipeFeedbackRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, errcode.ErrParam, "请选择反馈类型")
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	if err := h.recipeFeedbackService.Set(userID, uint(id), req.Type, req.Source); err != nil {
+		if errors.Is(err, service.ErrInvalidRecipeFeedbackType) {
+			response.Error(c, errcode.ErrParam, "反馈类型错误")
+			return
+		}
+		response.Error(c, errcode.ErrServer, "提交反馈失败")
+		return
+	}
+
+	status, _ := h.recipeFeedbackService.Status(userID, uint(id))
+	response.Success(c, gin.H{"feedback": status})
+}
+
+func (h *RecipeHandler) DeleteFeedback(c *gin.Context) {
+	if h.recipeFeedbackService == nil {
+		response.Error(c, errcode.ErrServer, "菜谱反馈服务不可用")
+		return
+	}
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.Error(c, errcode.ErrParam, "无效的菜谱ID")
+		return
+	}
+
+	feedbackType := c.Param("type")
+	userID := middleware.GetUserID(c)
+	if err := h.recipeFeedbackService.Delete(userID, uint(id), feedbackType); err != nil {
+		if errors.Is(err, service.ErrInvalidRecipeFeedbackType) {
+			response.Error(c, errcode.ErrParam, "反馈类型错误")
+			return
+		}
+		response.Error(c, errcode.ErrServer, "取消反馈失败")
+		return
+	}
+
+	status, _ := h.recipeFeedbackService.Status(userID, uint(id))
+	response.Success(c, gin.H{"feedback": status})
+}
+
+func (h *RecipeHandler) GetUserRecipeFeedback(c *gin.Context) {
+	if h.recipeFeedbackService == nil {
+		response.Error(c, errcode.ErrServer, "菜谱反馈服务不可用")
+		return
+	}
+	userID := middleware.GetUserID(c)
+	items, err := h.recipeFeedbackService.List(userID)
+	if err != nil {
+		response.Error(c, errcode.ErrServer, "查询反馈失败")
+		return
+	}
+	response.Success(c, gin.H{"list": items})
 }

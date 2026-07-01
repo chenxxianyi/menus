@@ -4,7 +4,10 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
+	"sort"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -17,10 +20,20 @@ type CoupleService struct {
 	coupleRepo  *repository.CoupleRepo
 	recipeRepo  *repository.RecipeRepo
 	userRepo    *repository.UserRepo
+	shoppingRepo *repository.ShoppingRepo
+	prefRepo    *repository.UserPrefRepo
 }
 
 func NewCoupleService(coupleRepo *repository.CoupleRepo, recipeRepo *repository.RecipeRepo, userRepo *repository.UserRepo) *CoupleService {
 	return &CoupleService{coupleRepo: coupleRepo, recipeRepo: recipeRepo, userRepo: userRepo}
+}
+
+func (s *CoupleService) SetShoppingRepo(shoppingRepo *repository.ShoppingRepo) {
+	s.shoppingRepo = shoppingRepo
+}
+
+func (s *CoupleService) SetUserPrefRepo(prefRepo *repository.UserPrefRepo) {
+	s.prefRepo = prefRepo
 }
 
 func generateInviteCode() (string, error) {
@@ -269,13 +282,26 @@ func (s *CoupleService) DeleteOrder(orderID, userID uint) error {
 
 // ShoppingListItem represents a merged shopping item
 type ShoppingListItem struct {
-	Name     string `json:"name"`
-	Amount   string `json:"amount"`
-	Category string `json:"category"`
+	Name     string  `json:"name"`
+	Amount   string  `json:"amount"`
+	Category string  `json:"category"`
+	Emoji    string  `json:"emoji,omitempty"`
+	Price    float64 `json:"price"`
+	Checked  bool    `json:"checked"`
+	Status   string  `json:"status,omitempty"`
 }
 
-// GenerateShoppingList merges ingredients from confirmed orders
-func (s *CoupleService) GenerateShoppingList(userID uint, mealDate, mealType string) (map[string]interface{}, error) {
+type CoupleMenuDish struct {
+	RecipeID   uint   `json:"recipe_id"`
+	Name       string `json:"name"`
+	Reason     string `json:"reason"`
+	Source     string `json:"source"`
+	CookTime   int    `json:"cook_time"`
+	Difficulty string `json:"difficulty"`
+}
+
+// GenerateShoppingList merges ingredients from couple orders and can create a copy for both users.
+func (s *CoupleService) GenerateShoppingList(userID uint, mealDate, mealType string, saveShared bool) (map[string]interface{}, error) {
 	binding, err := s.coupleRepo.FindActiveBindingByUser(userID)
 	if err != nil {
 		return nil, errors.New("请先绑定情侣关系")
@@ -286,11 +312,29 @@ func (s *CoupleService) GenerateShoppingList(userID uint, mealDate, mealType str
 		return nil, err
 	}
 
-	// Collect recipe IDs from orders that have them
+	agreedDishes, compromiseDishes := s.buildCoupleMenuDishes(binding, orders)
+
+	// Collect recipe IDs from agreed/confirmed/compromise dishes that have them.
+	recipeIDSet := make(map[uint]bool)
 	var recipeIDs []uint
+	addRecipeID := func(id uint) {
+		if id == 0 || recipeIDSet[id] {
+			return
+		}
+		recipeIDSet[id] = true
+		recipeIDs = append(recipeIDs, id)
+	}
+	for _, dish := range agreedDishes {
+		addRecipeID(dish.RecipeID)
+	}
+	if len(agreedDishes) == 0 {
+		for _, dish := range compromiseDishes {
+			addRecipeID(dish.RecipeID)
+		}
+	}
 	for _, o := range orders {
 		if o.RecipeID != nil {
-			recipeIDs = append(recipeIDs, *o.RecipeID)
+			addRecipeID(*o.RecipeID)
 		}
 	}
 
@@ -308,14 +352,20 @@ func (s *CoupleService) GenerateShoppingList(userID uint, mealDate, mealType str
 				json.Unmarshal(recipe.Ingredients, &ingredients)
 			}
 			for _, ing := range ingredients {
+				name := strings.TrimSpace(ing.Name)
+				if name == "" {
+					continue
+				}
 				if existing, ok := ingredientMap[ing.Name]; ok {
 					if existing.Amount != ing.Amount {
 						existing.Amount = existing.Amount + " + " + ing.Amount
 					}
 				} else {
 					ingredientMap[ing.Name] = &ShoppingListItem{
-						Name:   ing.Name,
-						Amount: ing.Amount,
+						Name:     ing.Name,
+						Amount:   firstNonEmpty(ing.Amount, "适量"),
+						Category: inferShoppingCategory(ing.Name, ""),
+						Status:   "pending",
 					}
 				}
 			}
@@ -328,10 +378,16 @@ func (s *CoupleService) GenerateShoppingList(userID uint, mealDate, mealType str
 				json.Unmarshal(recipe.Seasonings, &seasonings)
 			}
 			for _, s := range seasonings {
-				if _, ok := ingredientMap[s.Name]; !ok {
-					ingredientMap[s.Name] = &ShoppingListItem{
-						Name:   s.Name,
-						Amount: s.Amount,
+				name := strings.TrimSpace(s.Name)
+				if name == "" {
+					continue
+				}
+				if _, ok := ingredientMap[name]; !ok {
+					ingredientMap[name] = &ShoppingListItem{
+						Name:     name,
+						Amount:   firstNonEmpty(s.Amount, "适量"),
+						Category: "调味",
+						Status:   "pending",
 					}
 				}
 			}
@@ -343,12 +399,236 @@ func (s *CoupleService) GenerateShoppingList(userID uint, mealDate, mealType str
 	for _, item := range ingredientMap {
 		shoppingList = append(shoppingList, *item)
 	}
+	sort.Slice(shoppingList, func(i, j int) bool {
+		if shoppingList[i].Category == shoppingList[j].Category {
+			return shoppingList[i].Name < shoppingList[j].Name
+		}
+		return shoppingList[i].Category < shoppingList[j].Category
+	})
+
+	var sharedLists []model.ShoppingList
+	if saveShared && len(shoppingList) > 0 {
+		sharedLists, err = s.createSharedShoppingLists(binding, mealDate, shoppingList)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return map[string]interface{}{
-		"orders":        orders,
-		"shopping_list": shoppingList,
-		"total_items":   len(shoppingList),
+		"orders":            orders,
+		"agreed_dishes":     agreedDishes,
+		"compromise_dishes": compromiseDishes,
+		"shopping_list":     shoppingList,
+		"shared_lists":      sharedLists,
+		"saved_shared":      saveShared && len(sharedLists) > 0,
+		"total_items":       len(shoppingList),
 	}, nil
+}
+
+func (s *CoupleService) buildCoupleMenuDishes(binding *model.CoupleBinding, orders []model.CoupleOrder) ([]CoupleMenuDish, []CoupleMenuDish) {
+	if binding == nil {
+		return nil, nil
+	}
+	byKey := make(map[string][]model.CoupleOrder)
+	for _, order := range orders {
+		key := coupleDishKey(order)
+		if key == "" {
+			continue
+		}
+		byKey[key] = append(byKey[key], order)
+	}
+
+	agreed := make([]CoupleMenuDish, 0)
+	for _, group := range byKey {
+		userSet := make(map[uint]bool)
+		var recipe *model.Recipe
+		dishName := ""
+		for _, order := range group {
+			userSet[order.UserID] = true
+			if dishName == "" {
+				dishName = order.DishName
+			}
+			if recipe == nil && order.Recipe != nil {
+				recipe = order.Recipe
+			}
+		}
+		if len(userSet) < 2 {
+			continue
+		}
+		agreed = append(agreed, coupleMenuDishFromRecipe(recipe, dishName, "双方都想吃，优先安排。", "overlap"))
+	}
+	sort.Slice(agreed, func(i, j int) bool { return agreed[i].Name < agreed[j].Name })
+	if len(agreed) > 0 {
+		return agreed, nil
+	}
+
+	compromise := s.buildCompromiseDishes(binding, orders)
+	return nil, compromise
+}
+
+func coupleDishKey(order model.CoupleOrder) string {
+	if order.RecipeID != nil && *order.RecipeID > 0 {
+		return fmt.Sprintf("recipe:%d", *order.RecipeID)
+	}
+	return "dish:" + strings.TrimSpace(strings.ToLower(order.DishName))
+}
+
+func coupleMenuDishFromRecipe(recipe *model.Recipe, fallbackName, reason, source string) CoupleMenuDish {
+	dish := CoupleMenuDish{
+		Name:   strings.TrimSpace(fallbackName),
+		Reason: reason,
+		Source: source,
+	}
+	if recipe != nil {
+		dish.RecipeID = recipe.ID
+		dish.Name = recipe.Title
+		dish.CookTime = recipe.CookTime
+		dish.Difficulty = recipe.Difficulty
+	}
+	if dish.Name == "" {
+		dish.Name = "合意推荐"
+	}
+	return dish
+}
+
+func (s *CoupleService) buildCompromiseDishes(binding *model.CoupleBinding, orders []model.CoupleOrder) []CoupleMenuDish {
+	recipeMap := make(map[uint]*model.Recipe)
+	for _, order := range orders {
+		if order.Recipe != nil && order.Recipe.ID > 0 {
+			recipeMap[order.Recipe.ID] = order.Recipe
+		}
+	}
+	if len(recipeMap) == 0 {
+		recipes, err := s.recipeRepo.FindHot(6)
+		if err != nil {
+			return nil
+		}
+		for i := range recipes {
+			recipe := recipes[i]
+			recipeMap[recipe.ID] = &recipe
+		}
+	}
+
+	prefs := s.couplePreferenceContext(binding)
+	type scored struct {
+		recipe *model.Recipe
+		score  int
+		reason string
+	}
+	scoredRecipes := make([]scored, 0, len(recipeMap))
+	for _, recipe := range recipeMap {
+		if recipe == nil {
+			continue
+		}
+		score, reason := scoreCompromiseRecipe(recipe, prefs)
+		scoredRecipes = append(scoredRecipes, scored{recipe: recipe, score: score, reason: reason})
+	}
+	sort.Slice(scoredRecipes, func(i, j int) bool {
+		if scoredRecipes[i].score == scoredRecipes[j].score {
+			return scoredRecipes[i].recipe.FavoriteCount+scoredRecipes[i].recipe.ViewCount > scoredRecipes[j].recipe.FavoriteCount+scoredRecipes[j].recipe.ViewCount
+		}
+		return scoredRecipes[i].score > scoredRecipes[j].score
+	})
+
+	limit := 3
+	if len(scoredRecipes) < limit {
+		limit = len(scoredRecipes)
+	}
+	result := make([]CoupleMenuDish, 0, limit)
+	for i := 0; i < limit; i++ {
+		item := scoredRecipes[i]
+		result = append(result, coupleMenuDishFromRecipe(item.recipe, "", item.reason, "compromise"))
+	}
+	return result
+}
+
+type couplePreferenceContext struct {
+	tastes    map[string]int
+	health    map[string]int
+	cookQuick int
+}
+
+func (s *CoupleService) couplePreferenceContext(binding *model.CoupleBinding) couplePreferenceContext {
+	ctx := couplePreferenceContext{
+		tastes: make(map[string]int),
+		health: make(map[string]int),
+	}
+	if s.prefRepo == nil || binding == nil {
+		return ctx
+	}
+	userIDs := []uint{binding.UserAID}
+	if binding.UserBID != nil {
+		userIDs = append(userIDs, *binding.UserBID)
+	}
+	for _, userID := range userIDs {
+		pref, err := s.prefRepo.FindByUserID(userID)
+		if err != nil || pref == nil {
+			continue
+		}
+		for _, taste := range jsonStringList(pref.TastePreference) {
+			ctx.tastes[taste]++
+		}
+		if strings.TrimSpace(pref.HealthGoal) != "" {
+			ctx.health[strings.TrimSpace(pref.HealthGoal)]++
+		}
+		if strings.Contains(pref.CookTimePreference, "20") || strings.Contains(pref.CookTimePreference, "30") {
+			ctx.cookQuick++
+		}
+	}
+	return ctx
+}
+
+func scoreCompromiseRecipe(recipe *model.Recipe, prefs couplePreferenceContext) (int, string) {
+	score := recipe.FavoriteCount/10 + recipe.ViewCount/100
+	reasons := make([]string, 0, 3)
+	if count := prefs.tastes[strings.TrimSpace(recipe.Taste)]; count > 0 {
+		score += 30 * count
+		reasons = append(reasons, "兼顾双方口味")
+	}
+	for _, tag := range jsonStringList(recipe.HealthTags) {
+		if count := prefs.health[tag]; count > 0 {
+			score += 22 * count
+			reasons = append(reasons, "照顾健康目标")
+			break
+		}
+	}
+	if prefs.cookQuick > 0 && recipe.CookTime > 0 && recipe.CookTime <= 30 {
+		score += 16 * prefs.cookQuick
+		reasons = append(reasons, "做起来不费时间")
+	}
+	if len(reasons) == 0 {
+		reasons = append(reasons, "从两人的候选菜中选择热度更高、接受度更稳的一道")
+	}
+	return score, strings.Join(reasons, "，") + "。"
+}
+
+func (s *CoupleService) createSharedShoppingLists(binding *model.CoupleBinding, mealDate string, items []ShoppingListItem) ([]model.ShoppingList, error) {
+	if s.shoppingRepo == nil || binding == nil || binding.UserBID == nil {
+		return nil, errors.New("共享购物清单服务不可用")
+	}
+	raw, err := json.Marshal(items)
+	if err != nil {
+		return nil, err
+	}
+	name := strings.TrimSpace(mealDate)
+	if name == "" {
+		name = time.Now().Format("2006-01-02")
+	}
+	name += " 情侣点餐采购清单"
+	userIDs := []uint{binding.UserAID, *binding.UserBID}
+	lists := make([]model.ShoppingList, 0, len(userIDs))
+	for _, uid := range userIDs {
+		list := model.ShoppingList{
+			UserID:    uid,
+			Name:      name,
+			ItemsJSON: model.JSON(raw),
+		}
+		if err := s.shoppingRepo.Create(&list); err != nil {
+			return nil, err
+		}
+		lists = append(lists, list)
+	}
+	return lists, nil
 }
 
 // Helper to get user binding info

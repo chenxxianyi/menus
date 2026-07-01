@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
+	"time"
 
 	"menu-recommend/internal/model"
 	"menu-recommend/internal/repository"
@@ -15,11 +18,13 @@ import (
 
 var ErrInvalidShoppingItemIndices = errors.New("invalid shopping item indices")
 var ErrRecipeIngredientsEmpty = errors.New("recipe ingredients empty")
+var ErrShoppingRecipeIDsEmpty = errors.New("shopping recipe ids empty")
 
 type ShoppingService struct {
 	repo       *repository.ShoppingRepo
 	recipeRepo *repository.RecipeRepo
 	aiClient   *AIClient
+	aiLogSvc   *AIGenerationLogService
 	recipeSvc  *RecipeService
 }
 
@@ -29,6 +34,10 @@ func NewShoppingService(repo *repository.ShoppingRepo, recipeRepo *repository.Re
 
 func (s *ShoppingService) SetAIClient(aiClient *AIClient) {
 	s.aiClient = aiClient
+}
+
+func (s *ShoppingService) SetAIGenerationLogService(aiLogSvc *AIGenerationLogService) {
+	s.aiLogSvc = aiLogSvc
 }
 
 func (s *ShoppingService) SetRecipeService(recipeSvc *RecipeService) {
@@ -81,12 +90,19 @@ type DishShoppingItem struct {
 	Category string  `json:"category"`
 	Price    float64 `json:"price"`
 	Checked  bool    `json:"checked"`
+	Status   string  `json:"status,omitempty"`
 }
 
 type DishShoppingListResult struct {
 	List   *model.ShoppingList `json:"list"`
 	Recipe *model.Recipe       `json:"recipe"`
 	Items  []DishShoppingItem  `json:"items"`
+}
+
+type RecipesShoppingListResult struct {
+	List    *model.ShoppingList `json:"list"`
+	Recipes []model.Recipe      `json:"recipes"`
+	Items   []DishShoppingItem  `json:"items"`
 }
 
 func (s *ShoppingService) GenerateFromDish(userID uint, dishName string, preview bool) (*DishShoppingListResult, error) {
@@ -132,8 +148,103 @@ func (s *ShoppingService) GenerateFromDish(userID uint, dishName string, preview
 	}, nil
 }
 
-func (s *ShoppingService) GenerateFromDishByAI(ctx context.Context, userID uint, dishName string, preview bool) (*DishShoppingListResult, error) {
+func (s *ShoppingService) GenerateFromRecipe(userID uint, recipeID uint, preview bool) (*DishShoppingListResult, error) {
+	if recipeID == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	recipe, err := s.recipeRepo.FindByID(recipeID)
+	if err != nil {
+		return nil, err
+	}
+
+	items, err := shoppingItemsFromRecipe(recipe.Ingredients)
+	if err != nil {
+		return nil, err
+	}
+
+	var list *model.ShoppingList
+	if !preview {
+		list, err = s.createShoppingListFromItems(userID, recipe.Title+"采购清单", items)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &DishShoppingListResult{
+		List:   list,
+		Recipe: recipe,
+		Items:  items,
+	}, nil
+}
+
+func (s *ShoppingService) GenerateFromRecipes(userID uint, recipeIDs []uint, name string, preview bool) (*RecipesShoppingListResult, error) {
+	ids := normalizeRecipeIDs(recipeIDs)
+	if len(ids) == 0 {
+		return nil, ErrShoppingRecipeIDsEmpty
+	}
+
+	recipes, err := s.recipeRepo.FindByIDs(ids)
+	if err != nil {
+		return nil, err
+	}
+	if len(recipes) == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	items := make([]DishShoppingItem, 0)
+	for i := range recipes {
+		recipeItems, err := shoppingItemsFromRecipe(recipes[i].Ingredients)
+		if err != nil {
+			continue
+		}
+		items = append(items, recipeItems...)
+	}
+	items = mergeShoppingItems(items)
+	if len(items) == 0 {
+		return nil, ErrRecipeIngredientsEmpty
+	}
+
+	listName := strings.TrimSpace(name)
+	if listName == "" {
+		listName = "推荐采购清单"
+	}
+
+	var list *model.ShoppingList
+	if !preview {
+		list, err = s.createShoppingListFromItems(userID, listName, items)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &RecipesShoppingListResult{
+		List:    list,
+		Recipes: recipes,
+		Items:   items,
+	}, nil
+}
+
+func (s *ShoppingService) GenerateFromDishByAI(ctx context.Context, userID uint, dishName string, preview bool) (result *DishShoppingListResult, err error) {
+	start := time.Now()
 	name := strings.TrimSpace(dishName)
+	defer func() {
+		status := "success"
+		if err != nil {
+			status = "failed"
+		}
+		s.aiLogSvc.Record(AIGenerationLogPayload{
+			UserID:         userID,
+			GenerationType: "shopping",
+			Model:          aiModelName(s.aiClient),
+			Input:          map[string]interface{}{"dish_name": name, "preview": preview},
+			Output:         summarizeShoppingAIResult(result),
+			Status:         status,
+			ErrorMessage:   aiErrorText(err),
+			Duration:       time.Since(start),
+			RecipeIDs:      recipeIDsFromShoppingAIResult(result),
+		})
+	}()
 	if name == "" {
 		return nil, ErrAIInvalidResponse
 	}
@@ -144,11 +255,11 @@ func (s *ShoppingService) GenerateFromDishByAI(ctx context.Context, userID uint,
 		return nil, ErrAIConfigMissing
 	}
 
-	result, err := s.recipeSvc.GenerateRecipeByAI(ctx, name)
+	generatedRecipe, err := s.recipeSvc.generateRecipeByAI(ctx, userID, name, false)
 	if err != nil {
 		return nil, err
 	}
-	items, err := shoppingItemsFromRecipe(result.Recipe.Ingredients)
+	items, err := shoppingItemsFromRecipe(generatedRecipe.Recipe.Ingredients)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +273,7 @@ func (s *ShoppingService) GenerateFromDishByAI(ctx context.Context, userID uint,
 
 		list = &model.ShoppingList{
 			UserID:    userID,
-			Name:      result.Recipe.Title + "采购清单",
+			Name:      generatedRecipe.Recipe.Title + "采购清单",
 			ItemsJSON: model.JSON(itemsJSON),
 		}
 		if err := s.repo.Create(list); err != nil {
@@ -172,9 +283,26 @@ func (s *ShoppingService) GenerateFromDishByAI(ctx context.Context, userID uint,
 
 	return &DishShoppingListResult{
 		List:   list,
-		Recipe: result.Recipe,
+		Recipe: generatedRecipe.Recipe,
 		Items:  items,
 	}, nil
+}
+
+func (s *ShoppingService) createShoppingListFromItems(userID uint, name string, items []DishShoppingItem) (*model.ShoppingList, error) {
+	itemsJSON, err := json.Marshal(items)
+	if err != nil {
+		return nil, fmt.Errorf("encode generated shopping items: %w", err)
+	}
+
+	list := &model.ShoppingList{
+		UserID:    userID,
+		Name:      name,
+		ItemsJSON: model.JSON(itemsJSON),
+	}
+	if err := s.repo.Create(list); err != nil {
+		return nil, err
+	}
+	return list, nil
 }
 
 func shoppingItemsFromRecipe(raw model.JSON) ([]DishShoppingItem, error) {
@@ -209,6 +337,7 @@ func shoppingItemsFromRecipe(raw model.JSON) ([]DishShoppingItem, error) {
 			Category: inferShoppingCategory(name, ingredient.Category),
 			Price:    ingredient.Price,
 			Checked:  false,
+			Status:   "pending",
 		}
 
 		key := normalizeShoppingItemName(name)
@@ -258,7 +387,18 @@ func formatIngredientAmount(amount interface{}, unit string) string {
 }
 
 func normalizeShoppingItemName(name string) string {
-	return strings.ReplaceAll(strings.TrimSpace(name), " ", "")
+	value := strings.ReplaceAll(strings.TrimSpace(name), " ", "")
+	value = strings.ReplaceAll(value, "　", "")
+	switch value {
+	case "番茄":
+		return "西红柿"
+	case "蛋":
+		return "鸡蛋"
+	case "马铃薯", "洋芋":
+		return "土豆"
+	default:
+		return value
+	}
 }
 
 func mergeAmountText(left, right string) string {
@@ -271,6 +411,120 @@ func mergeAmountText(left, right string) string {
 		return left
 	}
 	return left + "、" + right
+}
+
+var shoppingAmountPattern = regexp.MustCompile(`^([0-9]+(?:\.[0-9]+)?)(.*)$`)
+
+func mergeShoppingItems(items []DishShoppingItem) []DishShoppingItem {
+	merged := make([]DishShoppingItem, 0, len(items))
+	seen := make(map[string]int)
+	for _, item := range items {
+		name := strings.TrimSpace(item.Name)
+		if name == "" {
+			continue
+		}
+		item.Name = name
+		item.Category = inferShoppingCategory(item.Name, item.Category)
+		item.Status = normalizeShoppingItemStatus(item.Status, item.Checked)
+		item.Checked = item.Status == "bought"
+
+		key := normalizeShoppingItemName(item.Name)
+		if idx, ok := seen[key]; ok {
+			existing := &merged[idx]
+			existing.Amount = mergeShoppingAmount(existing.Amount, item.Amount)
+			existing.Status = mergeShoppingItemStatus(existing.Status, item.Status)
+			existing.Checked = existing.Status == "bought"
+			if existing.Emoji == "" {
+				existing.Emoji = item.Emoji
+			}
+			if existing.Category == "" {
+				existing.Category = item.Category
+			}
+			existing.Price += item.Price
+			continue
+		}
+		seen[key] = len(merged)
+		merged = append(merged, item)
+	}
+	return merged
+}
+
+func normalizeShoppingItemStatus(status string, checked bool) string {
+	switch strings.TrimSpace(status) {
+	case "pending", "bought", "owned":
+		return strings.TrimSpace(status)
+	default:
+		if checked {
+			return "bought"
+		}
+		return "pending"
+	}
+}
+
+func mergeShoppingItemStatus(left, right string) string {
+	left = normalizeShoppingItemStatus(left, false)
+	right = normalizeShoppingItemStatus(right, false)
+	if left == "pending" || right == "pending" {
+		return "pending"
+	}
+	if left == "owned" || right == "owned" {
+		return "owned"
+	}
+	return "bought"
+}
+
+func mergeShoppingAmount(left, right string) string {
+	left = strings.TrimSpace(left)
+	right = strings.TrimSpace(right)
+	if left == "" || left == "按菜谱适量" || left == "适量" {
+		if right == "" {
+			return "适量"
+		}
+		return right
+	}
+	if right == "" || right == "按菜谱适量" || right == "适量" || right == left {
+		return left
+	}
+
+	leftNum, leftUnit, leftOK := splitAmount(left)
+	rightNum, rightUnit, rightOK := splitAmount(right)
+	if leftOK && rightOK && leftUnit == rightUnit {
+		total := leftNum + rightNum
+		return formatNumber(total) + leftUnit
+	}
+	return left + "、" + right
+}
+
+func splitAmount(text string) (float64, string, bool) {
+	matches := shoppingAmountPattern.FindStringSubmatch(strings.TrimSpace(text))
+	if len(matches) != 3 {
+		return 0, "", false
+	}
+	value, err := strconv.ParseFloat(matches[1], 64)
+	if err != nil {
+		return 0, "", false
+	}
+	return value, strings.TrimSpace(matches[2]), true
+}
+
+func formatNumber(value float64) string {
+	if value == float64(int64(value)) {
+		return fmt.Sprintf("%d", int64(value))
+	}
+	return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", value), "0"), ".")
+}
+
+func normalizeRecipeIDs(ids []uint) []uint {
+	result := make([]uint, 0, len(ids))
+	seen := make(map[uint]bool, len(ids))
+	for _, id := range ids {
+		if id == 0 || seen[id] {
+			continue
+		}
+		seen[id] = true
+		result = append(result, id)
+	}
+	return result
 }
 
 func inferShoppingCategory(name, category string) string {

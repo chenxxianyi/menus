@@ -9,6 +9,7 @@ export interface Recipe {
   servings: number
   favorite_count: number
   is_favorited: boolean
+  feedback?: RecipeFeedbackStatus
   category_id: number
   category_name: string
   health_tags: string[]
@@ -17,6 +18,13 @@ export interface Recipe {
   steps: CookingStep[]
   nutrition: Nutrition
   tips?: string
+}
+
+export interface RecipeFeedbackStatus {
+  cooked: boolean
+  like: boolean
+  dislike: boolean
+  block: boolean
 }
 
 export interface Ingredient {

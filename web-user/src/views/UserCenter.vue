@@ -212,7 +212,7 @@ function statValue(key: keyof ProfileStats) {
 
 const stats = computed(() => [
   { label: '我的收藏', value: statValue('favorite_count'), path: '/user/favorites' },
-  { label: '定制菜单', value: statValue('menu_count'), path: '/week-menu' },
+  { label: '定制菜单', value: statValue('menu_count'), path: '/user/menus' },
   { label: '购物清单', value: statValue('shopping_list_count'), path: '/shopping-list' },
 ])
 
@@ -229,7 +229,7 @@ const contentItems: MenuItem[] = [
     icon: 'file',
     color: '#5f8df7',
     bg: 'rgba(95, 141, 247, 0.15)',
-    path: '/week-menu',
+    path: '/user/menus',
   },
   {
     label: '我的购物清单',

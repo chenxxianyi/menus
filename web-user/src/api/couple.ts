@@ -42,6 +42,10 @@ export function deleteCoupleOrder(id: number) {
   return api.delete(`/couple/orders/${id}`)
 }
 
-export function generateShoppingList(mealDate?: string, mealType?: string) {
-  return api.post('/couple/orders/generate-shopping-list', { meal_date: mealDate, meal_type: mealType })
+export function generateShoppingList(mealDate?: string, mealType?: string, saveShared = false) {
+  return api.post('/couple/orders/generate-shopping-list', {
+    meal_date: mealDate,
+    meal_type: mealType,
+    save_shared: saveShared,
+  })
 }

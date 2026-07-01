@@ -1,5 +1,5 @@
 import api from './index'
-import type { UserPreferences } from '@/types/user'
+import type { PreferenceStatus, UserPreferences } from '@/types/user'
 
 export function getUserInfo() {
   return api.get('/user/info')
@@ -17,6 +17,10 @@ export function uploadAvatar(file: File) {
 
 export function getPreferences() {
   return api.get('/user/preferences')
+}
+
+export function getPreferenceStatus() {
+  return api.get('/user/preferences/status') as Promise<PreferenceStatus>
 }
 
 export function updatePreferences(data: UserPreferences) {

@@ -21,6 +21,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'shopping-list', name: 'ShoppingList', component: () => import('@/views/ShoppingList.vue'), meta: { showTabBar: true } },
       { path: 'user', name: 'UserCenter', component: () => import('@/views/UserCenter.vue'), meta: { showTabBar: true } },
       { path: 'user/favorites', name: 'Favorites', component: () => import('@/views/Favorites.vue') },
+      { path: 'user/menus', name: 'MyMenus', component: () => import('@/views/MyMenus.vue') },
       { path: 'user/preferences', name: 'Preferences', component: () => import('@/views/Preferences.vue') },
       { path: 'user/history', name: 'BrowseHistory', component: () => import('@/views/BrowseHistory.vue') },
       { path: 'about', name: 'About', component: () => import('@/views/About.vue') },

@@ -29,7 +29,7 @@
         </div>
       </div>
       <button class="generate-btn" @click="handleGenerate" :disabled="loading">
-        {{ loading ? '生成中...' : '生成食材清单' }}
+        {{ loading ? '生成中...' : '生成合意菜单' }}
       </button>
     </div>
 
@@ -51,6 +51,23 @@
         <div v-if="!result.orders.length" class="summary-empty">暂无已确认的点餐</div>
       </div>
 
+      <div v-if="menuDishes.length" class="menu-section">
+        <div class="shopping-header">
+          <h3 class="shopping-title">{{ result.agreed_dishes?.length ? '双方都想吃' : '折中推荐' }}</h3>
+          <span class="shopping-count">{{ result.agreed_dishes?.length ? '优先安排' : '无重合时推荐' }}</span>
+        </div>
+        <div class="menu-dishes">
+          <article v-for="dish in menuDishes" :key="`${dish.source}-${dish.recipe_id || dish.name}`" class="menu-dish-card">
+            <div>
+              <strong>{{ dish.name }}</strong>
+              <p>{{ dish.reason }}</p>
+              <span>{{ dish.cook_time ? `${dish.cook_time} 分钟` : '家庭餐桌' }} · {{ dish.difficulty || '家常' }}</span>
+            </div>
+            <button v-if="dish.recipe_id" type="button" @click="router.push(`/recipes/${dish.recipe_id}`)">做法</button>
+          </article>
+        </div>
+      </div>
+
       <!-- Shopping list -->
       <div class="shopping-section" v-if="result.shopping_list.length">
         <div class="shopping-header">
@@ -66,9 +83,10 @@
             <span class="item-amount">{{ item.amount }}</span>
           </div>
         </div>
-        <button class="save-btn" @click="handleSaveToShoppingList">
-          保存到购物清单
+        <button class="save-btn" :disabled="savingShared" @click="handleSaveToShoppingList">
+          {{ savingShared ? '生成中...' : '生成共享购物清单' }}
         </button>
+        <p v-if="saveMessage" class="save-message">{{ saveMessage }}</p>
       </div>
 
       <div v-else class="empty-shopping">
@@ -86,12 +104,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCoupleStore } from '@/stores/couple'
 import { generateShoppingList } from '@/api/couple'
-import { createShoppingList } from '@/api/shopping'
-import type { GenerateShoppingListResult, ShoppingListItem } from '@/types/couple'
+import type { CoupleMenuDish, GenerateShoppingListResult, ShoppingListItem } from '@/types/couple'
 
 const router = useRouter()
 const coupleStore = useCoupleStore()
@@ -100,9 +117,16 @@ const today = new Date().toISOString().split('T')[0]
 const mealDate = ref(today)
 const mealType = ref('')
 const loading = ref(false)
+const savingShared = ref(false)
+const saveMessage = ref('')
 type CheckedShoppingItem = ShoppingListItem & { checked: boolean }
 type CoupleMenuResult = Omit<GenerateShoppingListResult, 'shopping_list'> & { shopping_list: CheckedShoppingItem[] }
 const result = ref<CoupleMenuResult | null>(null)
+const menuDishes = computed<CoupleMenuDish[]>(() => {
+  if (!result.value) return []
+  if (result.value.agreed_dishes?.length) return result.value.agreed_dishes
+  return result.value.compromise_dishes || []
+})
 
 const mealTypes = [
   { value: '', label: '全部' },
@@ -113,11 +137,12 @@ const mealTypes = [
 
 async function handleGenerate() {
   loading.value = true
+  saveMessage.value = ''
   try {
     const res: any = await generateShoppingList(mealDate.value, mealType.value)
     result.value = {
       ...res,
-      shopping_list: (res.shopping_list || []).map((item: ShoppingListItem) => ({ ...item, checked: false })),
+      shopping_list: normalizeShoppingItems(res.shopping_list || []),
     }
   } catch {
     result.value = null
@@ -128,23 +153,28 @@ async function handleGenerate() {
 
 async function handleSaveToShoppingList() {
   if (!result.value) return
-  const items = result.value.shopping_list.map(item => ({
-    name: item.name,
-    amount: item.amount,
-    emoji: '',
-    category: item.category || '',
-    price: 0,
-    checked: item.checked,
-  }))
+  savingShared.value = true
+  saveMessage.value = ''
   try {
-    await createShoppingList({
-      name: `${mealDate.value} 情侣点餐食材`,
-      items,
-    })
-    alert('已保存到购物清单')
-  } catch {
-    alert('保存失败')
+    const res: any = await generateShoppingList(mealDate.value, mealType.value, true)
+    result.value = {
+      ...res,
+      shopping_list: normalizeShoppingItems(res.shopping_list || []),
+    }
+    saveMessage.value = res.saved_shared ? '已生成共享购物清单，双方都能在清单页查看。' : '已生成采购清单。'
+  } catch (error) {
+    saveMessage.value = error instanceof Error ? error.message : '保存失败'
+  } finally {
+    savingShared.value = false
   }
+}
+
+function normalizeShoppingItems(items: ShoppingListItem[]): CheckedShoppingItem[] {
+  return items.map((item) => ({
+    ...item,
+    checked: false,
+    status: item.status || 'pending',
+  }))
 }
 
 onMounted(async () => {
@@ -349,6 +379,69 @@ onMounted(async () => {
   margin-bottom: var(--sp-4);
 }
 
+.menu-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-4);
+}
+
+.menu-dishes {
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.menu-dish-card {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: var(--color-surface-2);
+}
+
+.menu-dish-card div {
+  min-width: 0;
+  flex: 1;
+}
+
+.menu-dish-card strong {
+  display: block;
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-dish-card p {
+  margin: 4px 0;
+  color: var(--color-text-2);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.menu-dish-card span {
+  color: var(--color-text-3);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+}
+
+.menu-dish-card button {
+  min-width: 52px;
+  min-height: 36px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--color-text);
+  color: var(--color-text-inv);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .shopping-header {
   display: flex;
   align-items: center;
@@ -420,6 +513,19 @@ onMounted(async () => {
 
 .save-btn:active {
   background: var(--color-surface-2);
+}
+
+.save-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.save-message {
+  margin-top: var(--sp-3);
+  color: var(--color-success);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-align: center;
 }
 
 /* Empty states */

@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS `ai_generation_logs` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` BIGINT UNSIGNED DEFAULT 0 COMMENT '用户ID',
+  `generation_type` VARCHAR(50) NOT NULL COMMENT '生成类型：scene_recipe / recipe / shopping',
+  `scene` VARCHAR(80) DEFAULT '' COMMENT '生成场景',
+  `model` VARCHAR(120) DEFAULT '' COMMENT 'AI模型',
+  `input_json` JSON NULL COMMENT '输入参数摘要',
+  `output_json` JSON NULL COMMENT '输出摘要',
+  `status` VARCHAR(20) NOT NULL COMMENT 'success / failed',
+  `error_message` TEXT NULL COMMENT '失败原因',
+  `duration_ms` BIGINT DEFAULT 0 COMMENT '耗时毫秒',
+  `recipe_ids_json` JSON NULL COMMENT '生成或复用的菜谱ID',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_ai_generation_logs_user_id` (`user_id`),
+  KEY `idx_ai_generation_logs_generation_type` (`generation_type`),
+  KEY `idx_ai_generation_logs_scene` (`scene`),
+  KEY `idx_ai_generation_logs_status` (`status`),
+  KEY `idx_ai_generation_logs_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"strings"
+	"time"
 
 	"menu-recommend/internal/model"
 	"menu-recommend/internal/repository"
@@ -13,6 +14,8 @@ type RecipeService struct {
 	categoryRepo *repository.CategoryRepo
 	favRepo      *repository.FavoriteRepo
 	historyRepo  *repository.BrowseHistoryRepo
+	feedbackRepo *repository.UserRecipeFeedbackRepo
+	aiLogService *AIGenerationLogService
 	aiClient     *AIClient
 }
 
@@ -20,8 +23,16 @@ func NewRecipeService(recipeRepo *repository.RecipeRepo, categoryRepo *repositor
 	return &RecipeService{recipeRepo: recipeRepo, categoryRepo: categoryRepo, favRepo: favRepo, historyRepo: historyRepo}
 }
 
+func (s *RecipeService) SetFeedbackRepo(feedbackRepo *repository.UserRecipeFeedbackRepo) {
+	s.feedbackRepo = feedbackRepo
+}
+
 func (s *RecipeService) SetAIClient(aiClient *AIClient) {
 	s.aiClient = aiClient
+}
+
+func (s *RecipeService) SetAIGenerationLogService(aiLogService *AIGenerationLogService) {
+	s.aiLogService = aiLogService
 }
 
 func (s *RecipeService) ListRecipes(keyword string, categoryID uint, taste, cookTime, difficulty, healthTags, sortBy string, page, pageSize int) ([]model.Recipe, int64, error) {
@@ -46,6 +57,11 @@ func (s *RecipeService) GetRecipeDetail(id uint, userID uint) (*model.Recipe, er
 	if userID > 0 {
 		recipe.IsFavorited = s.favRepo.Exists(userID, id)
 		_ = s.historyRepo.Record(userID, id)
+		if s.feedbackRepo != nil {
+			if items, err := s.feedbackRepo.FindByUserAndRecipe(userID, id); err == nil {
+				recipe.Feedback = FeedbackStatusMap(items)
+			}
+		}
 	}
 
 	return recipe, nil
@@ -78,8 +94,32 @@ type AIRecipeGenerateResult struct {
 	Created bool          `json:"created"`
 }
 
-func (s *RecipeService) GenerateRecipeByAI(ctx context.Context, dishName string) (*AIRecipeGenerateResult, error) {
+func (s *RecipeService) GenerateRecipeByAI(ctx context.Context, userID uint, dishName string) (*AIRecipeGenerateResult, error) {
+	return s.generateRecipeByAI(ctx, userID, dishName, true)
+}
+
+func (s *RecipeService) generateRecipeByAI(ctx context.Context, userID uint, dishName string, logEnabled bool) (result *AIRecipeGenerateResult, err error) {
+	start := time.Now()
 	name := strings.TrimSpace(dishName)
+	if logEnabled {
+		defer func() {
+			status := "success"
+			if err != nil {
+				status = "failed"
+			}
+			s.aiLogService.Record(AIGenerationLogPayload{
+				UserID:         userID,
+				GenerationType: "recipe",
+				Model:          aiModelName(s.aiClient),
+				Input:          map[string]interface{}{"dish_name": name},
+				Output:         summarizeAIRecipeGenerateResult(result),
+				Status:         status,
+				ErrorMessage:   aiErrorText(err),
+				Duration:       time.Since(start),
+				RecipeIDs:      recipeIDsFromAIRecipeGenerateResult(result),
+			})
+		}()
+	}
 	if name == "" {
 		return nil, ErrAIInvalidResponse
 	}

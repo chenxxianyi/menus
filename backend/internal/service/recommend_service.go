@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"sort"
 	"strings"
+	"time"
 
 	"menu-recommend/internal/model"
 	"menu-recommend/internal/repository"
@@ -14,7 +15,9 @@ type RecommendService struct {
 	recipeRepo     *repository.RecipeRepo
 	ingredientRepo *repository.IngredientRepo
 	prefRepo       *repository.UserPrefRepo
+	feedbackRepo   *repository.UserRecipeFeedbackRepo
 	recipeService  *RecipeService
+	aiLogService   *AIGenerationLogService
 	aiClient       *AIClient
 }
 
@@ -28,8 +31,17 @@ func NewRecommendService(recipeRepo *repository.RecipeRepo, ingredientRepo *repo
 	}
 }
 
+func (s *RecommendService) SetFeedbackRepo(feedbackRepo *repository.UserRecipeFeedbackRepo) {
+	s.feedbackRepo = feedbackRepo
+}
+
+func (s *RecommendService) SetAIGenerationLogService(aiLogService *AIGenerationLogService) {
+	s.aiLogService = aiLogService
+}
+
 type RecommendParams struct {
 	Scene               string   `json:"scene"`
+	UserID              uint     `json:"-"`
 	PeopleCount         int      `json:"people_count"`
 	MealType            string   `json:"meal_type"`
 	TastePreference     []string `json:"taste_preference"`
@@ -61,6 +73,12 @@ type RecommendResult struct {
 type scoredRecipe struct {
 	recipe *model.Recipe
 	score  float64
+}
+
+type recipeFeedbackContext struct {
+	byRecipe       map[uint]map[string]bool
+	likedTastes    map[string]bool
+	likedHealthTag map[string]bool
 }
 
 type IngredientRecommendResult struct {
@@ -162,6 +180,83 @@ func recipeHasAvoidIngredient(recipeIngredients []string, avoidIngredients []str
 	return false
 }
 
+func (s *RecommendService) feedbackContext(userID uint, recipes []model.Recipe) recipeFeedbackContext {
+	ctx := recipeFeedbackContext{
+		byRecipe:       make(map[uint]map[string]bool),
+		likedTastes:    make(map[string]bool),
+		likedHealthTag: make(map[string]bool),
+	}
+	if s.feedbackRepo == nil || userID == 0 {
+		return ctx
+	}
+
+	items, err := s.feedbackRepo.FindByUser(userID)
+	if err != nil {
+		return ctx
+	}
+
+	recipeMap := make(map[uint]model.Recipe, len(recipes))
+	for _, recipe := range recipes {
+		recipeMap[recipe.ID] = recipe
+	}
+
+	for _, item := range items {
+		if ctx.byRecipe[item.RecipeID] == nil {
+			ctx.byRecipe[item.RecipeID] = make(map[string]bool)
+		}
+		ctx.byRecipe[item.RecipeID][item.FeedbackType] = true
+		if item.FeedbackType != "like" {
+			continue
+		}
+		recipe, ok := recipeMap[item.RecipeID]
+		if !ok {
+			continue
+		}
+		if taste := strings.TrimSpace(recipe.Taste); taste != "" {
+			ctx.likedTastes[taste] = true
+		}
+		for _, tag := range jsonStringList(recipe.HealthTags) {
+			if tag != "" {
+				ctx.likedHealthTag[tag] = true
+			}
+		}
+	}
+	return ctx
+}
+
+func (ctx recipeFeedbackContext) isBlocked(recipeID uint) bool {
+	return ctx.byRecipe[recipeID]["block"]
+}
+
+func (ctx recipeFeedbackContext) scoreDelta(recipeID uint) float64 {
+	feedback := ctx.byRecipe[recipeID]
+	if len(feedback) == 0 {
+		return 0
+	}
+	var delta float64
+	if feedback["like"] {
+		delta += 18
+	}
+	if feedback["cooked"] {
+		delta -= 10
+	}
+	if feedback["dislike"] {
+		delta -= 35
+	}
+	return delta
+}
+
+func adjustIngredientMatchRate(matchRate float64, delta float64) float64 {
+	adjusted := matchRate + delta/100
+	if adjusted < 0.01 {
+		return 0.01
+	}
+	if adjusted > 1 {
+		return 1
+	}
+	return adjusted
+}
+
 func jsonStringList(raw model.JSON) []string {
 	if len(raw) == 0 || string(raw) == "null" {
 		return nil
@@ -244,13 +339,36 @@ func dishFromRecipe(recipe *model.Recipe, dishType string, reason string) DishRe
 	}
 }
 
-func (s *RecommendService) RecommendSceneByAI(ctx context.Context, userID uint, params *RecommendParams) (*RecommendResult, error) {
+func (s *RecommendService) RecommendSceneByAI(ctx context.Context, userID uint, params *RecommendParams) (result *RecommendResult, err error) {
+	start := time.Now()
+	var sceneCtx AISceneRecommendContext
+	defer func() {
+		status := "success"
+		if err != nil {
+			status = "failed"
+		}
+		scene := sceneCtx.Scene
+		if scene == "" && params != nil {
+			scene = params.Scene
+		}
+		s.aiLogService.Record(AIGenerationLogPayload{
+			UserID:         userID,
+			GenerationType: "scene_recipe",
+			Scene:          scene,
+			Model:          aiModelName(s.aiClient),
+			Input:          sceneCtx,
+			Output:         summarizeRecommendResult(result),
+			Status:         status,
+			ErrorMessage:   aiErrorText(err),
+			Duration:       time.Since(start),
+			RecipeIDs:      recipeIDsFromDishes(resultDishes(result)),
+		})
+	}()
 	if s.aiClient == nil || !s.aiClient.IsConfigured() || s.recipeService == nil {
 		return nil, ErrAIConfigMissing
 	}
 
 	var pref *model.UserPreference
-	var err error
 	if s.prefRepo != nil && userID > 0 {
 		pref, err = s.prefRepo.FindByUserID(userID)
 		if err != nil {
@@ -258,13 +376,13 @@ func (s *RecommendService) RecommendSceneByAI(ctx context.Context, userID uint, 
 		}
 	}
 
-	sceneCtx := ensureSceneDefaults(params, pref)
+	sceneCtx = ensureSceneDefaults(params, pref)
 	draft, err := s.aiClient.GenerateSceneRecipeDrafts(ctx, sceneCtx)
 	if err != nil {
 		return nil, err
 	}
 
-	result := &RecommendResult{
+	result = &RecommendResult{
 		MenuName: draft.MenuName,
 		Reason:   draft.Reason + " 已同步到菜谱库，可点击查看完整做法。",
 		Source:   "ai",
@@ -294,6 +412,13 @@ func (s *RecommendService) RecommendSceneByAI(ctx context.Context, userID uint, 
 	return result, nil
 }
 
+func resultDishes(result *RecommendResult) []DishResult {
+	if result == nil {
+		return nil
+	}
+	return result.Dishes
+}
+
 func recipeIngredientNamesFromDraft(items []AIRecipeIngredient) []string {
 	names := make([]string, 0, len(items))
 	for _, item := range items {
@@ -309,6 +434,7 @@ func (s *RecommendService) RecommendMenu(params *RecommendParams) (*RecommendRes
 	if err != nil {
 		return nil, err
 	}
+	feedbackCtx := s.feedbackContext(params.UserID, recipes)
 
 	var scored []scoredRecipe
 	for i := range recipes {
@@ -316,10 +442,13 @@ func (s *RecommendService) RecommendMenu(params *RecommendParams) (*RecommendRes
 		if containsRecipeID(params.ExcludeRecipeIDs, r.ID) {
 			continue
 		}
+		if feedbackCtx.isBlocked(r.ID) {
+			continue
+		}
 		if recipeHasAvoidIngredient(recipeIngredientNames(r.Ingredients), params.AvoidIngredients) {
 			continue
 		}
-		score := s.calcScore(*r, params)
+		score := s.calcScore(*r, params, feedbackCtx)
 		scored = append(scored, scoredRecipe{recipe: r, score: score})
 	}
 
@@ -370,7 +499,7 @@ func (s *RecommendService) RecommendMenu(params *RecommendParams) (*RecommendRes
 	return result, nil
 }
 
-func (s *RecommendService) calcScore(r model.Recipe, params *RecommendParams) float64 {
+func (s *RecommendService) calcScore(r model.Recipe, params *RecommendParams, feedbackCtx recipeFeedbackContext) float64 {
 	var score float64
 
 	if len(params.TastePreference) > 0 {
@@ -400,6 +529,15 @@ func (s *RecommendService) calcScore(r model.Recipe, params *RecommendParams) fl
 	if params.HealthGoal != "" && len(r.HealthTags) > 0 && strings.Contains(string(r.HealthTags), params.HealthGoal) {
 		score += 12
 	}
+	if feedbackCtx.likedTastes[strings.TrimSpace(r.Taste)] {
+		score += 8
+	}
+	for tag := range feedbackCtx.likedHealthTag {
+		if tag != "" && strings.Contains(string(r.HealthTags), tag) {
+			score += 4
+			break
+		}
+	}
 
 	if r.CookTime <= 15 {
 		score += 15
@@ -409,15 +547,17 @@ func (s *RecommendService) calcScore(r model.Recipe, params *RecommendParams) fl
 
 	score += float64(r.FavoriteCount) * 0.01
 	score += float64(r.ViewCount) * 0.001
+	score += feedbackCtx.scoreDelta(r.ID)
 
 	return score
 }
 
-func (s *RecommendService) RecommendByIngredients(ingredients []string, mode string, limit int) (*IngredientRecommendPayload, error) {
+func (s *RecommendService) RecommendByIngredients(userID uint, ingredients []string, mode string, limit int) (*IngredientRecommendPayload, error) {
 	recipes, err := s.recipeRepo.FindHot(50)
 	if err != nil {
 		return nil, err
 	}
+	feedbackCtx := s.feedbackContext(userID, recipes)
 
 	normalized := normalizeIngredientList(ingredients, 20)
 	if limit <= 0 || limit > 50 {
@@ -431,6 +571,9 @@ func (s *RecommendService) RecommendByIngredients(ingredients []string, mode str
 	}
 
 	for _, r := range recipes {
+		if feedbackCtx.isBlocked(r.ID) {
+			continue
+		}
 		recipeIngredients := normalizeIngredientList(recipeIngredientNames(r.Ingredients), 100)
 		if len(recipeIngredients) == 0 {
 			continue
@@ -456,7 +599,7 @@ func (s *RecommendService) RecommendByIngredients(ingredients []string, mode str
 			}
 			results = append(results, IngredientRecommendResult{
 				Recipe:             r,
-				MatchRate:          matchRate,
+				MatchRate:          adjustIngredientMatchRate(matchRate, feedbackCtx.scoreDelta(r.ID)),
 				MatchedIngredients: matched,
 				MissingIngredients: missing,
 				Reason:             reason,

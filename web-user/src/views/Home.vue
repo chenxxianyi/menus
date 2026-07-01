@@ -20,13 +20,24 @@
         <input v-model="keyword" type="search" placeholder="搜索菜谱、食材或菜系" aria-label="搜索菜谱、食材或菜系" @keyup.enter="goToSearch" />
       </div>
 
-      <section class="glass-card couple-card" role="button" tabindex="0" @click="router.push('/couple')">
-        <div class="couple-photo" aria-hidden="true"></div>
-        <div class="couple-mask" aria-hidden="true"></div>
-        <div class="couple-copy">
-          <h2>双人点餐 <span aria-hidden="true">♡</span></h2>
-          <p>一起选菜，一起下厨<br />为你们定制美味晚餐</p>
-          <button class="primary-pill" type="button" @click.stop="router.push('/couple')">去选菜 <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+      <section class="glass-card decision-panel" aria-labelledby="decision-title">
+        <div class="section-title decision-title">
+          <div>
+            <span>Meal decision</span>
+            <h2 id="decision-title">今天怎么吃</h2>
+          </div>
+          <button type="button" @click="router.push('/recommend/scene')">更多</button>
+        </div>
+        <div class="main-actions" aria-label="主要用餐行动">
+          <button v-for="item in mainActions" :key="item.label" class="main-action" type="button" @click="goQuickAction(item)">
+            <span class="main-icon" :class="item.tone" aria-hidden="true">
+              <svg v-if="item.icon === 'scene'" viewBox="0 0 48 48"><path d="M8 38 24 13l16 25"/><path d="M16 38V27l8-14 8 14v11M24 13v25"/></svg>
+              <svg v-else-if="item.icon === 'ingredients'" viewBox="0 0 48 48"><path d="M25 22c-4-9-13-8-18-6 1 8 8 13 18 10"/><path d="M26 21c1-8 7-13 15-13-1 9-6 14-15 14"/><circle cx="27" cy="30" r="8"/></svg>
+              <svg v-else viewBox="0 0 48 48"><rect x="11" y="12" width="26" height="28" rx="5"/><path d="M17 8v8M31 8v8M16 22h16M16 29h10"/></svg>
+            </span>
+            <strong>{{ item.label }}</strong>
+            <small>{{ item.description }}</small>
+          </button>
         </div>
       </section>
 
@@ -43,8 +54,18 @@
           <h2>{{ todayRecipe ? recipeTitle(todayRecipe) : '暂无今日推荐' }}</h2>
           <p>{{ todayRecipe ? recipeDescription(todayRecipe) : emptyText }}</p>
           <span v-if="todayRecipe" class="sage-badge"><i></i>{{ activeMeal }} · {{ recipeDifficulty(todayRecipe) }}</span>
+          <div v-if="todayRecipe" class="chef-actions">
+            <button type="button" @click.stop="goToRecipe(todayRecipe)">查看做法</button>
+            <button type="button" @click.stop="router.push('/recommend/scene')">换一组</button>
+            <button type="button" :disabled="shoppingActionLoading" @click.stop="addRecipeToShopping(todayRecipe)">
+              {{ shoppingActionLoading ? '加入中...' : '加入清单' }}
+            </button>
+          </div>
         </div>
       </section>
+
+      <p v-if="homeMessage" class="home-message" role="status">{{ homeMessage }}</p>
+      <p v-if="homeError" class="home-error" role="alert">{{ homeError }}</p>
 
       <nav class="meal-tabs" aria-label="餐段切换">
         <button v-for="tab in mealTabs" :key="tab" :class="{ active: activeMeal === tab }" type="button" @click="activeMeal = tab">{{ tab }}</button>
@@ -72,8 +93,8 @@
         <p>{{ loading ? '正在读取后端推荐...' : emptyText }}</p>
       </section>
 
-      <section class="glass-card quick-grid" aria-label="快捷功能">
-        <button v-for="item in quickActions" :key="item.label" class="quick-item" type="button" @click="goQuickAction(item)">
+      <section class="glass-card quick-grid" aria-label="更多用餐入口">
+        <button v-for="item in secondaryActions" :key="item.label" class="quick-item" type="button" @click="goQuickAction(item)">
           <span class="quick-icon" :class="item.tone" aria-hidden="true">
             <svg v-if="item.icon === 'ingredients'" viewBox="0 0 48 48"><path d="M25 22c-4-9-13-8-18-6 1 8 8 13 18 10"/><path d="M26 21c1-8 7-13 15-13-1 9-6 14-15 14"/><circle cx="27" cy="30" r="8"/></svg>
             <svg v-else-if="item.icon === 'taste'" viewBox="0 0 48 48"><path d="M24 40c9-6 12-17 8-29-4 6-11 7-14 12-4 7-1 13 6 17Z"/><path d="M28 14c2-2 5-3 8-3"/></svg>
@@ -84,6 +105,16 @@
           </span>
           <span>{{ item.label }}</span>
         </button>
+      </section>
+
+      <section class="glass-card couple-card" role="button" tabindex="0" @click="router.push('/couple')">
+        <div class="couple-photo" aria-hidden="true"></div>
+        <div class="couple-mask" aria-hidden="true"></div>
+        <div class="couple-copy">
+          <h2>和 TA 一起决定</h2>
+          <p>同步想吃的菜<br />生成合意菜单和采购清单</p>
+          <button class="primary-pill" type="button" @click.stop="router.push('/couple')">去选菜 <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+        </div>
       </section>
 
       <section class="glass-card popular-panel">
@@ -113,6 +144,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getHomeData } from '@/api/home'
+import { useShoppingStore } from '@/stores/shopping'
+import { trackEvent } from '@/utils/event'
 import kitchenBg from '@/assets/home/kitchen-bg.jpg'
 import coupleImage from '@/assets/home/couple-dining.jpg'
 
@@ -135,14 +168,19 @@ type QuickAction = {
   icon: string
   tone: string
   path: string
+  description?: string
   query?: Record<string, string>
 }
 
 const router = useRouter()
+const shoppingStore = useShoppingStore()
 
 const keyword = ref('')
 const activeMeal = ref('晚餐')
 const loading = ref(true)
+const shoppingActionLoading = ref(false)
+const homeMessage = ref('')
+const homeError = ref('')
 const todayRecommend = ref<HomeRecipe | null>(null)
 const hotRecipes = ref<HomeRecipe[]>([])
 
@@ -158,12 +196,16 @@ const todayRecipe = computed(() => todayRecommend.value)
 const menuRecipe = computed(() => hotRecipes.value[0] || todayRecommend.value || null)
 const popularRecipes = computed(() => hotRecipes.value.slice(0, 2))
 
-const quickActions: QuickAction[] = [
-  { label: '按食材推荐', icon: 'ingredients', tone: 'tomato', path: '/recommend/ingredients' },
-  { label: '按口味推荐', icon: 'taste', tone: 'pepper', path: '/recommend/taste' },
-  { label: '按场景推荐', icon: 'scene', tone: 'sage', path: '/recommend/scene' },
-  { label: '一周菜单', icon: 'week', tone: 'wheat', path: '/week-menu' },
-  { label: '冰箱剩菜', icon: 'fridge', tone: 'sage', path: '/recommend/fridge' },
+const mainActions: QuickAction[] = [
+  { label: '快速推荐', description: '不知道吃什么', icon: 'scene', tone: 'sage', path: '/recommend/scene' },
+  { label: '用现有食材', description: '看看家里能做什么', icon: 'ingredients', tone: 'tomato', path: '/recommend/ingredients' },
+  { label: '安排本周', description: '生成一周菜单', icon: 'week', tone: 'wheat', path: '/week-menu' },
+]
+
+const secondaryActions: QuickAction[] = [
+  { label: '按口味找菜', icon: 'taste', tone: 'pepper', path: '/recommend/taste' },
+  { label: '冰箱库存', icon: 'fridge', tone: 'sage', path: '/recommend/fridge' },
+  { label: '换点新菜', icon: 'scene', tone: 'coral', path: '/recommend/new' },
   { label: '最热菜谱', icon: 'hot', tone: 'coral', path: '/recipes', query: { sort: 'hot' } },
 ]
 
@@ -233,7 +275,38 @@ function goToSearch() {
 }
 
 function goQuickAction(item: QuickAction) {
+  trackEvent({
+    event_name: 'home_action_click',
+    entity_type: 'entry',
+    payload: { label: item.label, path: item.path },
+  })
   router.push(item.query ? { path: item.path, query: item.query } : item.path)
+}
+
+async function addRecipeToShopping(recipe: HomeRecipe | null) {
+  if (!recipe || shoppingActionLoading.value) return
+  const title = recipeTitle(recipe)
+  shoppingActionLoading.value = true
+  homeMessage.value = ''
+  homeError.value = ''
+  try {
+    if (recipe.id) {
+      await shoppingStore.generateByRecipe(recipe.id, title)
+    } else {
+      await shoppingStore.generateByDish(title)
+    }
+    trackEvent({
+      event_name: 'add_shopping_list',
+      entity_type: 'recipe',
+      entity_id: recipe.id || 0,
+      payload: { source: 'home', title },
+    })
+    homeMessage.value = '「' + title + '」的食材已合并到购物清单。'
+  } catch (error) {
+    homeError.value = error instanceof Error ? error.message : '加入购物清单失败，请稍后重试'
+  } finally {
+    shoppingActionLoading.value = false
+  }
 }
 
 onMounted(async () => {
@@ -417,6 +490,79 @@ svg {
   cursor: pointer;
 }
 
+.decision-panel {
+  margin-top: 20px;
+  padding: 16px;
+}
+
+.decision-title {
+  margin-bottom: 14px;
+}
+
+.decision-title span {
+  display: block;
+  margin-bottom: 4px;
+  color: #c26d3d;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.main-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.main-action {
+  min-width: 0;
+  min-height: 128px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  border-radius: 20px;
+  background: rgba(255, 253, 247, 0.82);
+  color: #3d2d25;
+  box-shadow: 0 10px 24px rgba(98, 68, 42, 0.1);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 170ms ease, background 170ms ease, box-shadow 170ms ease;
+}
+
+.main-action strong {
+  display: block;
+  color: #34251f;
+  font-size: 15px;
+  font-weight: 950;
+  line-height: 1.15;
+}
+
+.main-action small {
+  display: block;
+  color: #806f64;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.main-icon,
+.main-icon svg {
+  width: 38px;
+  height: 38px;
+}
+
+.main-icon svg {
+  fill: rgba(232, 79, 63, 0.1);
+  stroke-width: 2.3;
+}
+
+.main-icon.tomato { color: #cf4b38; }
+.main-icon.sage { color: #73936d; }
+.main-icon.wheat { color: #d48b3d; }
+
 .couple-photo {
   position: absolute;
   top: 0;
@@ -578,6 +724,56 @@ svg {
   color: #765f53;
   font-size: 15px;
   line-height: 1.55;
+}
+
+.chef-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.chef-actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #4b352c;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.chef-actions button:last-child {
+  color: #fff;
+  background: linear-gradient(135deg, var(--coral), var(--coral-2));
+  box-shadow: 0 9px 18px rgba(218, 64, 50, 0.2);
+}
+
+.chef-actions button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.home-message,
+.home-error {
+  margin: 12px 2px 0;
+  padding: 11px 13px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.home-message {
+  color: #416834;
+  background: rgba(226, 241, 206, 0.82);
+}
+
+.home-error {
+  color: #9b2f24;
+  background: rgba(255, 225, 219, 0.88);
 }
 
 .sage-badge {
@@ -919,6 +1115,7 @@ svg {
 
 .primary-pill:active,
 .calendar-btn:active,
+.main-action:active,
 .quick-item:active,
 .glass-card:active,
 .popular-card:active {
@@ -927,11 +1124,13 @@ svg {
 
 @media (hover: hover) {
   .primary-pill:hover,
+  .main-action:hover,
   .quick-item:hover,
   .calendar-btn:hover {
     transform: translateY(-1px);
   }
 
+  .main-action:hover,
   .quick-item:hover {
     background: rgba(255, 255, 255, 0.86);
     box-shadow: 0 14px 28px rgba(91, 61, 38, 0.13);
@@ -972,6 +1171,21 @@ svg {
 
   .quick-grid {
     gap: 10px;
+  }
+
+  .main-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .main-action {
+    min-height: 88px;
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    align-items: center;
+  }
+
+  .main-action small {
+    grid-column: 2;
   }
 }
 

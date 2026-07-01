@@ -184,8 +184,9 @@ func (h *CoupleHandler) DeleteOrder(c *gin.Context) {
 }
 
 type GenerateShoppingListRequest struct {
-	MealDate string `json:"meal_date"`
-	MealType string `json:"meal_type"`
+	MealDate   string `json:"meal_date"`
+	MealType   string `json:"meal_type"`
+	SaveShared bool   `json:"save_shared"`
 }
 
 // GenerateShoppingList generates merged shopping list
@@ -197,7 +198,7 @@ func (h *CoupleHandler) GenerateShoppingList(c *gin.Context) {
 		return
 	}
 
-	result, err := h.coupleService.GenerateShoppingList(userID, req.MealDate, req.MealType)
+	result, err := h.coupleService.GenerateShoppingList(userID, req.MealDate, req.MealType, req.SaveShared)
 	if err != nil {
 		response.Error(c, errcode.ErrParam, err.Error())
 		return

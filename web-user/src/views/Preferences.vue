@@ -14,12 +14,12 @@
     </div>
 
     <header class="page-header" aria-label="页面顶部">
-      <button class="back-btn" type="button" aria-label="返回" @click="router.back()">
+      <button class="back-btn" type="button" aria-label="返回" @click="handleBack">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="m15 18-6-6 6-6" />
         </svg>
       </button>
-      <h1 class="page-title">偏好设置</h1>
+      <h1 class="page-title">{{ isGuideMode ? '快速了解你' : '偏好设置' }}</h1>
       <button class="save-btn" type="button" :disabled="saving" @click="handleSave">
         {{ saving ? '保存中' : '保存' }}
       </button>
@@ -70,6 +70,29 @@
           @click="form.health_goal = goal.value"
         >
           {{ goal.label }}
+        </button>
+      </div>
+    </section>
+
+    <section class="settings-card" aria-labelledby="time-title">
+      <div class="card-title-row">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M12 7v5l3 2" />
+        </svg>
+        <h2 class="card-title" id="time-title">做饭时间</h2>
+      </div>
+      <p class="card-desc">告诉我们你通常愿意花多久做一餐</p>
+      <div class="goal-scroll">
+        <button
+          v-for="item in cookTimeOptions"
+          :key="item"
+          class="goal-chip"
+          :class="{ active: form.cook_time_preference === item }"
+          type="button"
+          @click="form.cook_time_preference = item"
+        >
+          {{ item }}
         </button>
       </div>
     </section>
@@ -136,13 +159,15 @@
       <span>保存后会用于个性化推荐，随时可修改</span>
     </p>
 
+    <button v-if="isGuideMode" class="skip-btn" type="button" @click="skipGuide">先跳过，稍后再完善</button>
+
     <div class="toast" :class="{ show: !!toastText }">{{ toastText }}</div>
   </main>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import kitchenBg from '@/assets/home/kitchen-bg.jpg'
 import { getPreferences, updatePreferences } from '@/api/user'
 
@@ -152,12 +177,15 @@ interface PreferenceForm {
   taste_preference: string[]
   health_goal: HealthGoal
   avoid_ingredients: string[]
+  cook_time_preference: string
   people_count: number
 }
 
 const router = useRouter()
+const route = useRoute()
 
 const tasteOptions = ['咸鲜', '酸甜', '麻辣', '清淡', '香辣', '酸辣', '甜味', '原味']
+const cookTimeOptions = ['15分钟内', '30分钟内', '45分钟内', '都可以']
 const goalOptions: { value: HealthGoal; label: string; legacy: string[] }[] = [
   { value: '普通', label: '普通', legacy: ['normal', '普通'] },
   { value: '减脂', label: '减脂', legacy: ['lose', '减脂'] },
@@ -175,12 +203,14 @@ const form = reactive<PreferenceForm>({
   taste_preference: [],
   health_goal: '普通',
   avoid_ingredients: [],
+  cook_time_preference: '30分钟内',
   people_count: 2,
 })
 
 const pageVars = computed(() => ({
   '--preference-bg': `url(${kitchenBg})`,
 }))
+const isGuideMode = computed(() => route.query.guide === '1')
 
 function normalizeArray(value: unknown) {
   if (Array.isArray(value)) {
@@ -260,6 +290,9 @@ async function loadPreferences() {
     form.taste_preference = normalizeArray(res.taste_preference)
     form.health_goal = normalizeGoal(res.health_goal)
     form.avoid_ingredients = normalizeArray(res.avoid_ingredients)
+    form.cook_time_preference = typeof res.cook_time_preference === 'string' && res.cook_time_preference.trim()
+      ? res.cook_time_preference.trim()
+      : '30分钟内'
     form.people_count = normalizePeopleCount(res.people_count)
   } catch {
     showToast('偏好读取失败')
@@ -275,16 +308,31 @@ async function handleSave() {
       health_goal: form.health_goal,
       avoid_ingredients: [...form.avoid_ingredients],
       favorite_ingredients: [],
-      cook_time_preference: '',
+      cook_time_preference: form.cook_time_preference,
       default_servings: form.people_count,
       people_count: form.people_count,
     } as any)
     showToast('偏好已保存')
+    if (isGuideMode.value) {
+      setTimeout(() => router.replace('/'), 450)
+    }
   } catch {
     showToast('保存失败，请稍后再试')
   } finally {
     saving.value = false
   }
+}
+
+function skipGuide() {
+  router.replace('/')
+}
+
+function handleBack() {
+  if (isGuideMode.value) {
+    router.replace('/')
+    return
+  }
+  router.back()
 }
 
 onMounted(() => {
@@ -756,6 +804,19 @@ svg {
   stroke-width: 2.2;
 }
 
+.skip-btn {
+  width: 100%;
+  min-height: 54px;
+  margin-top: 18px;
+  border: 1px solid rgba(120, 90, 65, 0.16);
+  border-radius: 18px;
+  color: #6b5142;
+  background: rgba(255, 250, 240, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  font-size: 16px;
+  font-weight: 850;
+}
+
 .toast {
   position: fixed;
   left: 50%;
@@ -789,7 +850,8 @@ svg {
 .goal-chip:active,
 .add-ingredient:active,
 .ingredient-tag button:active,
-.step-btn:active {
+.step-btn:active,
+.skip-btn:active {
   transform: scale(0.98);
 }
 
@@ -799,7 +861,8 @@ svg {
   .taste-chip:hover,
   .goal-chip:hover,
   .add-ingredient:hover,
-  .step-btn:hover:not(:disabled) {
+  .step-btn:hover:not(:disabled),
+  .skip-btn:hover {
     transform: translateY(-1px);
   }
 }

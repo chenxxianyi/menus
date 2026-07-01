@@ -1,6 +1,6 @@
 import type { Recipe } from './recipe'
 
-export type RecommendMode = 'ingredients' | 'taste' | 'scene' | 'fridge'
+export type RecommendMode = 'ingredients' | 'taste' | 'scene' | 'fridge' | 'new' | 'week' | 'couple'
 
 export interface IngredientOption {
   id: number

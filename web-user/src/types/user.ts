@@ -29,4 +29,11 @@ export interface UserPreferences {
   favorite_ingredients: string[]
   cook_time_preference: string
   default_servings: number
+  people_count?: number
+}
+
+export interface PreferenceStatus {
+  completed: boolean
+  completeness: number
+  missing_fields: string[]
 }

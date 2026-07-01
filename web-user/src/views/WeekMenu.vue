@@ -34,6 +34,19 @@
         </button>
       </nav>
 
+      <section class="template-strip" aria-label="常用菜单模板">
+        <button
+          v-for="template in menuTemplates"
+          :key="template.key"
+          type="button"
+          :class="{ active: selectedTemplateKey === template.key }"
+          @click="selectedTemplateKey = template.key"
+        >
+          <strong>{{ template.title }}</strong>
+          <span>{{ template.description }}</span>
+        </button>
+      </section>
+
       <section class="glass-card smart-card">
         <div class="smart-content">
           <span class="smart-badge">
@@ -73,6 +86,24 @@
             <span><strong>{{ currentDayIngredients.length }}</strong>食材</span>
           </div>
         </div>
+        <button
+          v-if="weekMenuData.length"
+          class="week-shopping-btn"
+          type="button"
+          :disabled="!allWeekRecipeIds.length && !allWeekIngredients.length || shoppingSaving"
+          @click="createWeekShoppingList"
+        >
+          {{ shoppingSaving ? '生成中' : '生成整周采购清单' }}
+        </button>
+        <button
+          v-if="weekMenuData.length"
+          class="week-shopping-btn save-menu-btn"
+          type="button"
+          :disabled="menuSaving"
+          @click="saveWeekMenu"
+        >
+          {{ menuSaving ? '保存中' : '保存本周菜单' }}
+        </button>
       </section>
 
       <section v-if="loading" class="glass-card state-card">
@@ -170,10 +201,12 @@
 import { computed, defineComponent, h, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/index'
+import { saveUserMenu } from '@/api/menu'
 import { getPreferences } from '@/api/user'
 import { useShoppingStore } from '@/stores/shopping'
 import type { ShoppingItem } from '@/api/shopping'
 import type { UserPreferences } from '@/types/user'
+import { trackEvent } from '@/utils/event'
 import kitchenBg from '@/assets/home/kitchen-bg.jpg'
 import smartMealImage from '@/assets/home/couple-dining.jpg'
 
@@ -213,8 +246,19 @@ const loading = ref(false)
 const error = ref('')
 const weekMenuData = ref<WeekDay[]>([])
 const shoppingSaving = ref(false)
+const menuSaving = ref(false)
 const shoppingMessage = ref('')
 const userPreferences = ref<UserPreferences | null>(null)
+const selectedTemplateKey = ref('weekday')
+
+const menuTemplates = [
+  { key: 'weekday', title: '工作日快手餐', description: '30 分钟内', health_goal: '', people_count: 2, cook_time_preference: '30分钟内' },
+  { key: 'weekend', title: '周末聚餐', description: '多 1 道菜', health_goal: '', people_count: 4, cook_time_preference: '都可以' },
+  { key: 'fat_loss', title: '减脂周菜单', description: '轻食高蛋白', health_goal: '减脂', people_count: 1, cook_time_preference: '30分钟内' },
+  { key: 'kids', title: '儿童营养餐', description: '少辣均衡', health_goal: '儿童营养', people_count: 3, cook_time_preference: '45分钟内' },
+]
+
+const selectedTemplate = computed(() => menuTemplates.find((item) => item.key === selectedTemplateKey.value) || menuTemplates[0])
 
 const weekDays = ref(buildWeekDays())
 
@@ -253,6 +297,32 @@ const currentDayIngredients = computed(() => {
     })
   })
   return Array.from(names)
+})
+
+const allWeekIngredients = computed(() => {
+  const names = new Set<string>()
+  weekMenuData.value.forEach((day) => {
+    ;(day.meals || []).forEach((meal) => {
+      ;(meal.shopping_list || []).forEach((item) => item && names.add(item))
+      ;(meal.dishes || []).forEach((dish) => {
+        ;(dish.ingredients || []).forEach((item) => item && names.add(item))
+      })
+    })
+  })
+  return Array.from(names)
+})
+
+const allWeekRecipeIds = computed(() => {
+  const ids = new Set<number>()
+  weekMenuData.value.forEach((day) => {
+    ;(day.meals || []).forEach((meal) => {
+      ;(meal.dishes || []).forEach((dish) => {
+        const id = Number(dish.recipe_id || 0)
+        if (Number.isFinite(id) && id > 0) ids.add(id)
+      })
+    })
+  })
+  return Array.from(ids)
 })
 
 const isGeneratedButEmpty = computed(() => {
@@ -340,6 +410,11 @@ async function createDayShoppingList() {
   shoppingMessage.value = ''
   try {
     await shoppingStore.createList(`${activeDayName.value}菜单采购`, toShoppingItems(currentDayIngredients.value))
+    trackEvent({
+      event_name: 'add_shopping_list',
+      entity_type: 'weekly_day',
+      payload: { day: activeDayName.value, ingredients: currentDayIngredients.value },
+    })
     shoppingMessage.value = '已生成采购清单，可以去购物清单页面查看。'
     setTimeout(() => {
       router.push('/shopping-list')
@@ -348,6 +423,63 @@ async function createDayShoppingList() {
     shoppingMessage.value = e?.message || '采购清单生成失败，请稍后再试。'
   } finally {
     shoppingSaving.value = false
+  }
+}
+
+async function createWeekShoppingList() {
+  if (shoppingSaving.value) return
+  shoppingSaving.value = true
+  shoppingMessage.value = ''
+  try {
+    if (allWeekRecipeIds.value.length) {
+      await shoppingStore.generateByRecipes(allWeekRecipeIds.value, '本周菜单采购清单')
+    } else if (allWeekIngredients.value.length) {
+      await shoppingStore.appendItemsToCurrentList('本周菜单采购清单', toShoppingItems(allWeekIngredients.value))
+    } else {
+      shoppingMessage.value = '当前周菜单还没有可生成采购清单的食材。'
+      return
+    }
+    trackEvent({
+      event_name: 'add_shopping_list',
+      entity_type: 'weekly_menu',
+      payload: { recipe_ids: allWeekRecipeIds.value, ingredients: allWeekIngredients.value },
+    })
+    shoppingMessage.value = '整周采购清单已合并，可以去购物清单页面查看。'
+    setTimeout(() => {
+      router.push('/shopping-list')
+    }, 350)
+  } catch (e: any) {
+    shoppingMessage.value = e?.message || '整周采购清单生成失败，请稍后再试。'
+  } finally {
+    shoppingSaving.value = false
+  }
+}
+
+async function saveWeekMenu() {
+  if (!weekMenuData.value.length || menuSaving.value) return
+  menuSaving.value = true
+  shoppingMessage.value = ''
+  try {
+    await saveUserMenu({
+      name: `${selectedTemplate.value.title} - 本周菜单`,
+      menu_type: 'weekly',
+      meal_type: 'weekly',
+      people_count: selectedTemplate.value.people_count,
+      health_goal: selectedTemplate.value.health_goal,
+      dishes: weekMenuData.value,
+      shopping_list: allWeekIngredients.value,
+      reason: `基于${selectedTemplate.value.title}模板生成`,
+    })
+    trackEvent({
+      event_name: 'save_menu',
+      entity_type: 'weekly_menu',
+      payload: { template: selectedTemplate.value.key, recipe_ids: allWeekRecipeIds.value },
+    })
+    shoppingMessage.value = '本周菜单已保存到“我的菜单”。'
+  } catch (e: any) {
+    shoppingMessage.value = e?.message || '保存菜单失败，请稍后再试。'
+  } finally {
+    menuSaving.value = false
   }
 }
 
@@ -360,16 +492,22 @@ async function generateWeekMenu() {
       await loadUserPreferences()
     }
     const pref = userPreferences.value
+    const template = selectedTemplate.value
     const res: any = await api.post('/recommend/week-menu', {
-      people_count: pref?.default_servings || 2,
+      people_count: template.people_count || pref?.default_servings || 2,
       meal_type: 'lunch',
       taste_preference: pref?.taste_preference || [],
-      health_goal: pref?.health_goal || '',
+      health_goal: template.health_goal || pref?.health_goal || '',
       avoid_ingredients: pref?.avoid_ingredients || [],
       existing_ingredients: [],
-      cook_time_preference: pref?.cook_time_preference || '',
+      cook_time_preference: template.cook_time_preference || pref?.cook_time_preference || '',
     })
     const list = Array.isArray(res) ? normalizeWeekMenu(res) : []
+    trackEvent({
+      event_name: 'recommend_start',
+      entity_type: 'weekly_menu',
+      payload: { source: 'week_menu', template: template.key },
+    })
     weekMenuData.value = list
     if (!list.length) {
       error.value = '暂时没有可用菜谱，请先确认后端已有菜谱数据。'
@@ -551,6 +689,42 @@ onMounted(() => {
   margin-top: 24px;
 }
 
+.template-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.template-strip button {
+  min-height: 58px;
+  display: grid;
+  gap: 3px;
+  justify-items: start;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 8px;
+  color: var(--text);
+  background: rgba(255, 250, 240, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.template-strip button.active {
+  border-color: rgba(233, 86, 69, 0.34);
+  background: rgba(252, 226, 214, 0.74);
+}
+
+.template-strip strong {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.template-strip span {
+  color: var(--sub);
+  font-size: 11px;
+  font-weight: 760;
+}
+
 .day {
   position: relative;
   min-width: 0;
@@ -704,6 +878,34 @@ onMounted(() => {
   border-radius: 21px;
   background: rgba(255, 250, 240, 0.74);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.week-shopping-btn {
+  position: relative;
+  z-index: 2;
+  width: min(100%, 236px);
+  min-height: 48px;
+  margin-top: 18px;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(135deg, #ef6153, #e94c3c);
+  box-shadow: 0 12px 24px rgba(233, 86, 69, 0.22);
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.week-shopping-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+  box-shadow: none;
+}
+
+.save-menu-btn {
+  margin-top: 8px;
+  color: var(--coral);
+  background: rgba(255, 250, 240, 0.82);
 }
 
 .stat-pill i {
@@ -1131,6 +1333,7 @@ onMounted(() => {
 .glass-card:active,
 .primary-btn:active,
 .shopping-btn:active,
+.week-shopping-btn:active,
 .dish-row button:active {
   transform: scale(0.98);
 }
@@ -1139,7 +1342,8 @@ onMounted(() => {
   .nav-btn:hover,
   .day:hover,
   .primary-btn:hover,
-  .shopping-btn:hover {
+  .shopping-btn:hover,
+  .week-shopping-btn:hover:not(:disabled) {
     transform: translateY(-1px);
   }
 

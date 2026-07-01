@@ -116,7 +116,7 @@
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l-1.1 11.2A2 2 0 0 1 14.9 21H9.1a2 2 0 0 1-2-1.8L6 8Z" /><path d="M9 8V6a3 3 0 0 1 6 0v2" /></svg></span>
             <div>
               <h2>食材清单</h2>
-              <p>轻触可标记已准备</p>
+              <p>轻触可标记家里已有</p>
             </div>
           </div>
           <div class="ingredient-groups">
@@ -128,11 +128,12 @@
                 class="ingredient-row"
                 :class="{ checked: item.checked }"
                 type="button"
-                @click="item.checked = !item.checked"
+                @click="toggleIngredientOwned(item)"
               >
                 <span class="check-dot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span>
                 <span class="ingredient-name">{{ item.name }}</span>
                 <span class="ingredient-amount">{{ item.amountText }}</span>
+                <span v-if="item.checked" class="owned-pill">已有</span>
               </button>
             </section>
           </div>
@@ -165,10 +166,42 @@
           </div>
         </section>
 
+        <section class="feedback-card" aria-label="菜谱反馈">
+          <div class="section-title">
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" /></svg></span>
+            <div>
+              <h2>这道菜合适吗</h2>
+              <p>你的反馈会影响以后推荐</p>
+            </div>
+          </div>
+          <div class="feedback-actions">
+            <button
+              v-for="item in feedbackActions"
+              :key="item.type"
+              type="button"
+              :class="{ active: feedbackStatus[item.type] }"
+              :disabled="feedbackSaving === item.type"
+              @click="toggleRecipeFeedback(item.type)"
+            >
+              <svg v-if="item.type === 'cooked'" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17h16" /><path d="M6 17a6 6 0 0 1 12 0" /><path d="M12 6v2" /><path d="M5 20h14" /></svg>
+              <svg v-else-if="item.type === 'like'" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.4 5.4 0 0 0-7.6 0L12 5.8l-1.2-1.2a5.4 5.4 0 1 0-7.6 7.6L12 21l8.8-8.8a5.4 5.4 0 0 0 0-7.6Z" /></svg>
+              <svg v-else-if="item.type === 'dislike'" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 15 5 20" /><path d="m5 15 5 5" /><path d="M14 4h4a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-3l-4 5v-5H7a2 2 0 0 1-2-2V8" /></svg>
+              <svg v-else viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m5.7 5.7 12.6 12.6" /></svg>
+              <span>{{ item.label }}</span>
+            </button>
+          </div>
+        </section>
+
+        <p v-if="actionMessage" class="action-message" role="status">{{ actionMessage }}</p>
+        <p v-if="actionError" class="action-error" role="alert">{{ actionError }}</p>
+
         <div class="bottom-actions" aria-label="菜谱操作">
-          <button class="primary-action" type="button" @click="goShoppingList">
+          <button class="primary-action" type="button" :disabled="shoppingSaving" @click="addRecipeToShopping">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12L6 6Z" /><path d="M6 6 5.2 3H3" /><circle cx="9" cy="20" r="1.5" /><circle cx="18" cy="20" r="1.5" /></svg>
-            <span>去购物清单</span>
+            <span>{{ shoppingSaving ? '加入中...' : '加入清单' }}</span>
+          </button>
+          <button class="secondary-action" type="button" aria-label="发给 TA 想吃" :disabled="coupleSaving" @click="sendToCouple">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13" /><path d="m22 2-7 20-4-9-9-4 20-7Z" /></svg>
           </button>
           <button class="secondary-action" type="button" :class="{ active: recipe.is_favorited }" :disabled="favoriteSaving" @click="handleFavorite">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.4 5.4 0 0 0-7.6 0L12 5.8l-1.2-1.2a5.4 5.4 0 1 0-7.6 7.6L12 21l8.8-8.8a5.4 5.4 0 0 0 0-7.6Z" /></svg>
@@ -182,8 +215,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { createCoupleOrder } from '@/api/couple'
 import kitchenBg from '@/assets/home/kitchen-bg.jpg'
-import { getRecipeDetail, removeFavorite, toggleFavorite } from '@/api/recipe'
+import { deleteRecipeFeedback, getRecipeDetail, removeFavorite, setRecipeFeedback, toggleFavorite } from '@/api/recipe'
+import { useShoppingStore } from '@/stores/shopping'
+import type { ShoppingItem } from '@/api/shopping'
+import type { RecipeFeedbackStatus } from '@/types/recipe'
+import { trackEvent } from '@/utils/event'
 
 interface DisplayIngredient {
   id: string
@@ -195,11 +233,31 @@ interface DisplayIngredient {
 
 const route = useRoute()
 const router = useRouter()
+const shoppingStore = useShoppingStore()
 const recipe = ref<any>(null)
 const loading = ref(true)
 const errorText = ref('')
 const favoriteSaving = ref(false)
+const shoppingSaving = ref(false)
+const coupleSaving = ref(false)
+const feedbackSaving = ref<keyof RecipeFeedbackStatus | ''>('')
+const actionMessage = ref('')
+const actionError = ref('')
 const preparedItems = ref<DisplayIngredient[]>([])
+
+const defaultFeedbackStatus: RecipeFeedbackStatus = {
+  cooked: false,
+  like: false,
+  dislike: false,
+  block: false,
+}
+const feedbackStatus = ref<RecipeFeedbackStatus>({ ...defaultFeedbackStatus })
+const feedbackActions: { type: keyof RecipeFeedbackStatus; label: string }[] = [
+  { type: 'cooked', label: '做过了' },
+  { type: 'like', label: '喜欢' },
+  { type: 'dislike', label: '不喜欢' },
+  { type: 'block', label: '不再推荐' },
+]
 
 const pageVars = computed(() => ({
   '--recipe-bg': 'url(' + kitchenBg + ')',
@@ -294,6 +352,12 @@ async function handleFavorite() {
     } else {
       await toggleFavorite(recipe.value.id)
     }
+    trackEvent({
+      event_name: 'favorite',
+      entity_type: 'recipe',
+      entity_id: recipe.value.id,
+      payload: { active: !wasFavorited, source: 'detail' },
+    })
   } catch {
     recipe.value.is_favorited = wasFavorited
   } finally {
@@ -301,8 +365,125 @@ async function handleFavorite() {
   }
 }
 
-function goShoppingList() {
-  router.push('/shopping-list')
+async function addRecipeToShopping() {
+  if (!recipe.value?.id || shoppingSaving.value) return
+  shoppingSaving.value = true
+  actionMessage.value = ''
+  actionError.value = ''
+  try {
+    const ownedItems = preparedItems.value
+      .filter((item) => item.checked)
+      .map((item): ShoppingItem => ({
+        name: item.name,
+        amount: item.amountText || '适量',
+        emoji: '',
+        category: item.category || groupTitle(item.category, item.name),
+        price: 0,
+        checked: false,
+        status: 'owned',
+      }))
+    const result = await shoppingStore.generateByRecipe(recipe.value.id, recipe.value.title || '菜谱')
+    if (ownedItems.length) {
+      await shoppingStore.appendItemsToCurrentList((recipe.value.title || '菜谱') + '已有食材', ownedItems)
+    }
+    trackEvent({
+      event_name: 'add_shopping_list',
+      entity_type: 'recipe',
+      entity_id: recipe.value.id,
+      payload: { source: 'detail', title: recipe.value.title, owned_count: ownedItems.length },
+    })
+    actionMessage.value = ownedItems.length
+      ? `食材已合并到购物清单，${ownedItems.length} 项标记为家里已有。`
+      : '食材已合并到购物清单。'
+  } catch (error) {
+    actionError.value = error instanceof Error ? error.message : '加入购物清单失败，请稍后重试。'
+  } finally {
+    shoppingSaving.value = false
+  }
+}
+
+function toggleIngredientOwned(item: DisplayIngredient) {
+  item.checked = !item.checked
+}
+
+async function sendToCouple() {
+  if (!recipe.value?.id || coupleSaving.value) return
+  coupleSaving.value = true
+  actionMessage.value = ''
+  actionError.value = ''
+  try {
+    await createCoupleOrder({
+      dish_name: recipe.value.title || '想吃的菜',
+      recipe_id: recipe.value.id,
+      meal_type: 'dinner',
+      meal_date: new Date().toISOString().split('T')[0],
+      note: '从菜谱详情发给 TA',
+    })
+    trackEvent({
+      event_name: 'couple_order_create',
+      entity_type: 'recipe',
+      entity_id: recipe.value.id,
+      payload: { source: 'detail', title: recipe.value.title },
+    })
+    actionMessage.value = '已发给 TA，等待对方确认。'
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '发送失败，请稍后重试。'
+    actionError.value = message
+    if (message.includes('绑定')) {
+      setTimeout(() => router.push('/couple/bind'), 450)
+    }
+  } finally {
+    coupleSaving.value = false
+  }
+}
+
+function normalizeFeedbackStatus(value: any): RecipeFeedbackStatus {
+  return {
+    cooked: value?.cooked === true,
+    like: value?.like === true,
+    dislike: value?.dislike === true,
+    block: value?.block === true,
+  }
+}
+
+async function toggleRecipeFeedback(type: keyof RecipeFeedbackStatus) {
+  if (!recipe.value?.id || feedbackSaving.value) return
+  if (type === 'block' && !feedbackStatus.value.block) {
+    const confirmed = window.confirm('之后将不再为你推荐这道菜，确认继续吗？')
+    if (!confirmed) return
+  }
+
+  const wasActive = feedbackStatus.value[type]
+  feedbackSaving.value = type
+  actionMessage.value = ''
+  actionError.value = ''
+  try {
+    const res = wasActive
+      ? await deleteRecipeFeedback(recipe.value.id, type)
+      : await setRecipeFeedback(recipe.value.id, type, 'detail')
+    feedbackStatus.value = normalizeFeedbackStatus(res.feedback)
+    trackEvent({
+      event_name: 'recipe_feedback',
+      entity_type: 'recipe',
+      entity_id: recipe.value.id,
+      payload: { type, active: !wasActive, source: 'detail' },
+    })
+    actionMessage.value = wasActive ? '已取消反馈。' : feedbackCopy(type)
+  } catch (error) {
+    actionError.value = error instanceof Error ? error.message : '反馈提交失败，请稍后重试。'
+  } finally {
+    feedbackSaving.value = ''
+  }
+}
+
+function feedbackCopy(type: keyof RecipeFeedbackStatus) {
+  const map: Record<keyof RecipeFeedbackStatus, string> = {
+    cooked: '已记录做过了，近期会减少重复推荐。',
+    like: '已记录喜欢，后续会多推荐相似口味。',
+    dislike: '已记录不喜欢，后续会降低推荐权重。',
+    block: '已记录不再推荐，后续会避开这道菜。',
+  }
+  return map[type]
 }
 
 onMounted(async () => {
@@ -315,6 +496,7 @@ onMounted(async () => {
   try {
     const res: any = await getRecipeDetail(id)
     recipe.value = res
+    feedbackStatus.value = normalizeFeedbackStatus(res?.feedback)
     preparedItems.value = normalizeIngredients(res?.ingredients)
   } catch (error) {
     errorText.value = error instanceof Error ? error.message : '请稍后重试'
@@ -623,11 +805,22 @@ svg {
 }
 
 .glass-card,
+.feedback-card,
 .tips-card,
 .state-card {
   margin-top: 17px;
   padding: 22px;
   border-radius: 30px;
+}
+
+.feedback-card {
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  background: var(--cream);
+  box-shadow:
+    0 18px 42px rgba(80, 50, 28, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(20px) saturate(1.08);
+  -webkit-backdrop-filter: blur(20px) saturate(1.08);
 }
 
 .section-title {
@@ -741,7 +934,7 @@ svg {
   width: 100%;
   min-height: 54px;
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
+  grid-template-columns: 28px minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 10px;
   padding: 10px 0;
@@ -802,6 +995,20 @@ svg {
   color: var(--sub);
   font-size: 13px;
   font-weight: 760;
+  white-space: nowrap;
+}
+
+.owned-pill {
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 9px;
+  border-radius: 999px;
+  color: #5f7e4b;
+  background: rgba(126, 163, 106, 0.16);
+  font-size: 12px;
+  font-weight: 880;
   white-space: nowrap;
 }
 
@@ -890,16 +1097,75 @@ svg {
   line-height: 1.6;
 }
 
+.feedback-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.feedback-actions button {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(143, 111, 86, 0.12);
+  border-radius: 16px;
+  color: #5d4b40;
+  background: rgba(255, 255, 255, 0.54);
+  font-size: 14px;
+  font-weight: 880;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.66);
+}
+
+.feedback-actions button.active {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, #ff7568, var(--coral));
+  box-shadow: 0 10px 20px rgba(233, 86, 69, 0.18);
+}
+
+.feedback-actions button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.feedback-actions svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 2.3;
+}
+
 .bottom-actions {
   position: fixed;
   left: 50%;
   bottom: calc(16px + env(safe-area-inset-bottom));
   width: min(calc(100% - 42px), 388px);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 58px;
+  grid-template-columns: minmax(0, 1fr) 58px 58px;
   gap: 12px;
   transform: translateX(-50%);
   z-index: 20;
+}
+
+.action-message,
+.action-error {
+  margin: 17px 2px 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.action-message {
+  color: #416834;
+  background: rgba(226, 241, 206, 0.82);
+}
+
+.action-error {
+  color: #9b2f24;
+  background: rgba(255, 225, 219, 0.88);
 }
 
 .primary-action,
@@ -947,6 +1213,11 @@ svg {
 .secondary-action:disabled {
   cursor: wait;
   opacity: 0.7;
+}
+
+.primary-action:disabled {
+  cursor: wait;
+  opacity: 0.72;
 }
 
 .state-card {
@@ -997,7 +1268,8 @@ svg {
 .nav-btn:active,
 .ingredient-row:active,
 .primary-action:active,
-.secondary-action:active {
+.secondary-action:active,
+.feedback-actions button:active {
   transform: scale(0.98);
 }
 
@@ -1005,7 +1277,8 @@ svg {
   .nav-btn:hover,
   .ingredient-row:hover,
   .primary-action:hover,
-  .secondary-action:hover {
+  .secondary-action:hover,
+  .feedback-actions button:hover:not(:disabled) {
     transform: translateY(-1px);
   }
 }
@@ -1034,7 +1307,8 @@ svg {
     grid-template-columns: 28px minmax(0, 1fr);
   }
 
-  .ingredient-amount {
+  .ingredient-amount,
+  .owned-pill {
     grid-column: 2;
   }
 
@@ -1043,4 +1317,3 @@ svg {
   }
 }
 </style>
-

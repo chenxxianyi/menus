@@ -1,5 +1,5 @@
 import api, { AI_GENERATION_TIMEOUT } from './index'
-import type { RecipeQuery } from '@/types/recipe'
+import type { RecipeFeedbackStatus, RecipeQuery } from '@/types/recipe'
 
 export function getRecipes(params: RecipeQuery) {
   return api.get('/recipes', { params })
@@ -15,6 +15,18 @@ export function toggleFavorite(id: number) {
 
 export function removeFavorite(id: number) {
   return api.delete(`/recipes/${id}/favorite`)
+}
+
+export function setRecipeFeedback(id: number, type: keyof RecipeFeedbackStatus, source = 'detail') {
+  return api.post(`/recipes/${id}/feedback`, { type, source }) as Promise<{ feedback: RecipeFeedbackStatus }>
+}
+
+export function deleteRecipeFeedback(id: number, type: keyof RecipeFeedbackStatus) {
+  return api.delete(`/recipes/${id}/feedback/${type}`) as Promise<{ feedback: RecipeFeedbackStatus }>
+}
+
+export function getUserRecipeFeedback() {
+  return api.get('/user/recipe-feedback')
 }
 
 export function getCategories() {

@@ -5,8 +5,8 @@
       :key="tab.path"
       :to="tab.path"
       class="tab"
-      :class="{ active: isActive(tab.path) }"
-      :aria-current="isActive(tab.path) ? 'page' : undefined"
+      :class="{ active: isActive(tab) }"
+      :aria-current="isActive(tab) ? 'page' : undefined"
     >
       <div class="tab-icon">
         <svg v-if="tab.icon === 'home'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -46,13 +46,14 @@ const route = useRoute()
 
 const tabs = [
   { path: '/', icon: 'home', label: '首页' },
+  { path: '/recommend/scene', activePrefix: '/recommend', icon: 'menu', label: '推荐' },
   { path: '/recipes', icon: 'book', label: '菜谱' },
-  { path: '/week-menu', icon: 'menu', label: '菜单推荐' },
-  { path: '/shopping-list', icon: 'cart', label: '购物清单' },
+  { path: '/shopping-list', icon: 'cart', label: '清单' },
   { path: '/user', icon: 'user', label: '我的' },
 ]
 
-function isActive(path: string) {
+function isActive(tab: { path: string; activePrefix?: string }) {
+  const path = tab.activePrefix || tab.path
   if (path === '/') return route.path === '/'
   return route.path.startsWith(path)
 }

@@ -52,6 +52,13 @@ func (c *AIClient) IsConfigured() bool {
 	return c != nil && c.baseURL != "" && c.apiKey != "" && c.model != ""
 }
 
+func (c *AIClient) Model() string {
+	if c == nil {
+		return ""
+	}
+	return c.model
+}
+
 func (c *AIClient) SuggestShoppingItems(ctx context.Context, dishName string) ([]DishShoppingItem, error) {
 	if !c.IsConfigured() {
 		return nil, ErrAIConfigMissing
@@ -287,6 +294,7 @@ func normalizeAIShoppingItems(items []DishShoppingItem) []DishShoppingItem {
 			Category: category,
 			Price:    0,
 			Checked:  false,
+			Status:   "pending",
 		})
 		if len(result) >= 20 {
 			break

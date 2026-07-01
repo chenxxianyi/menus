@@ -142,6 +142,21 @@ type GenerateShoppingByDishRequest struct {
 	Preview  bool   `json:"preview"`
 }
 
+type GenerateShoppingByRecipeRequest struct {
+	RecipeID     uint `json:"recipe_id" binding:"required"`
+	Preview      bool `json:"preview"`
+	MergeCurrent bool `json:"merge_current"`
+}
+
+type GenerateShoppingByRecipesRequest struct {
+	RecipeIDs    []uint   `json:"recipe_ids" binding:"required,min=1"`
+	Name         string   `json:"name"`
+	Preview      bool     `json:"preview"`
+	MergeCurrent bool     `json:"merge_current"`
+	OnlyMissing  bool     `json:"only_missing"`
+	MissingItems []string `json:"missing_items"`
+}
+
 func (h *ShoppingHandler) DeleteItems(c *gin.Context) {
 	listID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil || listID == 0 {
@@ -200,6 +215,66 @@ func (h *ShoppingHandler) GenerateByDish(c *gin.Context) {
 	response.Success(c, gin.H{
 		"list":    result.List,
 		"recipe":  result.Recipe,
+		"items":   result.Items,
+		"preview": req.Preview,
+	})
+}
+
+func (h *ShoppingHandler) GenerateByRecipe(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+	var req GenerateShoppingByRecipeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, errcode.ErrParam, "请选择要加入清单的菜谱")
+		return
+	}
+
+	result, err := h.shoppingService.GenerateFromRecipe(userID, req.RecipeID, req.Preview)
+	if err != nil {
+		switch {
+		case errors.Is(err, gorm.ErrRecordNotFound):
+			response.Error(c, errcode.ErrNotFound, "菜谱不存在或已下架")
+		case errors.Is(err, service.ErrRecipeIngredientsEmpty):
+			response.Error(c, errcode.ErrParam, "该菜谱还没有维护食材数据")
+		default:
+			response.Error(c, errcode.ErrServer, "生成采购清单失败")
+		}
+		return
+	}
+
+	response.Success(c, gin.H{
+		"list":    result.List,
+		"recipe":  result.Recipe,
+		"items":   result.Items,
+		"preview": req.Preview,
+	})
+}
+
+func (h *ShoppingHandler) GenerateByRecipes(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+	var req GenerateShoppingByRecipesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, errcode.ErrParam, "请选择要加入清单的菜谱")
+		return
+	}
+
+	result, err := h.shoppingService.GenerateFromRecipes(userID, req.RecipeIDs, req.Name, req.Preview)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrShoppingRecipeIDsEmpty):
+			response.Error(c, errcode.ErrParam, "请选择要加入清单的菜谱")
+		case errors.Is(err, gorm.ErrRecordNotFound):
+			response.Error(c, errcode.ErrNotFound, "没有找到可用菜谱")
+		case errors.Is(err, service.ErrRecipeIngredientsEmpty):
+			response.Error(c, errcode.ErrParam, "选中的菜谱还没有维护食材数据")
+		default:
+			response.Error(c, errcode.ErrServer, "生成采购清单失败")
+		}
+		return
+	}
+
+	response.Success(c, gin.H{
+		"list":    result.List,
+		"recipes": result.Recipes,
 		"items":   result.Items,
 		"preview": req.Preview,
 	})

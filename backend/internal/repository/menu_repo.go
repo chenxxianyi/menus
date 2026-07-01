@@ -32,3 +32,20 @@ func (r *MenuRepo) FindByUserID(userID uint, page, pageSize int) ([]model.Menu, 
 	err := query.Offset((page - 1) * pageSize).Limit(pageSize).Order("id DESC").Find(&menus).Error
 	return menus, total, err
 }
+
+func (r *MenuRepo) FindByIDAndUserID(id, userID uint) (*model.Menu, error) {
+	var menu model.Menu
+	err := r.db.Where("id = ? AND user_id = ?", id, userID).First(&menu).Error
+	return &menu, err
+}
+
+func (r *MenuRepo) DeleteByIDAndUserID(id, userID uint) error {
+	result := r.db.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Menu{})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}

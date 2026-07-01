@@ -24,6 +24,7 @@ func (h *RecommendHandler) Menu(c *gin.Context) {
 		response.Error(c, errcode.ErrParam, "参数错误")
 		return
 	}
+	params.UserID = middleware.GetUserID(c)
 
 	result, err := h.recommendService.RecommendMenu(&params)
 	if err != nil {
@@ -41,6 +42,7 @@ func (h *RecommendHandler) MenuAI(c *gin.Context) {
 	}
 
 	userID := middleware.GetUserID(c)
+	params.UserID = userID
 	result, err := h.recommendService.RecommendSceneByAI(c.Request.Context(), userID, &params)
 	if err != nil {
 		switch {
@@ -80,7 +82,8 @@ func (h *RecommendHandler) ByIngredients(c *gin.Context) {
 		return
 	}
 
-	result, err := h.recommendService.RecommendByIngredients(req.Ingredients, req.Mode, req.Limit)
+	userID := middleware.GetUserID(c)
+	result, err := h.recommendService.RecommendByIngredients(userID, req.Ingredients, req.Mode, req.Limit)
 	if err != nil {
 		response.Error(c, errcode.ErrServer, "推荐失败")
 		return
@@ -94,6 +97,7 @@ func (h *RecommendHandler) WeekMenu(c *gin.Context) {
 		response.Error(c, errcode.ErrParam, "参数错误")
 		return
 	}
+	params.UserID = middleware.GetUserID(c)
 
 	result, err := h.recommendService.GenerateWeekMenu(&params)
 	if err != nil {

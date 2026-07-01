@@ -70,9 +70,9 @@ func TestShoppingItemsFromRecipeUsesRealIngredients(t *testing.T) {
 	}
 
 	want := []DishShoppingItem{
-		{Name: "鸡肉", Amount: "500克", Category: "肉蛋水产", Checked: false},
-		{Name: "香菇", Amount: "8朵", Category: "蔬菜", Checked: false},
-		{Name: "料酒", Amount: "1勺", Category: "调味", Checked: false},
+		{Name: "鸡肉", Amount: "500克", Category: "肉蛋水产", Checked: false, Status: "pending"},
+		{Name: "香菇", Amount: "8朵", Category: "蔬菜", Checked: false, Status: "pending"},
+		{Name: "料酒", Amount: "1勺", Category: "调味", Checked: false, Status: "pending"},
 	}
 	if !reflect.DeepEqual(items, want) {
 		t.Fatalf("items = %#v, want %#v", items, want)
@@ -83,5 +83,55 @@ func TestShoppingItemsFromRecipeRejectsEmptyIngredients(t *testing.T) {
 	_, err := shoppingItemsFromRecipe(model.JSON(`[]`))
 	if !errors.Is(err, ErrRecipeIngredientsEmpty) {
 		t.Fatalf("error = %v, want ErrRecipeIngredientsEmpty", err)
+	}
+}
+
+func TestMergeShoppingItemsCombinesAliasAndSameUnit(t *testing.T) {
+	items := []DishShoppingItem{
+		{Name: "番茄", Amount: "2个", Category: "蔬菜"},
+		{Name: "西红柿", Amount: "3个", Category: "蔬菜"},
+		{Name: "鸡蛋", Amount: "2个", Category: "肉蛋水产"},
+	}
+
+	got := mergeShoppingItems(items)
+	want := []DishShoppingItem{
+		{Name: "番茄", Amount: "5个", Category: "蔬菜", Checked: false, Status: "pending"},
+		{Name: "鸡蛋", Amount: "2个", Category: "肉蛋水产", Checked: false, Status: "pending"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("merged = %#v, want %#v", got, want)
+	}
+}
+
+func TestMergeShoppingItemsKeepsIncompatibleAmounts(t *testing.T) {
+	items := []DishShoppingItem{
+		{Name: "酱油", Amount: "1勺", Category: "调味"},
+		{Name: "酱油", Amount: "适量", Category: "调味"},
+		{Name: "料酒", Amount: "1勺", Category: "调味"},
+		{Name: "料酒", Amount: "20毫升", Category: "调味"},
+	}
+
+	got := mergeShoppingItems(items)
+	want := []DishShoppingItem{
+		{Name: "酱油", Amount: "1勺", Category: "调味", Checked: false, Status: "pending"},
+		{Name: "料酒", Amount: "1勺、20毫升", Category: "调味", Checked: false, Status: "pending"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("merged = %#v, want %#v", got, want)
+	}
+}
+
+func TestMergeShoppingItemsKeepsOwnedWhenAllSourcesOwned(t *testing.T) {
+	items := []DishShoppingItem{
+		{Name: "番茄", Amount: "2个", Category: "蔬菜", Status: "owned"},
+		{Name: "西红柿", Amount: "3个", Category: "蔬菜", Status: "owned"},
+	}
+
+	got := mergeShoppingItems(items)
+	want := []DishShoppingItem{
+		{Name: "番茄", Amount: "5个", Category: "蔬菜", Checked: false, Status: "owned"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("merged = %#v, want %#v", got, want)
 	}
 }

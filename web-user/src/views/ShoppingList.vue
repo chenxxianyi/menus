@@ -214,6 +214,7 @@
               class="ingredient-row"
               :class="{
                 checked: item.checked && !isDeleteMode,
+                owned: item.status === 'owned' && !isDeleteMode,
                 deleting: isDeleteMode,
                 'delete-selected': isSelectedForDelete(item),
               }"
@@ -232,13 +233,25 @@
                   <path d="m5 12 4 4L19 6" />
                 </svg>
               </button>
-              <button v-else class="check-btn" type="button" :aria-label="`勾选${item.name}`" @click.stop="toggleItem(item)">
+              <button v-else class="check-btn" type="button" :aria-label="`标记${item.name}已购买`" @click.stop="toggleItem(item)">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="m5 12 4 4L19 6" />
                 </svg>
               </button>
               <span class="ingredient-name">{{ item.name }}</span>
               <span class="quantity">{{ item.quantity }}</span>
+              <div v-if="!isDeleteMode" class="status-switch" role="group" :aria-label="`${item.name}状态`" @click.stop>
+                <button
+                  v-for="option in itemStatusOptions"
+                  :key="option.value"
+                  type="button"
+                  :class="{ active: item.status === option.value }"
+                  :aria-pressed="item.status === option.value"
+                  @click="setItemStatus(item, option.value)"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
               <span class="storage-tag" :class="tagClass(item.tag)">{{ item.tag }}</span>
             </div>
           </div>
@@ -431,7 +444,7 @@ import kitchenBg from '@/assets/home/kitchen-bg.jpg'
 import { deleteShoppingItems, updateShoppingList, type ShoppingItem } from '@/api/shopping'
 import { useShoppingStore } from '@/stores/shopping'
 
-type GroupKey = 'all' | 'vegetables' | 'protein' | 'ingredients' | 'seasoning' | 'other'
+type GroupKey = 'all' | 'vegetables' | 'protein' | 'staple' | 'seasoning' | 'ingredients' | 'other'
 type GroupIconType = 'leaf' | 'egg' | 'bottle' | 'basket'
 type StorageTag = '新鲜' | '冷藏' | '常温'
 
@@ -440,6 +453,7 @@ interface DisplayItem {
   name: string
   quantity: string
   tag: StorageTag
+  status: NonNullable<ShoppingItem['status']>
   checked: boolean
   sourceIndex?: number
 }
@@ -454,9 +468,10 @@ interface ShoppingGroup {
 
 const GROUP_META: Record<Exclude<GroupKey, 'all'>, Omit<ShoppingGroup, 'items'>> = {
   vegetables: { key: 'vegetables', title: '蔬菜', color: '#79A35D', icon: 'leaf' },
-  protein: { key: 'protein', title: '肉蛋', color: '#F28A2E', icon: 'egg' },
-  ingredients: { key: 'ingredients', title: '配料', color: '#C88768', icon: 'basket' },
+  protein: { key: 'protein', title: '肉蛋水产', color: '#F28A2E', icon: 'egg' },
+  staple: { key: 'staple', title: '主食', color: '#D1A447', icon: 'basket' },
   seasoning: { key: 'seasoning', title: '调味', color: '#9A7957', icon: 'bottle' },
+  ingredients: { key: 'ingredients', title: '配料', color: '#C88768', icon: 'basket' },
   other: { key: 'other', title: '其他', color: '#8B715E', icon: 'basket' },
 }
 
@@ -508,6 +523,11 @@ const GroupIcon = defineComponent({
 
 const router = useRouter()
 const shoppingStore = useShoppingStore()
+const itemStatusOptions: { value: NonNullable<ShoppingItem['status']>; label: string }[] = [
+  { value: 'pending', label: '待买' },
+  { value: 'bought', label: '已买' },
+  { value: 'owned', label: '已有' },
+]
 
 const activeCategory = ref<GroupKey>('all')
 const collapsedKeys = ref(new Set<GroupKey>())
@@ -567,8 +587,9 @@ const displayGroups = computed<ShoppingGroup[]>(() => {
   const grouped: Record<Exclude<GroupKey, 'all'>, DisplayItem[]> = {
     vegetables: [],
     protein: [],
-    ingredients: [],
+    staple: [],
     seasoning: [],
+    ingredients: [],
     other: [],
   }
 
@@ -579,7 +600,8 @@ const displayGroups = computed<ShoppingGroup[]>(() => {
       name: item.name || '未命名食材',
       quantity: item.amount || '1份',
       tag: resolveStorageTag(item, key),
-      checked: !!item.checked,
+      status: normalizeItemStatus(item),
+      checked: normalizeItemStatus(item) === 'bought',
       sourceIndex: index,
     })
   })
@@ -603,9 +625,10 @@ const categories = computed(() => {
   const base = [
     { key: 'all' as GroupKey, label: '全部', count: totalCount.value },
     { key: 'vegetables' as GroupKey, label: '蔬菜', count: countGroupItems('vegetables') },
-    { key: 'protein' as GroupKey, label: '肉蛋', count: countGroupItems('protein') },
-    { key: 'ingredients' as GroupKey, label: '配料', count: countGroupItems('ingredients') },
+    { key: 'protein' as GroupKey, label: '肉蛋水产', count: countGroupItems('protein') },
+    { key: 'staple' as GroupKey, label: '主食', count: countGroupItems('staple') },
     { key: 'seasoning' as GroupKey, label: '调味', count: countGroupItems('seasoning') },
+    { key: 'ingredients' as GroupKey, label: '配料', count: countGroupItems('ingredients') },
   ]
 
   const otherCount = countGroupItems('other')
@@ -617,7 +640,7 @@ const categories = computed(() => {
 })
 
 const estimatedTotal = computed(() => {
-  const total = shoppingStore.allItems.reduce((sum, item) => sum + (item.checked ? 0 : Number(item.price || 0)), 0)
+  const total = shoppingStore.allItems.reduce((sum, item) => sum + (normalizeItemStatus(item) === 'pending' ? Number(item.price || 0) : 0), 0)
   return total.toFixed(1)
 })
 
@@ -631,13 +654,15 @@ function resolveGroupKey(item: ShoppingItem): Exclude<GroupKey, 'all'> {
 
   // 优先按名称纠正历史数据，避免普通配料因旧 category=“调味”继续显示错误。
   if (/酱油|生抽|老抽|蚝油|醋|盐|糖|食用油|香油|料酒|味精|鸡精|胡椒|孜然|辣椒粉|调味酱/.test(name)) return 'seasoning'
+  if (/米|面|粉|饭|粥|馒头|饼|年糕|面包|粉丝/.test(name)) return 'staple'
   if (/西红柿|番茄|芹菜|香菇|红枣|木耳|豆腐|腐竹|粉丝|花生|芝麻|葱|姜|蒜/.test(name)) return 'ingredients'
   if (/肉|蛋|鱼|虾|鸡|牛|猪|羊/.test(name)) return 'protein'
   if (/青菜|白菜|菠菜|生菜|油菜|菜心|萝卜|土豆|茄子|黄瓜|冬瓜|南瓜|西兰花|豆角|菌菇/.test(name)) return 'vegetables'
 
   if (/配料/.test(category)) return 'ingredients'
   if (/调味|调料/.test(category)) return 'seasoning'
-  if (/肉蛋|肉|蛋|鱼|虾/.test(category)) return 'protein'
+  if (/肉蛋水产|肉蛋|水产|肉|蛋|鱼|虾/.test(category)) return 'protein'
+  if (/主食/.test(category)) return 'staple'
   if (/蔬菜|青菜|叶菜|根茎|瓜果|菌菇/.test(category)) return 'vegetables'
   return 'other'
 }
@@ -653,6 +678,11 @@ function tagClass(tag: StorageTag) {
   if (tag === '新鲜') return 'fresh'
   if (tag === '冷藏') return 'chilled'
   return 'room'
+}
+
+function normalizeItemStatus(item: ShoppingItem): NonNullable<ShoppingItem['status']> {
+  if (item.status === 'pending' || item.status === 'bought' || item.status === 'owned') return item.status
+  return item.checked ? 'bought' : 'pending'
 }
 
 function isCollapsed(key: GroupKey) {
@@ -678,11 +708,21 @@ function showToast(message: string) {
 }
 
 async function toggleItem(item: DisplayItem) {
-  const wasChecked = item.checked
   if (typeof item.sourceIndex === 'number') {
     await shoppingStore.toggleItemChecked(item.sourceIndex)
   }
-  showToast(wasChecked ? '已取消勾选' : '已标记为已购买')
+  showToast(item.status === 'bought' ? '已改回待购买' : '已标记为已购买')
+}
+
+async function setItemStatus(item: DisplayItem, status: NonNullable<ShoppingItem['status']>) {
+  if (typeof item.sourceIndex !== 'number') return
+  await shoppingStore.setItemStatus(item.sourceIndex, status)
+  const copy: Record<NonNullable<ShoppingItem['status']>, string> = {
+    pending: '已标记为待购买',
+    bought: '已标记为已购买',
+    owned: '已标记为家里已有',
+  }
+  showToast(copy[status])
 }
 
 function toggleDeleteMode() {
@@ -767,10 +807,16 @@ function formatShoppingListText() {
     if (!group.items.length) return
     lines.push(`${group.title}：`)
     group.items.forEach((item) => {
-      lines.push(`- ${item.name} ${item.quantity}`)
+      lines.push(`- ${item.name} ${item.quantity}（${statusLabel(item.status)}）`)
     })
   })
   return lines.join('\n')
+}
+
+function statusLabel(status: NonNullable<ShoppingItem['status']>) {
+  if (status === 'bought') return '已购买'
+  if (status === 'owned') return '家里已有'
+  return '待购买'
 }
 
 async function copyShoppingList() {
@@ -843,6 +889,7 @@ async function confirmAddIngredient() {
     category: GROUP_META[targetKey].title,
     price: 0,
     checked: false,
+    status: 'pending',
   }
 
   addingIngredient.value = true
@@ -1648,6 +1695,7 @@ svg {
 .ingredient-row {
   min-height: 56px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   padding: 8px 13px;
@@ -1662,6 +1710,11 @@ svg {
 
 .ingredient-row.checked {
   opacity: 0.62;
+}
+
+.ingredient-row.owned {
+  border-color: rgba(126, 163, 106, 0.28);
+  background: rgba(236, 246, 225, 0.58);
 }
 
 .ingredient-row.deleting {
@@ -1759,12 +1812,52 @@ svg {
   text-decoration-thickness: 2px;
 }
 
+.ingredient-row.owned .ingredient-name {
+  color: #5f7e4b;
+}
+
 .quantity {
   flex: 0 0 auto;
   color: #574137;
   font-size: 17px;
   font-weight: 760;
   white-space: nowrap;
+}
+
+.status-switch {
+  min-height: 32px;
+  display: inline-grid;
+  grid-template-columns: repeat(3, minmax(46px, 1fr));
+  flex: 0 1 168px;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(143, 111, 86, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 250, 240, 0.64);
+}
+
+.status-switch button {
+  min-width: 0;
+  min-height: 24px;
+  padding: 0 6px;
+  border-radius: 999px;
+  color: #7a6a5f;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+  transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.status-switch button.active {
+  color: #fff;
+  background: var(--coral);
+  box-shadow: 0 4px 10px rgba(233, 86, 69, 0.16);
+}
+
+.ingredient-row.owned .status-switch button.active {
+  background: var(--sage);
+  box-shadow: 0 4px 10px rgba(126, 163, 106, 0.16);
 }
 
 .storage-tag {
@@ -2495,6 +2588,12 @@ svg {
 
   .quantity {
     font-size: 16px;
+  }
+
+  .status-switch {
+    order: 5;
+    flex-basis: calc(100% - 39px);
+    margin-left: 35px;
   }
 }
 

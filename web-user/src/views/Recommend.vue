@@ -22,6 +22,56 @@
         <p>{{ modeMeta.description }}</p>
       </section>
 
+      <section class="intent-panel" aria-label="推荐入口">
+        <button
+          v-for="intent in intentOptions"
+          :key="intent.mode"
+          type="button"
+          :class="{ active: mode === intent.mode }"
+          @click="goIntent(intent)"
+        >
+          <strong>{{ intent.title }}</strong>
+          <span>{{ intent.description }}</span>
+        </button>
+      </section>
+
+      <section class="preference-panel" aria-label="本次推荐偏好">
+        <div class="panel-title">
+          <div>
+            <span>本次偏好</span>
+            <h2>{{ preferenceSummary }}</h2>
+          </div>
+          <button type="button" @click="router.push('/user/preferences')">长期修改</button>
+        </div>
+        <div class="preference-controls">
+          <label>
+            <span>人数</span>
+            <select v-model.number="temporaryPreference.people_count">
+              <option v-for="count in peopleOptions" :key="count" :value="count">{{ count }}人</option>
+            </select>
+          </label>
+          <label>
+            <span>做饭时间</span>
+            <select v-model="temporaryPreference.cook_time_preference">
+              <option value="">不限</option>
+              <option v-for="item in cookTimeOptions" :key="item" :value="item">{{ item }}</option>
+            </select>
+          </label>
+          <label>
+            <span>健康目标</span>
+            <select v-model="temporaryPreference.health_goal">
+              <option value="">不限</option>
+              <option v-for="item in healthGoalOptions" :key="item" :value="item">{{ item }}</option>
+            </select>
+          </label>
+        </div>
+        <div v-if="userPreference.taste_preference.length || userPreference.avoid_ingredients.length" class="preference-tags">
+          <span v-for="taste in userPreference.taste_preference.slice(0, 4)" :key="'taste-' + taste">{{ taste }}</span>
+          <span v-for="avoid in userPreference.avoid_ingredients.slice(0, 3)" :key="'avoid-' + avoid">不吃{{ avoid }}</span>
+        </div>
+        <p v-else class="preference-empty">还没有长期偏好，可先用本次调整生成，再去完善偏好。</p>
+      </section>
+
       <section v-if="isIngredientMode" class="panel">
         <div class="panel-title">
           <h2>{{ mode === 'fridge' ? '录入冰箱里的食材' : '选择已有食材' }}</h2>
@@ -91,9 +141,9 @@
         <p v-else class="data-empty">数据库暂无口味选项，请先在后台维护菜谱口味字段。</p>
       </section>
 
-      <section v-else class="panel">
+      <section v-else-if="mode === 'scene' || mode === 'new'" class="panel">
         <div class="panel-title">
-          <h2>按生活场景安排</h2>
+          <h2>{{ mode === 'new' ? '换点没吃过的新菜' : '按生活场景安排' }}</h2>
           <button type="button" @click="clearSceneResult">重选</button>
         </div>
         <div class="scene-list">
@@ -109,16 +159,33 @@
           </button>
         </div>
         <div class="scene-actions">
-          <button class="submit-btn" type="button" :disabled="!selectedScene || loading || aiSceneLoading" @click="submitScene">
+          <button v-if="mode === 'scene'" class="submit-btn" type="button" :disabled="!selectedScene || loading || aiSceneLoading" @click="submitScene">
             <span v-if="loading" class="mini-spinner" aria-hidden="true"></span>
             <span>{{ loading ? '正在搭配...' : '从菜谱库推荐' }}</span>
           </button>
           <button class="submit-btn ai-submit-btn" type="button" :disabled="!selectedScene || loading || aiSceneLoading" @click="submitAIScene">
             <span v-if="aiSceneLoading" class="mini-spinner" aria-hidden="true"></span>
-            <span>{{ aiSceneLoading ? 'AI 正在生成...' : 'AI 按偏好生成新菜' }}</span>
+            <span>{{ aiSceneLoading ? aiProgressLabel : 'AI 按偏好生成新菜' }}</span>
           </button>
         </div>
+        <div v-if="aiSceneLoading || aiProgressStep > 0" class="ai-progress" aria-label="AI 生成进度">
+          <span
+            v-for="(step, index) in aiProgressSteps"
+            :key="step"
+            :class="{ active: index <= aiProgressStep, current: index === aiProgressStep && aiSceneLoading }"
+          >
+            {{ step }}
+          </span>
+        </div>
         <p class="scene-ai-hint">AI 会读取你的偏好设置，生成没吃过也适合你的新菜，并同步到菜谱库。</p>
+      </section>
+
+      <section v-else class="panel shortcut-panel">
+        <div class="panel-title">
+          <h2>{{ modeMeta.title }}</h2>
+        </div>
+        <p>{{ modeMeta.description }}</p>
+        <button class="submit-btn" type="button" @click="runShortcutMode">{{ mode === 'week' ? '去安排本周菜单' : '去情侣点餐' }}</button>
       </section>
 
       <p v-if="message" class="message" role="status">{{ message }}</p>
@@ -146,6 +213,8 @@
             </div>
             <div class="result-actions">
               <button type="button" @click="openRecipe(item.recipe.id)">查看做法</button>
+              <button type="button" @click="addRecipeToShopping(item.recipe.id, item.recipe.title || '')">加入清单</button>
+              <button type="button" :disabled="coupleLoading" @click="sendDishToCouple(item.recipe.id, item.recipe.title || '')">和 TA 吃</button>
               <button
                 v-if="mode === 'fridge' && item.missing_ingredients.length"
                 type="button"
@@ -160,14 +229,25 @@
 
       <section v-if="sceneResult" class="scene-result">
         <div class="scene-summary">
-          <span>{{ sceneResult.menu_name || selectedScene?.title }}</span>
+          <span>{{ sceneSourceLabel }} · {{ sceneResult.menu_name || selectedScene?.title }}</span>
           <h2>{{ sceneResult.reason || '为你搭配好了这一餐' }}</h2>
+          <div class="scene-result-actions">
+            <button type="button" :disabled="shoppingLoading" @click="addSceneShoppingList">
+              {{ shoppingLoading ? '加入中...' : '整组加入清单' }}
+            </button>
+            <button type="button" :disabled="menuSaving" @click="saveSceneMenu">
+              {{ menuSaving ? '保存中...' : '保存菜单' }}
+            </button>
+            <button type="button" @click="mode === 'new' ? submitAIScene() : submitScene()">换一组</button>
+          </div>
         </div>
         <article v-for="dish in sceneDishes" :key="dish.recipe_id || dish.name" class="dish-card" @click="openRecipe(dish.recipe_id)">
           <div>
             <strong>{{ dish.name || '未命名菜谱' }}</strong>
             <p>{{ dish.type || '推荐菜' }} · {{ dish.cook_time ? dish.cook_time + '分钟' : '时间待补充' }} · {{ dish.difficulty || '难度待补充' }}</p>
+            <small>{{ dish.steps_summary || dish.reason || '符合当前场景和偏好' }}</small>
           </div>
+          <button class="couple-dish-btn" type="button" :disabled="coupleLoading" @click.stop="sendDishToCouple(dish.recipe_id, dish.name)">和 TA 吃</button>
           <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></svg>
         </article>
       </section>
@@ -183,12 +263,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { createCoupleOrder } from '@/api/couple'
+import { saveUserMenu } from '@/api/menu'
 import { getIngredientOptions, recommendByIngredients, recommendByScene, recommendSceneByAI } from '@/api/recommend'
 import { getRecipeFilterOptions } from '@/api/recipe'
+import { getPreferences } from '@/api/user'
 import { updateShoppingList } from '@/api/shopping'
 import { useShoppingStore } from '@/stores/shopping'
 import type { IngredientOption, RecommendMode, RecommendRecipeResult, SceneOption } from '@/types/recommend'
 import type { ShoppingItem } from '@/api/shopping'
+import { trackEvent } from '@/utils/event'
 import kitchenBg from '@/assets/home/kitchen-bg.jpg'
 
 const route = useRoute()
@@ -196,8 +280,8 @@ const router = useRouter()
 const shoppingStore = useShoppingStore()
 
 const mode = computed<RecommendMode>(() => {
-  const value = String(route.params.mode || 'ingredients')
-  return ['ingredients', 'taste', 'scene', 'fridge'].includes(value) ? value as RecommendMode : 'ingredients'
+  const value = String(route.params.mode || 'scene')
+  return ['ingredients', 'taste', 'scene', 'fridge', 'new', 'week', 'couple'].includes(value) ? value as RecommendMode : 'scene'
 })
 const isIngredientMode = computed(() => mode.value === 'ingredients' || mode.value === 'fridge')
 
@@ -211,11 +295,43 @@ const selectedScene = ref<SceneOption | null>(null)
 const sceneResult = ref<any>(null)
 const loading = ref(false)
 const aiSceneLoading = ref(false)
+const shoppingLoading = ref(false)
+const coupleLoading = ref(false)
+const menuSaving = ref(false)
+const aiProgressStep = ref(0)
+let aiProgressTimer: ReturnType<typeof window.setInterval> | null = null
 const error = ref('')
 const message = ref('')
 const hasSubmitted = ref(false)
+const userPreference = ref({
+  taste_preference: [] as string[],
+  avoid_ingredients: [] as string[],
+  health_goal: '',
+  cook_time_preference: '',
+  people_count: 2,
+})
+const temporaryPreference = ref({
+  people_count: 2,
+  health_goal: '',
+  cook_time_preference: '',
+})
 
 const pageVars = computed(() => ({ '--recommend-bg': `url(${kitchenBg})` }))
+const peopleOptions = [1, 2, 3, 4, 5, 6, 8, 10]
+const cookTimeOptions = ['15分钟内', '30分钟内', '45分钟内', '都可以']
+const healthGoalOptions = ['普通', '减脂', '增肌', '控糖', '儿童营养']
+
+const intentOptions: { mode: RecommendMode; title: string; description: string; path?: string }[] = [
+  { mode: 'scene', title: '我不知道吃什么', description: '按快手、聚餐、减脂等场景推荐' },
+  { mode: 'ingredients', title: '用现有食材做饭', description: '录入手头食材，看看能做什么' },
+  { mode: 'taste', title: '按口味找菜', description: '今天想吃清淡、香辣还是家常' },
+  { mode: 'week', title: '安排本周菜单', description: '提前规划一周三餐', path: '/week-menu' },
+  { mode: 'new', title: '换点没吃过的新菜', description: 'AI 按偏好生成并保存菜谱' },
+  { mode: 'couple', title: '我和 TA 一起决定', description: '同步想吃的菜，生成合意菜单', path: '/couple' },
+]
+
+const aiProgressSteps = ['读取偏好', '生成菜谱', '校验食材', '保存菜谱库']
+const aiProgressLabel = computed(() => aiProgressSteps[Math.min(aiProgressStep.value, aiProgressSteps.length - 1)] + '...')
 
 const scenes: SceneOption[] = [
   { key: 'quick_meal', title: '快手一餐', description: '优先 30 分钟内、步骤简单的菜谱', meal_type: 'dinner', people_count: 2, cook_time_preference: '30分钟内' },
@@ -228,32 +344,53 @@ const scenes: SceneOption[] = [
 const modeMeta = computed(() => {
   const map = {
     ingredients: {
-      eyebrow: 'Ingredient match',
-      title: '按食材推荐',
+      eyebrow: 'Use what you have',
+      title: '用现有食材做饭',
       badge: '食材匹配',
       heading: '把手头食材变成一顿饭',
       description: '选择已有食材，系统会按匹配度展示菜谱，并告诉你还缺什么。',
     },
     taste: {
       eyebrow: 'Taste finder',
-      title: '按口味推荐',
+      title: '按口味找菜',
       badge: '口味筛选',
       heading: '今天想吃什么味道？',
       description: '选择一个口味后进入菜谱列表，刷新和返回都会保留筛选条件。',
     },
     scene: {
-      eyebrow: 'Scene menu',
-      title: '按场景推荐',
+      eyebrow: 'Meal decision',
+      title: '我不知道吃什么',
       badge: '场景搭配',
       heading: '让场景替你做选择',
       description: '快手、聚餐、减脂、宴客、夜宵，不同场景用不同推荐规则。',
     },
     fridge: {
       eyebrow: 'Fridge rescue',
-      title: '冰箱剩菜',
+      title: '冰箱库存',
       badge: '剩菜拯救',
       heading: '先消耗冰箱里的库存',
       description: '录入现有食材，优先推荐能直接做或只差少量食材的菜谱。',
+    },
+    new: {
+      eyebrow: 'AI new dish',
+      title: '换点没吃过的新菜',
+      badge: 'AI 生成',
+      heading: '按你的偏好生成新菜',
+      description: '选择一个生活场景，AI 会生成适合你的新菜并同步到菜谱库。',
+    },
+    week: {
+      eyebrow: 'Weekly plan',
+      title: '安排本周菜单',
+      badge: '周菜单',
+      heading: '提前安排一周怎么吃',
+      description: '生成一周菜单，并继续生成整周采购清单。',
+    },
+    couple: {
+      eyebrow: 'Together',
+      title: '我和 TA 一起决定',
+      badge: '情侣点餐',
+      heading: '两个人一起选菜',
+      description: '同步双方想吃的菜，生成合意菜单和采购清单。',
     },
   }
   return map[mode.value]
@@ -268,6 +405,20 @@ const visibleIngredientOptions = computed(() => {
 
 const sceneDishes = computed(() => {
   return Array.isArray(sceneResult.value?.dishes) ? sceneResult.value.dishes : []
+})
+
+const sceneSourceLabel = computed(() => {
+  if (sceneResult.value?.source === 'ai' || mode.value === 'new') return 'AI 生成'
+  return '菜谱库推荐'
+})
+
+const preferenceSummary = computed(() => {
+  const parts = [
+    `${temporaryPreference.value.people_count || userPreference.value.people_count || 2}人`,
+    temporaryPreference.value.cook_time_preference || userPreference.value.cook_time_preference || '时间不限',
+    temporaryPreference.value.health_goal || userPreference.value.health_goal || '目标不限',
+  ]
+  return parts.join(' · ')
 })
 
 function normalizeName(name: string) {
@@ -333,6 +484,45 @@ async function loadTasteOptions() {
   }
 }
 
+function normalizeStringArray(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean)
+  }
+  return []
+}
+
+async function loadUserPreference() {
+  try {
+    const pref: any = await getPreferences()
+    userPreference.value = {
+      taste_preference: normalizeStringArray(pref?.taste_preference),
+      avoid_ingredients: normalizeStringArray(pref?.avoid_ingredients),
+      health_goal: String(pref?.health_goal || '').trim(),
+      cook_time_preference: String(pref?.cook_time_preference || '').trim(),
+      people_count: Number(pref?.people_count || pref?.default_servings || 2) || 2,
+    }
+    temporaryPreference.value = {
+      people_count: userPreference.value.people_count || 2,
+      health_goal: userPreference.value.health_goal,
+      cook_time_preference: userPreference.value.cook_time_preference,
+    }
+  } catch {
+    // 偏好读取失败时使用默认参数，推荐流程仍可继续。
+  }
+}
+
+function scenePayload(scene: SceneOption) {
+  return {
+    scene: scene.key,
+    meal_type: scene.meal_type,
+    people_count: temporaryPreference.value.people_count || scene.people_count,
+    cook_time_preference: temporaryPreference.value.cook_time_preference || scene.cook_time_preference,
+    health_goal: temporaryPreference.value.health_goal || scene.health_goal,
+    taste_preference: userPreference.value.taste_preference,
+    avoid_ingredients: userPreference.value.avoid_ingredients,
+  }
+}
+
 async function submitIngredients() {
   if (!selectedIngredients.value.length || loading.value) return
   loading.value = true
@@ -340,6 +530,11 @@ async function submitIngredients() {
   message.value = ''
   hasSubmitted.value = true
   try {
+    trackEvent({
+      event_name: 'recommend_start',
+      entity_type: 'recommend',
+      payload: { mode: mode.value, ingredients: selectedIngredients.value },
+    })
     const res = await recommendByIngredients({
       ingredients: selectedIngredients.value,
       mode: mode.value === 'fridge' ? 'fridge' : 'ingredients',
@@ -365,19 +560,56 @@ function chooseScene(scene: SceneOption) {
   error.value = ''
 }
 
+function goIntent(intent: { mode: RecommendMode; path?: string }) {
+  if (intent.path) {
+    router.push(intent.path)
+    return
+  }
+  router.push('/recommend/' + intent.mode)
+}
+
+function runShortcutMode() {
+  if (mode.value === 'week') {
+    router.push('/week-menu')
+    return
+  }
+  router.push('/couple')
+}
+
+function startAIProgress() {
+  stopAIProgress()
+  aiProgressStep.value = 0
+  aiProgressTimer = window.setInterval(() => {
+    if (aiProgressStep.value < aiProgressSteps.length - 2) {
+      aiProgressStep.value += 1
+    }
+  }, 1400)
+}
+
+function finishAIProgress(success: boolean) {
+  stopAIProgress()
+  aiProgressStep.value = success ? aiProgressSteps.length - 1 : 0
+}
+
+function stopAIProgress() {
+  if (aiProgressTimer) {
+    window.clearInterval(aiProgressTimer)
+    aiProgressTimer = null
+  }
+}
+
 async function submitScene() {
   if (!selectedScene.value || loading.value || aiSceneLoading.value) return
   loading.value = true
   error.value = ''
   message.value = ''
   try {
-    sceneResult.value = await recommendByScene({
-      scene: selectedScene.value.key,
-      meal_type: selectedScene.value.meal_type,
-      people_count: selectedScene.value.people_count,
-      cook_time_preference: selectedScene.value.cook_time_preference,
-      health_goal: selectedScene.value.health_goal,
+    trackEvent({
+      event_name: 'recommend_start',
+      entity_type: 'recommend',
+      payload: { mode: 'scene', scene: selectedScene.value.key },
     })
+    sceneResult.value = await recommendByScene(scenePayload(selectedScene.value))
     message.value = '已从真实菜谱库中为你搭配场景菜单。'
   } catch (e: any) {
     sceneResult.value = null
@@ -390,19 +622,21 @@ async function submitScene() {
 async function submitAIScene() {
   if (!selectedScene.value || loading.value || aiSceneLoading.value) return
   aiSceneLoading.value = true
+  startAIProgress()
   error.value = ''
   message.value = ''
   try {
-    sceneResult.value = await recommendSceneByAI({
-      scene: selectedScene.value.key,
-      meal_type: selectedScene.value.meal_type,
-      people_count: selectedScene.value.people_count,
-      cook_time_preference: selectedScene.value.cook_time_preference,
-      health_goal: selectedScene.value.health_goal,
+    trackEvent({
+      event_name: 'recommend_start',
+      entity_type: 'recommend',
+      payload: { mode: 'ai_scene', scene: selectedScene.value.key },
     })
+    sceneResult.value = await recommendSceneByAI(scenePayload(selectedScene.value))
+    finishAIProgress(true)
     message.value = 'AI 已根据你的偏好生成新菜，并同步到菜谱库。'
   } catch (e: any) {
     sceneResult.value = null
+    finishAIProgress(false)
     error.value = e?.message || 'AI 场景推荐失败，请确认 AI 配置后重试。'
   } finally {
     aiSceneLoading.value = false
@@ -421,7 +655,15 @@ function recipeTitle(recipe: { title?: string }) {
 }
 
 function openRecipe(id?: number) {
-  if (id) router.push('/recipes/' + id)
+  if (id) {
+    trackEvent({
+      event_name: 'recommend_result_click',
+      entity_type: 'recipe',
+      entity_id: id,
+      payload: { mode: mode.value },
+    })
+    router.push('/recipes/' + id)
+  }
 }
 
 function inferCategory(name: string) {
@@ -461,7 +703,135 @@ async function addMissingToShopping(names: string[]) {
   message.value = '缺少食材已加入购物清单。'
 }
 
+async function addRecipeToShopping(recipeId?: number, name?: string) {
+  const value = String(name || '').trim()
+  if ((!recipeId && !value) || shoppingLoading.value) return
+  shoppingLoading.value = true
+  message.value = ''
+  error.value = ''
+  try {
+    if (recipeId) {
+      await shoppingStore.generateByRecipe(recipeId, value || '菜谱')
+    } else {
+      await shoppingStore.generateByDish(value)
+    }
+    trackEvent({
+      event_name: 'add_shopping_list',
+      entity_type: recipeId ? 'recipe' : 'dish',
+      entity_id: recipeId || 0,
+      payload: { source: 'recommend', title: value },
+    })
+    message.value = '「' + value + '」的食材已合并到购物清单。'
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : '加入购物清单失败，请稍后重试。'
+  } finally {
+    shoppingLoading.value = false
+  }
+}
+
+async function addSceneShoppingList() {
+  if (shoppingLoading.value) return
+  const recipeIds = sceneDishes.value
+    .map((dish: any) => Number(dish?.recipe_id || 0))
+    .filter((id: number) => Number.isFinite(id) && id > 0)
+  if (recipeIds.length) {
+    shoppingLoading.value = true
+    message.value = ''
+    error.value = ''
+    try {
+      const title = sceneResult.value?.menu_name || selectedScene.value?.title || '推荐采购清单'
+      await shoppingStore.generateByRecipes(recipeIds, title + '采购清单')
+      trackEvent({
+        event_name: 'add_shopping_list',
+        entity_type: 'recommend_menu',
+        payload: { source: 'recommend', recipe_ids: recipeIds, title },
+      })
+      message.value = '推荐菜单食材已合并到购物清单。'
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '生成采购清单失败，请稍后重试。'
+    } finally {
+      shoppingLoading.value = false
+    }
+    return
+  }
+  const names = Array.isArray(sceneResult.value?.shopping_list) ? sceneResult.value.shopping_list : []
+  if (names.length) {
+    await addMissingToShopping(names)
+    return
+  }
+  const firstDish = sceneDishes.value.find((dish: any) => dish?.name)
+  if (!firstDish?.name) {
+    error.value = '当前推荐结果没有可加入清单的食材。'
+    return
+  }
+  await addRecipeToShopping(undefined, firstDish.name)
+}
+
+async function saveSceneMenu() {
+  if (!sceneResult.value || menuSaving.value) return
+  menuSaving.value = true
+  message.value = ''
+  error.value = ''
+  try {
+    const title = sceneResult.value?.menu_name || selectedScene.value?.title || '推荐菜单'
+    await saveUserMenu({
+      name: title,
+      menu_type: sceneResult.value?.source === 'ai' || mode.value === 'new' ? 'ai' : 'daily',
+      meal_type: scenePayload(selectedScene.value || scenes[0]).meal_type,
+      people_count: temporaryPreference.value.people_count,
+      health_goal: temporaryPreference.value.health_goal,
+      dishes: sceneDishes.value,
+      shopping_list: sceneResult.value?.shopping_list || [],
+      reason: sceneResult.value?.reason || '',
+    })
+    trackEvent({
+      event_name: 'save_menu',
+      entity_type: 'recommend_menu',
+      payload: { source: sceneResult.value?.source || mode.value, title },
+    })
+    message.value = '菜单已保存到“我的菜单”。'
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : '保存菜单失败，请稍后重试。'
+  } finally {
+    menuSaving.value = false
+  }
+}
+
+async function sendDishToCouple(recipeId?: number, name?: string) {
+  const title = String(name || '').trim()
+  if (!title || coupleLoading.value) return
+  coupleLoading.value = true
+  message.value = ''
+  error.value = ''
+  try {
+    await createCoupleOrder({
+      dish_name: title,
+      recipe_id: recipeId,
+      meal_type: 'dinner',
+      meal_date: new Date().toISOString().split('T')[0],
+      note: '从推荐结果加入情侣点餐',
+    })
+    trackEvent({
+      event_name: 'couple_order_create',
+      entity_type: recipeId ? 'recipe' : 'dish',
+      entity_id: recipeId || 0,
+      payload: { source: 'recommend', title, mode: mode.value },
+    })
+    message.value = '已加入情侣点餐，等待 TA 确认。'
+  } catch (err) {
+    const text = err instanceof Error ? err.message : '加入情侣点餐失败，请稍后重试。'
+    error.value = text
+    if (text.includes('绑定')) {
+      setTimeout(() => router.push('/couple/bind'), 450)
+    }
+  } finally {
+    coupleLoading.value = false
+  }
+}
+
 watch(mode, () => {
+  stopAIProgress()
+  aiProgressStep.value = 0
   error.value = ''
   message.value = ''
   results.value = []
@@ -482,6 +852,7 @@ watch(mode, () => {
 onMounted(() => {
   loadIngredientOptions()
   loadTasteOptions()
+  loadUserPreference()
 })
 </script>
 
@@ -570,6 +941,7 @@ svg {
 
 .hero-card,
 .panel,
+.preference-panel,
 .result-card,
 .scene-result,
 .empty-panel {
@@ -619,9 +991,55 @@ svg {
   line-height: 1.6;
 }
 
+.intent-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.intent-panel button {
+  min-height: 82px;
+  padding: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 18px;
+  background: rgba(255, 250, 240, 0.78);
+  color: #3b2b24;
+  box-shadow: 0 10px 22px rgba(80, 50, 30, 0.1);
+  text-align: left;
+  cursor: pointer;
+}
+
+.intent-panel button.active {
+  border-color: rgba(233, 86, 69, 0.42);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: inset 0 0 0 2px rgba(233, 86, 69, 0.18), 0 12px 24px rgba(80, 50, 30, 0.12);
+}
+
+.intent-panel strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 950;
+  line-height: 1.15;
+}
+
+.intent-panel span {
+  display: block;
+  margin-top: 6px;
+  color: var(--sub);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.36;
+}
+
 .panel {
   margin-top: 18px;
   padding: 20px;
+}
+
+.preference-panel {
+  margin-top: 14px;
+  padding: 18px;
 }
 
 .panel-title {
@@ -638,6 +1056,14 @@ svg {
   font-weight: 950;
 }
 
+.panel-title span {
+  display: block;
+  margin-bottom: 4px;
+  color: #c26d3d;
+  font-size: 12px;
+  font-weight: 850;
+}
+
 .panel-title button {
   border: 0;
   background: transparent;
@@ -645,6 +1071,66 @@ svg {
   font-size: 14px;
   font-weight: 850;
   cursor: pointer;
+}
+
+.preference-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.preference-controls label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.preference-controls label > span {
+  color: #806f64;
+  font-size: 12px;
+  font-weight: 820;
+}
+
+.preference-controls select {
+  width: 100%;
+  min-height: 42px;
+  min-width: 0;
+  padding: 0 9px;
+  border: 1px solid rgba(143, 111, 86, 0.14);
+  border-radius: 14px;
+  color: #3b2b24;
+  background: rgba(255, 255, 255, 0.66);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  outline: none;
+}
+
+.preference-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.preference-tags span {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: #6d7653;
+  background: rgba(226, 235, 203, 0.72);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.preference-empty {
+  margin: 12px 0 0;
+  color: #8a7162;
+  font-size: 13px;
+  font-weight: 720;
+  line-height: 1.5;
 }
 
 .ingredient-input {
@@ -783,6 +1269,41 @@ button:disabled {
   font-size: 13px;
   font-weight: 750;
   line-height: 1.5;
+}
+
+.ai-progress {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.ai-progress span {
+  min-height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.54);
+  color: #8a7162;
+  font-size: 11px;
+  font-weight: 850;
+  text-align: center;
+}
+
+.ai-progress span.active {
+  color: #fff;
+  background: linear-gradient(135deg, #ff7568, var(--coral));
+}
+
+.ai-progress span.current {
+  box-shadow: 0 0 0 3px rgba(233, 86, 69, 0.16);
+}
+
+.shortcut-panel p {
+  margin: 0;
+  color: var(--sub);
+  font-size: 14px;
+  line-height: 1.58;
 }
 
 .mini-spinner {
@@ -947,7 +1468,7 @@ button:disabled {
 
 .result-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
   gap: 10px;
   margin-top: 16px;
 }
@@ -979,6 +1500,29 @@ button:disabled {
   line-height: 1.3;
 }
 
+.scene-result-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.scene-result-actions button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 15px;
+  color: #3a2a24;
+  background: rgba(255, 255, 255, 0.72);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.scene-result-actions button:first-child {
+  color: #fff;
+  background: linear-gradient(135deg, #ff7568, var(--coral));
+  box-shadow: 0 12px 24px rgba(233, 86, 69, 0.18);
+}
+
 .dish-card {
   min-height: 68px;
   display: flex;
@@ -990,6 +1534,23 @@ button:disabled {
   cursor: pointer;
 }
 
+.couple-dish-btn {
+  min-width: 72px;
+  min-height: 36px;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(135deg, #ff7568, var(--coral));
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.couple-dish-btn:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
 .dish-card strong {
   font-size: 17px;
   font-weight: 950;
@@ -999,6 +1560,14 @@ button:disabled {
   margin: 5px 0 0;
   color: var(--sub);
   font-size: 13px;
+}
+
+.dish-card small {
+  display: block;
+  margin-top: 5px;
+  color: #8a7162;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .dish-card svg {
@@ -1039,8 +1608,15 @@ button:disabled {
   }
 
   .taste-grid,
-  .result-actions {
+  .intent-panel,
+  .preference-controls,
+  .result-actions,
+  .scene-result-actions {
     grid-template-columns: 1fr;
+  }
+
+  .ai-progress {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

@@ -19,6 +19,8 @@ export function recommendByScene(data: {
   people_count: number
   cook_time_preference?: string
   health_goal?: string
+  taste_preference?: string[]
+  avoid_ingredients?: string[]
 }) {
   return api.post('/recommend/menu', data)
 }
@@ -29,6 +31,8 @@ export function recommendSceneByAI(data: {
   people_count: number
   cook_time_preference?: string
   health_goal?: string
+  taste_preference?: string[]
+  avoid_ingredients?: string[]
 }) {
   return api.post('/recommend/menu-ai', data, { timeout: AI_GENERATION_TIMEOUT })
 }
