@@ -91,9 +91,21 @@
           <path d="M19 16v4M21 18h-4" />
         </svg>
         <span v-else class="mini-spinner coral" aria-hidden="true"></span>
-        <span>{{ generatingAIList ? 'AI 生成中...' : '使用 AI 生成建议清单' }}</span>
+        <span>{{ generatingAIList ? 'AI 编写菜谱中...' : 'AI 生成并保存菜谱' }}</span>
       </button>
-      <p v-else class="dish-generator-tip">优先使用真实菜谱食材；同名食材会自动合并，不会覆盖当前清单。</p>
+      <button
+        v-if="generatedRecipeLink"
+        class="recipe-link-btn"
+        type="button"
+        @click="openGeneratedRecipe"
+      >
+        <span>查看已同步菜谱</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 17 17 7" />
+          <path d="M9 7h8v8" />
+        </svg>
+      </button>
+      <p v-else class="dish-generator-tip">优先使用真实菜谱食材；没有菜谱时可用 AI 编写并保存到菜谱库。</p>
     </section>
 
     <nav class="category-tabs" aria-label="食材分类筛选">
@@ -511,6 +523,7 @@ const generatingDishList = ref(false)
 const generatingAIList = ref(false)
 const dishGenerateError = ref('')
 const canUseAIForDish = ref(false)
+const generatedRecipeLink = ref<{ id: number; title: string } | null>(null)
 const isDeleteMode = ref(false)
 const selectedDeleteIndices = ref(new Set<number>())
 const deleteConfirmVisible = ref(false)
@@ -814,6 +827,10 @@ function closeAddIngredientDialog() {
   addDialogError.value = ''
 }
 
+function clearGeneratedRecipeLink() {
+  generatedRecipeLink.value = null
+}
+
 async function confirmAddIngredient() {
   const trimmedName = ingredientName.value.trim().slice(0, 12)
   if (!trimmedName || addingIngredient.value) return
@@ -860,6 +877,7 @@ async function generateDishShoppingList() {
   generatingDishList.value = true
   dishGenerateError.value = ''
   canUseAIForDish.value = false
+  clearGeneratedRecipeLink()
   try {
     const result = await shoppingStore.generateByDish(value)
     dishName.value = ''
@@ -882,20 +900,32 @@ async function generateAIShoppingList() {
 
   generatingAIList.value = true
   dishGenerateError.value = ''
+  clearGeneratedRecipeLink()
   try {
-    await shoppingStore.generateByAI(value)
+    const result = await shoppingStore.generateByAI(value)
+    if (result.recipe?.id) {
+      generatedRecipeLink.value = {
+        id: result.recipe.id,
+        title: result.recipe.title || value,
+      }
+    }
     dishName.value = ''
     lastDishNameForAI.value = ''
     canUseAIForDish.value = false
     activeCategory.value = 'all'
     collapsedKeys.value = new Set()
-    showToast('AI建议食材已合并到当前清单')
+    showToast(result.recipe?.title ? '「' + result.recipe.title + '」已同步到菜谱库' : 'AI菜谱已同步到菜谱库')
   } catch (error) {
     dishGenerateError.value = error instanceof Error ? error.message : 'AI 生成失败，请稍后重试'
     canUseAIForDish.value = true
   } finally {
     generatingAIList.value = false
   }
+}
+
+function openGeneratedRecipe() {
+  if (!generatedRecipeLink.value) return
+  router.push('/recipes/' + generatedRecipeLink.value.id)
 }
 
 function formatMergeToast(result: { added?: number; merged?: number; created?: boolean } | undefined, name: string) {
@@ -1320,7 +1350,8 @@ svg {
   font-weight: 720;
 }
 
-.ai-generate-btn {
+.ai-generate-btn,
+.recipe-link-btn {
   width: 100%;
   min-height: 48px;
   display: inline-flex;
@@ -1340,13 +1371,21 @@ svg {
   transition: transform 180ms ease, opacity 180ms ease, background 180ms ease;
 }
 
-.ai-generate-btn svg {
+.recipe-link-btn {
+  color: #fff;
+  background: linear-gradient(135deg, #ff7568, var(--coral));
+  box-shadow: 0 12px 24px rgba(233, 86, 69, 0.24);
+}
+
+.ai-generate-btn svg,
+.recipe-link-btn svg {
   width: 20px;
   height: 20px;
   stroke-width: 2.2;
 }
 
-.ai-generate-btn:disabled {
+.ai-generate-btn:disabled,
+.recipe-link-btn:disabled {
   cursor: wait;
   opacity: 0.7;
 }

@@ -24,6 +24,7 @@ export interface GenerateShoppingByDishResult {
   recipe?: {
     id: number
     title: string
+    description?: string
   }
   items: ShoppingItem[]
   preview?: boolean

@@ -1,6 +1,9 @@
 package service
 
 import (
+	"context"
+	"strings"
+
 	"menu-recommend/internal/model"
 	"menu-recommend/internal/repository"
 )
@@ -10,10 +13,15 @@ type RecipeService struct {
 	categoryRepo *repository.CategoryRepo
 	favRepo      *repository.FavoriteRepo
 	historyRepo  *repository.BrowseHistoryRepo
+	aiClient     *AIClient
 }
 
 func NewRecipeService(recipeRepo *repository.RecipeRepo, categoryRepo *repository.CategoryRepo, favRepo *repository.FavoriteRepo, historyRepo *repository.BrowseHistoryRepo) *RecipeService {
 	return &RecipeService{recipeRepo: recipeRepo, categoryRepo: categoryRepo, favRepo: favRepo, historyRepo: historyRepo}
+}
+
+func (s *RecipeService) SetAIClient(aiClient *AIClient) {
+	s.aiClient = aiClient
 }
 
 func (s *RecipeService) ListRecipes(keyword string, categoryID uint, taste, cookTime, difficulty, healthTags, sortBy string, page, pageSize int) ([]model.Recipe, int64, error) {
@@ -63,6 +71,49 @@ func (s *RecipeService) GetFilterOptions() (map[string]interface{}, error) {
 
 func (s *RecipeService) CreateRecipe(recipe *model.Recipe) error {
 	return s.recipeRepo.Create(recipe)
+}
+
+type AIRecipeGenerateResult struct {
+	Recipe  *model.Recipe `json:"recipe"`
+	Created bool          `json:"created"`
+}
+
+func (s *RecipeService) GenerateRecipeByAI(ctx context.Context, dishName string) (*AIRecipeGenerateResult, error) {
+	name := strings.TrimSpace(dishName)
+	if name == "" {
+		return nil, ErrAIInvalidResponse
+	}
+	if existing, err := s.recipeRepo.FindByTitle(name); err == nil {
+		return &AIRecipeGenerateResult{Recipe: existing, Created: false}, nil
+	}
+	if s.aiClient == nil || !s.aiClient.IsConfigured() {
+		return nil, ErrAIConfigMissing
+	}
+
+	draft, err := s.aiClient.GenerateRecipeDraft(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	if existing, err := s.recipeRepo.FindByTitle(draft.Title); err == nil {
+		return &AIRecipeGenerateResult{Recipe: existing, Created: false}, nil
+	}
+
+	recipe, err := draft.ToRecipe(s.defaultRecipeCategoryID())
+	if err != nil {
+		return nil, err
+	}
+	if err := s.recipeRepo.Create(recipe); err != nil {
+		return nil, err
+	}
+	return &AIRecipeGenerateResult{Recipe: recipe, Created: true}, nil
+}
+
+func (s *RecipeService) defaultRecipeCategoryID() uint {
+	categories, err := s.categoryRepo.FindAll()
+	if err != nil || len(categories) == 0 {
+		return 0
+	}
+	return categories[0].ID
 }
 
 func (s *RecipeService) UpdateRecipe(recipe *model.Recipe) error {

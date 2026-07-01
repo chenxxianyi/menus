@@ -66,6 +66,14 @@ func (r *RecipeRepo) FindBestMatch(keyword string) (*model.Recipe, error) {
 	return &recipe, err
 }
 
+func (r *RecipeRepo) FindByTitle(title string) (*model.Recipe, error) {
+	var recipe model.Recipe
+	err := r.db.Where("status = 1 AND title = ?", title).
+		Order("id DESC").
+		First(&recipe).Error
+	return &recipe, err
+}
+
 func (r *RecipeRepo) FindRandom(limit int) ([]model.Recipe, error) {
 	var recipes []model.Recipe
 	err := r.db.Where("status = 1").Order("RAND()").Limit(limit).Find(&recipes).Error

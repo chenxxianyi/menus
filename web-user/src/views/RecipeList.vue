@@ -118,7 +118,18 @@
 
       <section v-else class="recipe-empty">
         <h2>没有找到符合条件的菜谱</h2>
-        <p>可以换个关键词，或在后台维护更多菜谱数据。</p>
+        <p>{{ keyword ? '可以让 AI 先写一份菜谱并保存到菜谱库。' : '可以换个关键词，或在后台维护更多菜谱数据。' }}</p>
+        <button
+          v-if="keyword"
+          class="empty-ai-btn"
+          type="button"
+          :disabled="generatingRecipe"
+          @click="createRecipeFromKeyword"
+        >
+          <span v-if="generatingRecipe" class="empty-spinner" aria-hidden="true"></span>
+          <span>{{ generatingRecipe ? 'AI 编写中...' : 'AI 创建“' + keyword + '”菜谱' }}</span>
+        </button>
+        <p v-if="generateError" class="empty-error" role="alert">{{ generateError }}</p>
       </section>
     </main>
   </div>
@@ -127,7 +138,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getCategories, getRecipes, removeFavorite, toggleFavorite } from '@/api/recipe'
+import { generateRecipeByAI, getCategories, getRecipes, removeFavorite, toggleFavorite } from '@/api/recipe'
 import kitchenBg from '@/assets/home/kitchen-bg.jpg'
 
 interface RecipeListItem {
@@ -158,6 +169,8 @@ const activeSort = ref<'latest' | 'hot'>('latest')
 const categories = ref<CategoryItem[]>([])
 const recipes = ref<RecipeListItem[]>([])
 const loading = ref(true)
+const generatingRecipe = ref(false)
+const generateError = ref('')
 let syncingFromRoute = false
 
 const pageVars = computed(() => ({
@@ -177,6 +190,7 @@ function normalizeList(payload: any) {
 
 async function fetchRecipes() {
   loading.value = true
+  generateError.value = ''
   try {
     const res: any = await getRecipes({
       keyword: keyword.value || undefined,
@@ -191,6 +205,25 @@ async function fetchRecipes() {
     recipes.value = []
   } finally {
     loading.value = false
+  }
+}
+
+async function createRecipeFromKeyword() {
+  const value = keyword.value.trim()
+  if (!value || generatingRecipe.value) return
+  generatingRecipe.value = true
+  generateError.value = ''
+  try {
+    const result = await generateRecipeByAI(value)
+    if (result.recipe?.id) {
+      router.push('/recipes/' + result.recipe.id)
+      return
+    }
+    await fetchRecipes()
+  } catch (error) {
+    generateError.value = error instanceof Error ? error.message : 'AI 生成菜谱失败，请稍后重试'
+  } finally {
+    generatingRecipe.value = false
   }
 }
 
@@ -744,6 +777,52 @@ watch(
   line-height: 1.5;
 }
 
+.empty-ai-btn {
+  min-height: 50px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 18px;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  border-radius: 17px;
+  color: #fff;
+  background: linear-gradient(135deg, #ff7568, var(--coral));
+  box-shadow: 0 14px 28px rgba(233, 86, 69, 0.24);
+  font-size: 15px;
+  font-weight: 880;
+  cursor: pointer;
+  transition: transform 180ms ease, opacity 180ms ease, box-shadow 180ms ease;
+}
+
+.empty-ai-btn:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  box-shadow: none;
+}
+
+.empty-spinner {
+  width: 17px;
+  height: 17px;
+  border: 2px solid rgba(255, 255, 255, 0.42);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.72s linear infinite;
+}
+
+.recipe-empty .empty-error {
+  width: 100%;
+  margin-top: 13px;
+  padding: 10px 12px;
+  border: 1px solid rgba(220, 68, 57, 0.16);
+  border-radius: 14px;
+  color: #c93f35;
+  background: rgba(252, 226, 214, 0.56);
+  font-weight: 720;
+  text-align: left;
+}
+
 .loading-spinner {
   width: 28px;
   height: 28px;
@@ -762,7 +841,8 @@ watch(
 .clear-btn:active,
 .recipe-chip:active,
 .favorite-btn:active,
-.recipe-card:active {
+.recipe-card:active,
+.empty-ai-btn:active {
   transform: scale(0.98);
 }
 
@@ -774,7 +854,8 @@ watch(
 
   .recipe-chip:hover,
   .favorite-btn:hover,
-  .clear-btn:hover {
+  .clear-btn:hover,
+  .empty-ai-btn:not(:disabled):hover {
     transform: translateY(-1px);
   }
 

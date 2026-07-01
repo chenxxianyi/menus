@@ -228,6 +228,7 @@ func (h *ShoppingHandler) GenerateByAI(c *gin.Context) {
 
 	response.Success(c, gin.H{
 		"list":    result.List,
+		"recipe":  result.Recipe,
 		"items":   result.Items,
 		"source":  "ai",
 		"preview": req.Preview,

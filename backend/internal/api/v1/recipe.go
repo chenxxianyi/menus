@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"errors"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -74,4 +75,30 @@ func (h *RecipeHandler) FilterOptions(c *gin.Context) {
 		return
 	}
 	response.Success(c, options)
+}
+
+type GenerateRecipeByAIRequest struct {
+	DishName string `json:"dish_name" binding:"required"`
+}
+
+func (h *RecipeHandler) GenerateByAI(c *gin.Context) {
+	var req GenerateRecipeByAIRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, errcode.ErrParam, "请输入想创建的菜品")
+		return
+	}
+
+	result, err := h.recipeService.GenerateRecipeByAI(c.Request.Context(), req.DishName)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrAIConfigMissing):
+			response.Error(c, errcode.ErrParam, "AI 未配置，请先配置 AI_BASE_URL、AI_API_KEY 和 AI_MODEL")
+		case errors.Is(err, service.ErrAIInvalidResponse):
+			response.Error(c, errcode.ErrServer, "AI 返回的菜谱格式无效")
+		default:
+			response.Error(c, errcode.ErrServer, "AI 生成菜谱失败")
+		}
+		return
+	}
+	response.Success(c, result)
 }

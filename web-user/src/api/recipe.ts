@@ -24,3 +24,7 @@ export function getCategories() {
 export function getRecipeFilterOptions() {
   return api.get('/recipes/filter-options') as Promise<{ tastes: string[] }>
 }
+
+export function generateRecipeByAI(dishName: string): Promise<{ recipe: any; created: boolean }> {
+  return api.post('/recipes/generate-by-ai', { dish_name: dishName }) as unknown as Promise<{ recipe: any; created: boolean }>
+}

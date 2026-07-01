@@ -20,6 +20,7 @@ type ShoppingService struct {
 	repo       *repository.ShoppingRepo
 	recipeRepo *repository.RecipeRepo
 	aiClient   *AIClient
+	recipeSvc  *RecipeService
 }
 
 func NewShoppingService(repo *repository.ShoppingRepo, recipeRepo *repository.RecipeRepo) *ShoppingService {
@@ -28,6 +29,10 @@ func NewShoppingService(repo *repository.ShoppingRepo, recipeRepo *repository.Re
 
 func (s *ShoppingService) SetAIClient(aiClient *AIClient) {
 	s.aiClient = aiClient
+}
+
+func (s *ShoppingService) SetRecipeService(recipeSvc *RecipeService) {
+	s.recipeSvc = recipeSvc
 }
 
 func (s *ShoppingService) GetLists(userID uint) ([]model.ShoppingList, error) {
@@ -132,11 +137,18 @@ func (s *ShoppingService) GenerateFromDishByAI(ctx context.Context, userID uint,
 	if name == "" {
 		return nil, ErrAIInvalidResponse
 	}
+	if s.recipeSvc == nil {
+		return nil, ErrAIConfigMissing
+	}
 	if s.aiClient == nil || !s.aiClient.IsConfigured() {
 		return nil, ErrAIConfigMissing
 	}
 
-	items, err := s.aiClient.SuggestShoppingItems(ctx, name)
+	result, err := s.recipeSvc.GenerateRecipeByAI(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	items, err := shoppingItemsFromRecipe(result.Recipe.Ingredients)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +162,7 @@ func (s *ShoppingService) GenerateFromDishByAI(ctx context.Context, userID uint,
 
 		list = &model.ShoppingList{
 			UserID:    userID,
-			Name:      name + " AI建议采购清单",
+			Name:      result.Recipe.Title + "采购清单",
 			ItemsJSON: model.JSON(itemsJSON),
 		}
 		if err := s.repo.Create(list); err != nil {
@@ -159,8 +171,9 @@ func (s *ShoppingService) GenerateFromDishByAI(ctx context.Context, userID uint,
 	}
 
 	return &DishShoppingListResult{
-		List:  list,
-		Items: items,
+		List:   list,
+		Recipe: result.Recipe,
+		Items:  items,
 	}, nil
 }
 
