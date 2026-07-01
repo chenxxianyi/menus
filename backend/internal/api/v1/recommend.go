@@ -1,7 +1,10 @@
 package v1
 
 import (
+	"errors"
+
 	"github.com/gin-gonic/gin"
+	"menu-recommend/internal/middleware"
 	"menu-recommend/internal/pkg/errcode"
 	"menu-recommend/internal/pkg/response"
 	"menu-recommend/internal/service"
@@ -25,6 +28,29 @@ func (h *RecommendHandler) Menu(c *gin.Context) {
 	result, err := h.recommendService.RecommendMenu(&params)
 	if err != nil {
 		response.Error(c, errcode.ErrServer, "推荐失败")
+		return
+	}
+	response.Success(c, result)
+}
+
+func (h *RecommendHandler) MenuAI(c *gin.Context) {
+	var params service.RecommendParams
+	if err := c.ShouldBindJSON(&params); err != nil {
+		response.Error(c, errcode.ErrParam, "参数错误")
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	result, err := h.recommendService.RecommendSceneByAI(c.Request.Context(), userID, &params)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrAIConfigMissing):
+			response.Error(c, errcode.ErrServer, "AI 未配置，请先配置 AI 服务后再生成")
+		case errors.Is(err, service.ErrAIInvalidResponse):
+			response.Error(c, errcode.ErrServer, "AI 返回的场景推荐格式无效，请稍后重试")
+		default:
+			response.Error(c, errcode.ErrServer, "AI 场景推荐失败")
+		}
 		return
 	}
 	response.Success(c, result)

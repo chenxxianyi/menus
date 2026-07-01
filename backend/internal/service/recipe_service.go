@@ -108,6 +108,28 @@ func (s *RecipeService) GenerateRecipeByAI(ctx context.Context, dishName string)
 	return &AIRecipeGenerateResult{Recipe: recipe, Created: true}, nil
 }
 
+func (s *RecipeService) CreateOrReuseAIRecipeDraft(draft *AIRecipeDraft) (*AIRecipeGenerateResult, error) {
+	if draft == nil {
+		return nil, ErrAIInvalidResponse
+	}
+	name := strings.TrimSpace(draft.Title)
+	if name == "" {
+		return nil, ErrAIInvalidResponse
+	}
+	if existing, err := s.recipeRepo.FindByTitle(name); err == nil {
+		return &AIRecipeGenerateResult{Recipe: existing, Created: false}, nil
+	}
+
+	recipe, err := draft.ToRecipe(s.defaultRecipeCategoryID())
+	if err != nil {
+		return nil, err
+	}
+	if err := s.recipeRepo.Create(recipe); err != nil {
+		return nil, err
+	}
+	return &AIRecipeGenerateResult{Recipe: recipe, Created: true}, nil
+}
+
 func (s *RecipeService) defaultRecipeCategoryID() uint {
 	categories, err := s.categoryRepo.FindAll()
 	if err != nil || len(categories) == 0 {

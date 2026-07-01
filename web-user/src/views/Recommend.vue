@@ -108,10 +108,17 @@
             <span>{{ scene.description }}</span>
           </button>
         </div>
-        <button class="submit-btn" type="button" :disabled="!selectedScene || loading" @click="submitScene">
-          <span v-if="loading" class="mini-spinner" aria-hidden="true"></span>
-          <span>{{ loading ? '正在搭配...' : '生成场景推荐' }}</span>
-        </button>
+        <div class="scene-actions">
+          <button class="submit-btn" type="button" :disabled="!selectedScene || loading || aiSceneLoading" @click="submitScene">
+            <span v-if="loading" class="mini-spinner" aria-hidden="true"></span>
+            <span>{{ loading ? '正在搭配...' : '从菜谱库推荐' }}</span>
+          </button>
+          <button class="submit-btn ai-submit-btn" type="button" :disabled="!selectedScene || loading || aiSceneLoading" @click="submitAIScene">
+            <span v-if="aiSceneLoading" class="mini-spinner" aria-hidden="true"></span>
+            <span>{{ aiSceneLoading ? 'AI 正在生成...' : 'AI 按偏好生成新菜' }}</span>
+          </button>
+        </div>
+        <p class="scene-ai-hint">AI 会读取你的偏好设置，生成没吃过也适合你的新菜，并同步到菜谱库。</p>
       </section>
 
       <p v-if="message" class="message" role="status">{{ message }}</p>
@@ -176,7 +183,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getIngredientOptions, recommendByIngredients, recommendByScene } from '@/api/recommend'
+import { getIngredientOptions, recommendByIngredients, recommendByScene, recommendSceneByAI } from '@/api/recommend'
 import { getRecipeFilterOptions } from '@/api/recipe'
 import { updateShoppingList } from '@/api/shopping'
 import { useShoppingStore } from '@/stores/shopping'
@@ -203,6 +210,7 @@ const tasteOptions = ref<string[]>([])
 const selectedScene = ref<SceneOption | null>(null)
 const sceneResult = ref<any>(null)
 const loading = ref(false)
+const aiSceneLoading = ref(false)
 const error = ref('')
 const message = ref('')
 const hasSubmitted = ref(false)
@@ -353,12 +361,15 @@ function chooseTaste(taste: string) {
 function chooseScene(scene: SceneOption) {
   selectedScene.value = scene
   sceneResult.value = null
+  message.value = ''
+  error.value = ''
 }
 
 async function submitScene() {
-  if (!selectedScene.value || loading.value) return
+  if (!selectedScene.value || loading.value || aiSceneLoading.value) return
   loading.value = true
   error.value = ''
+  message.value = ''
   try {
     sceneResult.value = await recommendByScene({
       scene: selectedScene.value.key,
@@ -367,6 +378,7 @@ async function submitScene() {
       cook_time_preference: selectedScene.value.cook_time_preference,
       health_goal: selectedScene.value.health_goal,
     })
+    message.value = '已从真实菜谱库中为你搭配场景菜单。'
   } catch (e: any) {
     sceneResult.value = null
     error.value = e?.message || '场景推荐失败，请稍后重试。'
@@ -375,10 +387,33 @@ async function submitScene() {
   }
 }
 
+async function submitAIScene() {
+  if (!selectedScene.value || loading.value || aiSceneLoading.value) return
+  aiSceneLoading.value = true
+  error.value = ''
+  message.value = ''
+  try {
+    sceneResult.value = await recommendSceneByAI({
+      scene: selectedScene.value.key,
+      meal_type: selectedScene.value.meal_type,
+      people_count: selectedScene.value.people_count,
+      cook_time_preference: selectedScene.value.cook_time_preference,
+      health_goal: selectedScene.value.health_goal,
+    })
+    message.value = 'AI 已根据你的偏好生成新菜，并同步到菜谱库。'
+  } catch (e: any) {
+    sceneResult.value = null
+    error.value = e?.message || 'AI 场景推荐失败，请确认 AI 配置后重试。'
+  } finally {
+    aiSceneLoading.value = false
+  }
+}
+
 function clearSceneResult() {
   selectedScene.value = null
   sceneResult.value = null
   error.value = ''
+  message.value = ''
 }
 
 function recipeTitle(recipe: { title?: string }) {
@@ -718,6 +753,36 @@ button:disabled {
   justify-content: center;
   gap: 9px;
   margin-top: 18px;
+}
+
+.scene-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.scene-actions .submit-btn {
+  margin-top: 0;
+}
+
+.ai-submit-btn {
+  color: #3a2a24;
+  border: 1px solid rgba(233, 86, 69, 0.22);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 238, 214, 0.9));
+  box-shadow: 0 12px 24px rgba(80, 50, 30, 0.12);
+}
+
+.ai-submit-btn .mini-spinner {
+  border-color: rgba(233, 86, 69, 0.22);
+  border-top-color: var(--coral);
+}
+
+.scene-ai-hint {
+  margin: 12px 2px 0;
+  color: #8a7162;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.5;
 }
 
 .mini-spinner {

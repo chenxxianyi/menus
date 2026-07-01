@@ -49,7 +49,7 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 	shoppingService.SetAIClient(aiClient)
 	shoppingService.SetRecipeService(recipeService)
 	feedbackService := service.NewFeedbackService(feedbackRepo)
-	recommendService := service.NewRecommendService(recipeRepo, ingredientRepo)
+	recommendService := service.NewRecommendService(recipeRepo, ingredientRepo, prefRepo, recipeService, aiClient)
 	coupleService := service.NewCoupleService(coupleRepo, recipeRepo, userRepo)
 	historyService := service.NewBrowseHistoryService(historyRepo)
 
@@ -121,6 +121,7 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 			auth.DELETE("/shopping-list/:id/items", shoppingHandler.DeleteItems)
 			auth.DELETE("/shopping-list/:id", shoppingHandler.Delete)
 			auth.POST("/recommend/menu", recommendHandler.Menu)
+			auth.POST("/recommend/menu-ai", recommendHandler.MenuAI)
 			auth.POST("/recommend/by-ingredients", recommendHandler.ByIngredients)
 			auth.POST("/recommend/week-menu", recommendHandler.WeekMenu)
 			auth.POST("/feedback", feedbackHandler.Create)

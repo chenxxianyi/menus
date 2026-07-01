@@ -22,3 +22,13 @@ export function recommendByScene(data: {
 }) {
   return api.post('/recommend/menu', data)
 }
+
+export function recommendSceneByAI(data: {
+  scene: string
+  meal_type: string
+  people_count: number
+  cook_time_preference?: string
+  health_goal?: string
+}) {
+  return api.post('/recommend/menu-ai', data)
+}

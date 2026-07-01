@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"sort"
 	"strings"
@@ -12,10 +13,19 @@ import (
 type RecommendService struct {
 	recipeRepo     *repository.RecipeRepo
 	ingredientRepo *repository.IngredientRepo
+	prefRepo       *repository.UserPrefRepo
+	recipeService  *RecipeService
+	aiClient       *AIClient
 }
 
-func NewRecommendService(recipeRepo *repository.RecipeRepo, ingredientRepo *repository.IngredientRepo) *RecommendService {
-	return &RecommendService{recipeRepo: recipeRepo, ingredientRepo: ingredientRepo}
+func NewRecommendService(recipeRepo *repository.RecipeRepo, ingredientRepo *repository.IngredientRepo, prefRepo *repository.UserPrefRepo, recipeService *RecipeService, aiClient *AIClient) *RecommendService {
+	return &RecommendService{
+		recipeRepo:     recipeRepo,
+		ingredientRepo: ingredientRepo,
+		prefRepo:       prefRepo,
+		recipeService:  recipeService,
+		aiClient:       aiClient,
+	}
 }
 
 type RecommendParams struct {
@@ -45,6 +55,7 @@ type RecommendResult struct {
 	Reason       string       `json:"reason"`
 	Dishes       []DishResult `json:"dishes"`
 	ShoppingList []string     `json:"shopping_list"`
+	Source       string       `json:"source,omitempty"`
 }
 
 type scoredRecipe struct {
@@ -149,6 +160,148 @@ func recipeHasAvoidIngredient(recipeIngredients []string, avoidIngredients []str
 		}
 	}
 	return false
+}
+
+func jsonStringList(raw model.JSON) []string {
+	if len(raw) == 0 || string(raw) == "null" {
+		return nil
+	}
+	var values []string
+	if err := json.Unmarshal(raw, &values); err != nil {
+		return nil
+	}
+	return normalizeStringList(values, 20)
+}
+
+func sceneLabel(scene string) string {
+	switch scene {
+	case "quick_meal":
+		return "快手一餐"
+	case "family_dinner":
+		return "家庭聚餐"
+	case "fat_loss":
+		return "减脂轻食"
+	case "treat_guest":
+		return "宴客招待"
+	case "late_night":
+		return "夜宵"
+	default:
+		return "日常用餐"
+	}
+}
+
+func mergeStringList(primary []string, secondary []string, limit int) []string {
+	merged := make([]string, 0, len(primary)+len(secondary))
+	merged = append(merged, primary...)
+	merged = append(merged, secondary...)
+	return normalizeStringList(merged, limit)
+}
+
+func ensureSceneDefaults(params *RecommendParams, pref *model.UserPreference) AISceneRecommendContext {
+	ctx := AISceneRecommendContext{
+		Scene:              strings.TrimSpace(params.Scene),
+		SceneLabel:         sceneLabel(params.Scene),
+		MealType:           strings.TrimSpace(params.MealType),
+		PeopleCount:        params.PeopleCount,
+		TastePreference:    normalizeStringList(params.TastePreference, 12),
+		HealthGoal:         strings.TrimSpace(params.HealthGoal),
+		AvoidIngredients:   normalizeStringList(params.AvoidIngredients, 20),
+		CookTimePreference: strings.TrimSpace(params.CookTimePreference),
+	}
+	if ctx.MealType == "" {
+		ctx.MealType = "dinner"
+	}
+	if ctx.PeopleCount <= 0 {
+		ctx.PeopleCount = 2
+	}
+	if pref != nil {
+		ctx.TastePreference = mergeStringList(ctx.TastePreference, jsonStringList(pref.TastePreference), 12)
+		ctx.AvoidIngredients = mergeStringList(ctx.AvoidIngredients, jsonStringList(pref.AvoidIngredients), 20)
+		ctx.FavoriteIngredients = jsonStringList(pref.FavoriteIngredients)
+		if ctx.HealthGoal == "" {
+			ctx.HealthGoal = strings.TrimSpace(pref.HealthGoal)
+		}
+		if ctx.CookTimePreference == "" {
+			ctx.CookTimePreference = strings.TrimSpace(pref.CookTimePreference)
+		}
+		if params.PeopleCount <= 0 && pref.PeopleCount > 0 {
+			ctx.PeopleCount = pref.PeopleCount
+		}
+	}
+	return ctx
+}
+
+func dishFromRecipe(recipe *model.Recipe, dishType string, reason string) DishResult {
+	ingredients := recipeIngredientNames(recipe.Ingredients)
+	return DishResult{
+		RecipeID:     recipe.ID,
+		Name:         recipe.Title,
+		Type:         normalizeSceneDishType(dishType),
+		CookTime:     recipe.CookTime,
+		Difficulty:   recipe.Difficulty,
+		Ingredients:  ingredients,
+		StepsSummary: strings.TrimSpace(reason),
+	}
+}
+
+func (s *RecommendService) RecommendSceneByAI(ctx context.Context, userID uint, params *RecommendParams) (*RecommendResult, error) {
+	if s.aiClient == nil || !s.aiClient.IsConfigured() || s.recipeService == nil {
+		return nil, ErrAIConfigMissing
+	}
+
+	var pref *model.UserPreference
+	var err error
+	if s.prefRepo != nil && userID > 0 {
+		pref, err = s.prefRepo.FindByUserID(userID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	sceneCtx := ensureSceneDefaults(params, pref)
+	draft, err := s.aiClient.GenerateSceneRecipeDrafts(ctx, sceneCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &RecommendResult{
+		MenuName: draft.MenuName,
+		Reason:   draft.Reason + " 已同步到菜谱库，可点击查看完整做法。",
+		Source:   "ai",
+	}
+	shoppingSet := make(map[string]bool)
+	for _, item := range draft.Dishes {
+		if recipeHasAvoidIngredient(recipeIngredientNamesFromDraft(item.Recipe.Ingredients), sceneCtx.AvoidIngredients) {
+			continue
+		}
+		created, err := s.recipeService.CreateOrReuseAIRecipeDraft(&item.Recipe)
+		if err != nil {
+			continue
+		}
+		dish := dishFromRecipe(created.Recipe, item.Type, item.Reason)
+		for _, ingredient := range dish.Ingredients {
+			shoppingSet[ingredient] = true
+		}
+		result.Dishes = append(result.Dishes, dish)
+	}
+	if len(result.Dishes) == 0 {
+		return nil, ErrAIInvalidResponse
+	}
+	for item := range shoppingSet {
+		result.ShoppingList = append(result.ShoppingList, item)
+	}
+	sort.Strings(result.ShoppingList)
+	return result, nil
+}
+
+func recipeIngredientNamesFromDraft(items []AIRecipeIngredient) []string {
+	names := make([]string, 0, len(items))
+	for _, item := range items {
+		if strings.TrimSpace(item.Name) != "" {
+			names = append(names, item.Name)
+		}
+	}
+	return names
 }
 
 func (s *RecommendService) RecommendMenu(params *RecommendParams) (*RecommendResult, error) {
