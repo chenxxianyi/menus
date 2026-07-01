@@ -20,3 +20,7 @@ export function removeFavorite(id: number) {
 export function getCategories() {
   return api.get('/categories')
 }
+
+export function getRecipeFilterOptions() {
+  return api.get('/recipes/filter-options') as Promise<{ tastes: string[] }>
+}

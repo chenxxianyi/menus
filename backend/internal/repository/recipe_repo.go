@@ -19,13 +19,14 @@ func (r *RecipeRepo) FindByID(id uint) (*model.Recipe, error) {
 	return &recipe, err
 }
 
-func (r *RecipeRepo) List(keyword string, categoryID uint, taste, cookTime, difficulty, healthTags string, page, pageSize int) ([]model.Recipe, int64, error) {
+func (r *RecipeRepo) List(keyword string, categoryID uint, taste, cookTime, difficulty, healthTags, sortBy string, page, pageSize int) ([]model.Recipe, int64, error) {
 	var recipes []model.Recipe
 	var total int64
 
 	query := r.db.Model(&model.Recipe{}).Where("status = 1")
 	if keyword != "" {
-		query = query.Where("title LIKE ? OR description LIKE ?", "%"+keyword+"%", "%"+keyword+"%")
+		pattern := "%" + keyword + "%"
+		query = query.Where("title LIKE ? OR description LIKE ? OR ingredients LIKE ?", pattern, pattern, pattern)
 	}
 	if categoryID > 0 {
 		query = query.Where("category_id = ?", categoryID)
@@ -36,9 +37,17 @@ func (r *RecipeRepo) List(keyword string, categoryID uint, taste, cookTime, diff
 	if difficulty != "" {
 		query = query.Where("difficulty = ?", difficulty)
 	}
+	if healthTags != "" {
+		query = query.Where("health_tags LIKE ?", "%"+healthTags+"%")
+	}
+
+	orderBy := "id DESC"
+	if sortBy == "hot" {
+		orderBy = "favorite_count DESC, view_count DESC, id DESC"
+	}
 
 	query.Count(&total)
-	err := query.Offset((page - 1) * pageSize).Limit(pageSize).Order("id DESC").Find(&recipes).Error
+	err := query.Offset((page - 1) * pageSize).Limit(pageSize).Order(orderBy).Find(&recipes).Error
 	return recipes, total, err
 }
 
@@ -67,6 +76,16 @@ func (r *RecipeRepo) FindHot(limit int) ([]model.Recipe, error) {
 	var recipes []model.Recipe
 	err := r.db.Where("status = 1").Order("favorite_count DESC, view_count DESC").Limit(limit).Find(&recipes).Error
 	return recipes, err
+}
+
+func (r *RecipeRepo) DistinctTastes() ([]string, error) {
+	var tastes []string
+	err := r.db.Model(&model.Recipe{}).
+		Where("status = 1 AND taste <> ''").
+		Distinct("taste").
+		Order("taste ASC").
+		Pluck("taste", &tastes).Error
+	return tastes, err
 }
 
 func (r *RecipeRepo) IncrementViewCount(id uint) error {

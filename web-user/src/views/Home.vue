@@ -89,7 +89,7 @@
       <section class="glass-card popular-panel">
         <div class="section-title">
           <h2>热门菜谱</h2>
-          <button type="button" @click="goToRecipes">查看更多</button>
+          <button type="button" @click="goHotRecipes">查看更多</button>
         </div>
         <div v-if="popularRecipes.length" class="popular-list">
           <article v-for="recipe in popularRecipes" :key="recipeKey(recipe)" class="popular-card" @click="goToRecipe(recipe)">
@@ -159,12 +159,12 @@ const menuRecipe = computed(() => hotRecipes.value[0] || todayRecommend.value ||
 const popularRecipes = computed(() => hotRecipes.value.slice(0, 2))
 
 const quickActions: QuickAction[] = [
-  { label: '按食材推荐', icon: 'ingredients', tone: 'tomato', path: '/recipes' },
-  { label: '按口味推荐', icon: 'taste', tone: 'pepper', path: '/recipes' },
-  { label: '按场景推荐', icon: 'scene', tone: 'sage', path: '/recipes' },
+  { label: '按食材推荐', icon: 'ingredients', tone: 'tomato', path: '/recommend/ingredients' },
+  { label: '按口味推荐', icon: 'taste', tone: 'pepper', path: '/recommend/taste' },
+  { label: '按场景推荐', icon: 'scene', tone: 'sage', path: '/recommend/scene' },
   { label: '一周菜单', icon: 'week', tone: 'wheat', path: '/week-menu' },
-  { label: '冰箱剩菜', icon: 'fridge', tone: 'sage', path: '/recipes' },
-  { label: '最热菜谱', icon: 'hot', tone: 'coral', path: '/recipes' },
+  { label: '冰箱剩菜', icon: 'fridge', tone: 'sage', path: '/recommend/fridge' },
+  { label: '最热菜谱', icon: 'hot', tone: 'coral', path: '/recipes', query: { sort: 'hot' } },
 ]
 
 function coverStyle(cover: string) {
@@ -217,6 +217,10 @@ function goToRecipe(recipe: HomeRecipe | null) {
 
 function goToRecipes() {
   router.push('/recipes')
+}
+
+function goHotRecipes() {
+  router.push({ path: '/recipes', query: { sort: 'hot' } })
 }
 
 function goToSearch() {

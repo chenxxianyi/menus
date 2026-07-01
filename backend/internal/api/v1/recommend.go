@@ -32,6 +32,8 @@ func (h *RecommendHandler) Menu(c *gin.Context) {
 
 type ByIngredientsRequest struct {
 	Ingredients []string `json:"ingredients" binding:"required"`
+	Mode        string   `json:"mode"`
+	Limit       int      `json:"limit"`
 }
 
 func (h *RecommendHandler) ByIngredients(c *gin.Context) {
@@ -41,7 +43,16 @@ func (h *RecommendHandler) ByIngredients(c *gin.Context) {
 		return
 	}
 
-	result, err := h.recommendService.RecommendByIngredients(req.Ingredients)
+	if len(req.Ingredients) > 20 {
+		response.Error(c, errcode.ErrParam, "食材数量不能超过20个")
+		return
+	}
+	if req.Mode != "" && req.Mode != "ingredients" && req.Mode != "fridge" {
+		response.Error(c, errcode.ErrParam, "推荐模式错误")
+		return
+	}
+
+	result, err := h.recommendService.RecommendByIngredients(req.Ingredients, req.Mode, req.Limit)
 	if err != nil {
 		response.Error(c, errcode.ErrServer, "推荐失败")
 		return

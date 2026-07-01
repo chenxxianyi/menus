@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"sort"
+	"strings"
 
 	"menu-recommend/internal/model"
 	"menu-recommend/internal/repository"
@@ -18,6 +19,7 @@ func NewRecommendService(recipeRepo *repository.RecipeRepo, ingredientRepo *repo
 }
 
 type RecommendParams struct {
+	Scene               string   `json:"scene"`
 	PeopleCount         int      `json:"people_count"`
 	MealType            string   `json:"meal_type"`
 	TastePreference     []string `json:"taste_preference"`
@@ -25,6 +27,7 @@ type RecommendParams struct {
 	AvoidIngredients    []string `json:"avoid_ingredients"`
 	ExistingIngredients []string `json:"existing_ingredients"`
 	CookTimePreference  string   `json:"cook_time_preference"`
+	ExcludeRecipeIDs    []uint   `json:"-"`
 }
 
 type DishResult struct {
@@ -49,6 +52,59 @@ type scoredRecipe struct {
 	score  float64
 }
 
+type IngredientRecommendResult struct {
+	Recipe             model.Recipe `json:"recipe"`
+	MatchRate          float64      `json:"match_rate"`
+	MatchedIngredients []string     `json:"matched_ingredients"`
+	MissingIngredients []string     `json:"missing_ingredients"`
+	Reason             string       `json:"reason"`
+}
+
+type IngredientRecommendPayload struct {
+	List  []IngredientRecommendResult `json:"list"`
+	Total int                         `json:"total"`
+}
+
+var ingredientAliases = map[string]string{
+	"番茄":  "西红柿",
+	"西红柿": "西红柿",
+	"土豆":  "土豆",
+	"马铃薯": "土豆",
+	"洋芋":  "土豆",
+	"鸡蛋":  "鸡蛋",
+	"蛋":   "鸡蛋",
+}
+
+func normalizeIngredientName(name string) string {
+	value := strings.TrimSpace(name)
+	value = strings.ReplaceAll(value, " ", "")
+	value = strings.ReplaceAll(value, "　", "")
+	if alias, ok := ingredientAliases[value]; ok {
+		return alias
+	}
+	return value
+}
+
+func normalizeIngredientList(items []string, limit int) []string {
+	if limit <= 0 {
+		limit = 20
+	}
+	set := make(map[string]bool)
+	result := make([]string, 0, len(items))
+	for _, item := range items {
+		name := normalizeIngredientName(item)
+		if name == "" || set[name] {
+			continue
+		}
+		set[name] = true
+		result = append(result, name)
+		if len(result) >= limit {
+			break
+		}
+	}
+	return result
+}
+
 func recipeIngredientNames(raw model.JSON) []string {
 	if len(raw) == 0 {
 		return nil
@@ -70,6 +126,31 @@ func recipeIngredientNames(raw model.JSON) []string {
 	return names
 }
 
+func containsRecipeID(ids []uint, id uint) bool {
+	for _, item := range ids {
+		if item == id {
+			return true
+		}
+	}
+	return false
+}
+
+func recipeHasAvoidIngredient(recipeIngredients []string, avoidIngredients []string) bool {
+	if len(avoidIngredients) == 0 {
+		return false
+	}
+	avoidSet := make(map[string]bool)
+	for _, item := range normalizeIngredientList(avoidIngredients, 100) {
+		avoidSet[item] = true
+	}
+	for _, item := range normalizeIngredientList(recipeIngredients, 100) {
+		if avoidSet[item] {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *RecommendService) RecommendMenu(params *RecommendParams) (*RecommendResult, error) {
 	recipes, err := s.recipeRepo.FindHot(100)
 	if err != nil {
@@ -77,9 +158,16 @@ func (s *RecommendService) RecommendMenu(params *RecommendParams) (*RecommendRes
 	}
 
 	var scored []scoredRecipe
-	for _, r := range recipes {
-		score := s.calcScore(r, params)
-		scored = append(scored, scoredRecipe{recipe: &r, score: score})
+	for i := range recipes {
+		r := &recipes[i]
+		if containsRecipeID(params.ExcludeRecipeIDs, r.ID) {
+			continue
+		}
+		if recipeHasAvoidIngredient(recipeIngredientNames(r.Ingredients), params.AvoidIngredients) {
+			continue
+		}
+		score := s.calcScore(*r, params)
+		scored = append(scored, scoredRecipe{recipe: r, score: score})
 	}
 
 	sort.Slice(scored, func(i, j int) bool {
@@ -134,11 +222,30 @@ func (s *RecommendService) calcScore(r model.Recipe, params *RecommendParams) fl
 
 	if len(params.TastePreference) > 0 {
 		for _, t := range params.TastePreference {
-			if r.Taste == t {
+			if strings.TrimSpace(r.Taste) == strings.TrimSpace(t) {
 				score += 20
 				break
 			}
 		}
+	}
+
+	if params.Scene == "quick_meal" && r.CookTime > 0 && r.CookTime <= 30 {
+		score += 25
+	}
+	if params.Scene == "family_dinner" && r.PeopleCount >= 4 {
+		score += 18
+	}
+	if params.Scene == "late_night" && r.CookTime > 0 && r.CookTime <= 20 {
+		score += 16
+	}
+	if strings.Contains(params.CookTimePreference, "30") && r.CookTime > 0 && r.CookTime <= 30 {
+		score += 10
+	}
+	if strings.Contains(params.CookTimePreference, "20") && r.CookTime > 0 && r.CookTime <= 20 {
+		score += 10
+	}
+	if params.HealthGoal != "" && len(r.HealthTags) > 0 && strings.Contains(string(r.HealthTags), params.HealthGoal) {
+		score += 12
 	}
 
 	if r.CookTime <= 15 {
@@ -153,47 +260,83 @@ func (s *RecommendService) calcScore(r model.Recipe, params *RecommendParams) fl
 	return score
 }
 
-func (s *RecommendService) RecommendByIngredients(ingredients []string) ([]map[string]interface{}, error) {
+func (s *RecommendService) RecommendByIngredients(ingredients []string, mode string, limit int) (*IngredientRecommendPayload, error) {
 	recipes, err := s.recipeRepo.FindHot(50)
 	if err != nil {
 		return nil, err
 	}
 
-	var results []map[string]interface{}
+	normalized := normalizeIngredientList(ingredients, 20)
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+
+	var results []IngredientRecommendResult
 	ingredientSet := make(map[string]bool)
-	for _, ing := range ingredients {
+	for _, ing := range normalized {
 		ingredientSet[ing] = true
 	}
 
 	for _, r := range recipes {
-		recipeIngredients := recipeIngredientNames(r.Ingredients)
+		recipeIngredients := normalizeIngredientList(recipeIngredientNames(r.Ingredients), 100)
+		if len(recipeIngredients) == 0 {
+			continue
+		}
 
-		matchCount := 0
+		matched := make([]string, 0)
+		missing := make([]string, 0)
 		for _, ri := range recipeIngredients {
 			if ingredientSet[ri] {
-				matchCount++
+				matched = append(matched, ri)
+			} else {
+				missing = append(missing, ri)
 			}
 		}
 
-		if matchCount > 0 {
-			matchRate := float64(matchCount) / float64(len(recipeIngredients))
-			results = append(results, map[string]interface{}{
-				"recipe":     r,
-				"match_rate": matchRate,
+		if len(matched) > 0 {
+			matchRate := float64(len(matched)) / float64(len(recipeIngredients))
+			reason := "匹配到您的现有食材"
+			if len(missing) == 0 {
+				reason = "现有食材已足够制作"
+			} else if mode == "fridge" {
+				reason = "优先消耗冰箱现有食材"
+			}
+			results = append(results, IngredientRecommendResult{
+				Recipe:             r,
+				MatchRate:          matchRate,
+				MatchedIngredients: matched,
+				MissingIngredients: missing,
+				Reason:             reason,
 			})
 		}
 	}
 
 	sort.Slice(results, func(i, j int) bool {
-		return results[i]["match_rate"].(float64) > results[j]["match_rate"].(float64)
+		if results[i].MatchRate == results[j].MatchRate {
+			iMissing := len(results[i].MissingIngredients)
+			jMissing := len(results[j].MissingIngredients)
+			if mode == "fridge" && iMissing != jMissing {
+				return iMissing < jMissing
+			}
+			if results[i].Recipe.FavoriteCount == results[j].Recipe.FavoriteCount {
+				return results[i].Recipe.ViewCount > results[j].Recipe.ViewCount
+			}
+			return results[i].Recipe.FavoriteCount > results[j].Recipe.FavoriteCount
+		}
+		return results[i].MatchRate > results[j].MatchRate
 	})
 
-	return results, nil
+	if len(results) > limit {
+		results = results[:limit]
+	}
+
+	return &IngredientRecommendPayload{List: results, Total: len(results)}, nil
 }
 
 func (s *RecommendService) GenerateWeekMenu(params *RecommendParams) ([]map[string]interface{}, error) {
 	var weekMenu []map[string]interface{}
 	mealTypes := []string{"breakfast", "lunch", "dinner"}
+	usedIDs := make(map[uint]bool)
 
 	for day := 1; day <= 7; day++ {
 		dayMenu := map[string]interface{}{
@@ -204,9 +347,16 @@ func (s *RecommendService) GenerateWeekMenu(params *RecommendParams) ([]map[stri
 		for _, mealType := range mealTypes {
 			p := *params
 			p.MealType = mealType
+			p.ExcludeRecipeIDs = make([]uint, 0, len(usedIDs))
+			for id := range usedIDs {
+				p.ExcludeRecipeIDs = append(p.ExcludeRecipeIDs, id)
+			}
 			result, err := s.RecommendMenu(&p)
 			if err != nil {
 				continue
+			}
+			for _, dish := range result.Dishes {
+				usedIDs[dish.RecipeID] = true
 			}
 			dayMenu["meals"] = append(dayMenu["meals"].([]interface{}), result)
 		}

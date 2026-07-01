@@ -170,8 +170,10 @@
 import { computed, defineComponent, h, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/index'
+import { getPreferences } from '@/api/user'
 import { useShoppingStore } from '@/stores/shopping'
 import type { ShoppingItem } from '@/api/shopping'
+import type { UserPreferences } from '@/types/user'
 import kitchenBg from '@/assets/home/kitchen-bg.jpg'
 import smartMealImage from '@/assets/home/couple-dining.jpg'
 
@@ -212,6 +214,7 @@ const error = ref('')
 const weekMenuData = ref<WeekDay[]>([])
 const shoppingSaving = ref(false)
 const shoppingMessage = ref('')
+const userPreferences = ref<UserPreferences | null>(null)
 
 const weekDays = ref(buildWeekDays())
 
@@ -353,14 +356,18 @@ async function generateWeekMenu() {
   error.value = ''
   shoppingMessage.value = ''
   try {
+    if (!userPreferences.value) {
+      await loadUserPreferences()
+    }
+    const pref = userPreferences.value
     const res: any = await api.post('/recommend/week-menu', {
-      people_count: 2,
+      people_count: pref?.default_servings || 2,
       meal_type: 'lunch',
-      taste_preference: [],
-      health_goal: '',
-      avoid_ingredients: [],
+      taste_preference: pref?.taste_preference || [],
+      health_goal: pref?.health_goal || '',
+      avoid_ingredients: pref?.avoid_ingredients || [],
       existing_ingredients: [],
-      cook_time_preference: '',
+      cook_time_preference: pref?.cook_time_preference || '',
     })
     const list = Array.isArray(res) ? normalizeWeekMenu(res) : []
     weekMenuData.value = list
@@ -371,6 +378,24 @@ async function generateWeekMenu() {
     error.value = e?.message || '生成失败，请确认已登录并且后端服务正常运行。'
   } finally {
     loading.value = false
+  }
+}
+
+async function loadUserPreferences() {
+  try {
+    const pref: any = await getPreferences()
+    userPreferences.value = {
+      taste_preference: Array.isArray(pref?.taste_preference) ? pref.taste_preference : [],
+      health_goal: pref?.health_goal || '',
+      avoid_ingredients: Array.isArray(pref?.avoid_ingredients) ? pref.avoid_ingredients : [],
+      favorite_ingredients: Array.isArray(pref?.favorite_ingredients) ? pref.favorite_ingredients : [],
+      cook_time_preference: pref?.cook_time_preference || '',
+      default_servings: pref?.people_count || pref?.default_servings || 2,
+    }
+    shoppingMessage.value = '已读取你的口味、忌口和烹饪时间偏好。'
+  } catch {
+    userPreferences.value = null
+    shoppingMessage.value = '偏好读取失败，本次将使用默认参数生成。'
   }
 }
 
@@ -425,7 +450,9 @@ const EmptyArt = defineComponent({
   },
 })
 
-onMounted(() => {})
+onMounted(() => {
+  loadUserPreferences()
+})
 </script>
 
 <style scoped>

@@ -16,8 +16,11 @@ func NewRecipeService(recipeRepo *repository.RecipeRepo, categoryRepo *repositor
 	return &RecipeService{recipeRepo: recipeRepo, categoryRepo: categoryRepo, favRepo: favRepo, historyRepo: historyRepo}
 }
 
-func (s *RecipeService) ListRecipes(keyword string, categoryID uint, taste, cookTime, difficulty, healthTags string, page, pageSize int) ([]model.Recipe, int64, error) {
-	return s.recipeRepo.List(keyword, categoryID, taste, cookTime, difficulty, healthTags, page, pageSize)
+func (s *RecipeService) ListRecipes(keyword string, categoryID uint, taste, cookTime, difficulty, healthTags, sortBy string, page, pageSize int) ([]model.Recipe, int64, error) {
+	if sortBy != "hot" {
+		sortBy = "latest"
+	}
+	return s.recipeRepo.List(keyword, categoryID, taste, cookTime, difficulty, healthTags, sortBy, page, pageSize)
 }
 
 func (s *RecipeService) GetRecipeDetail(id uint, userID uint) (*model.Recipe, error) {
@@ -48,6 +51,16 @@ func (s *RecipeService) GetRandomRecipes(limit int) ([]model.Recipe, error) {
 	return s.recipeRepo.FindRandom(limit)
 }
 
+func (s *RecipeService) GetFilterOptions() (map[string]interface{}, error) {
+	tastes, err := s.recipeRepo.DistinctTastes()
+	if err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{
+		"tastes": tastes,
+	}, nil
+}
+
 func (s *RecipeService) CreateRecipe(recipe *model.Recipe) error {
 	return s.recipeRepo.Create(recipe)
 }
@@ -61,5 +74,5 @@ func (s *RecipeService) DeleteRecipe(id uint) error {
 }
 
 func (s *RecipeService) ListAllRecipes(keyword string, categoryID uint, status *int8, page, pageSize int) ([]model.Recipe, int64, error) {
-	return s.recipeRepo.List(keyword, categoryID, "", "", "", "", page, pageSize)
+	return s.recipeRepo.List(keyword, categoryID, "", "", "", "", "latest", page, pageSize)
 }

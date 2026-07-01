@@ -31,12 +31,31 @@ func (r *ShoppingRepo) FindByID(id uint) (*model.ShoppingList, error) {
 	return &list, err
 }
 
+func (r *ShoppingRepo) FindByIDAndUserID(id, userID uint) (*model.ShoppingList, error) {
+	var list model.ShoppingList
+	err := r.db.Where("id = ? AND user_id = ?", id, userID).First(&list).Error
+	return &list, err
+}
+
 func (r *ShoppingRepo) Create(list *model.ShoppingList) error {
 	return r.db.Create(list).Error
 }
 
 func (r *ShoppingRepo) Update(list *model.ShoppingList) error {
 	return r.db.Save(list).Error
+}
+
+func (r *ShoppingRepo) UpdateItemsByUserID(id, userID uint, items model.JSON) error {
+	result := r.db.Model(&model.ShoppingList{}).
+		Where("id = ? AND user_id = ?", id, userID).
+		Update("items_json", items)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 func (r *ShoppingRepo) Delete(id uint) error {

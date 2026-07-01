@@ -18,6 +18,7 @@ type Config struct {
 	JWT      JWTConfig      `mapstructure:"jwt"`
 	CORS     CORSConfig     `mapstructure:"cors"`
 	Upload   UploadConfig   `mapstructure:"upload"`
+	AI       AIConfig       `mapstructure:"ai"`
 }
 
 type AppConfig struct {
@@ -87,6 +88,14 @@ type UploadConfig struct {
 	MaxSize int64  `mapstructure:"max_size"`
 }
 
+type AIConfig struct {
+	BaseURL     string  `mapstructure:"base_url"`
+	APIKey      string  `mapstructure:"api_key"`
+	Model       string  `mapstructure:"model"`
+	TimeoutSecs int     `mapstructure:"timeout_secs"`
+	Temperature float64 `mapstructure:"temperature"`
+}
+
 func LoadConfig() (*Config, error) {
 	_ = gotenv.Load(".env")
 
@@ -114,8 +123,31 @@ func LoadConfig() (*Config, error) {
 	if v := os.Getenv("REDIS_PASSWORD"); v != "" {
 		cfg.Redis.Password = v
 	}
+	applyAIEnv(&cfg.AI)
 
 	return &cfg, nil
+}
+
+func applyAIEnv(cfg *AIConfig) {
+	if v := os.Getenv("AI_BASE_URL"); v != "" {
+		cfg.BaseURL = v
+	}
+	if v := os.Getenv("AI_API_KEY"); v != "" {
+		cfg.APIKey = v
+	}
+	if v := os.Getenv("AI_MODEL"); v != "" {
+		cfg.Model = v
+	}
+	if v := os.Getenv("AI_TIMEOUT_SECS"); v != "" {
+		if timeoutSecs, err := strconv.Atoi(v); err == nil {
+			cfg.TimeoutSecs = timeoutSecs
+		}
+	}
+	if v := os.Getenv("AI_TEMPERATURE"); v != "" {
+		if temperature, err := strconv.ParseFloat(v, 64); err == nil {
+			cfg.Temperature = temperature
+		}
+	}
 }
 
 func applyDatabaseEnv(cfg *DatabaseConfig) {

@@ -5,7 +5,7 @@
     <main class="recipe-phone">
       <header class="recipe-header">
         <p class="recipe-eyebrow">Recipe library</p>
-        <h1 class="recipe-title">菜谱</h1>
+        <h1 class="recipe-title">{{ pageTitle }}</h1>
 
         <form class="recipe-search" role="search" @submit.prevent="handleSearch">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -26,6 +26,17 @@
           </button>
         </form>
       </header>
+
+      <div v-if="activeTaste || activeSort === 'hot'" class="active-filters" aria-label="当前筛选">
+        <span v-if="activeTaste">口味：{{ activeTaste }}</span>
+        <span v-if="activeSort === 'hot'">最热排序</span>
+        <button type="button" @click="clearRouteFilters">清除筛选</button>
+      </div>
+
+      <nav class="sort-tabs" aria-label="排序方式">
+        <button type="button" :class="{ active: activeSort === 'latest' }" @click="selectSort('latest')">最新发布</button>
+        <button type="button" :class="{ active: activeSort === 'hot' }" @click="selectSort('hot')">最热菜谱</button>
+      </nav>
 
       <nav class="recipe-chips" aria-label="菜谱分类">
         <button
@@ -114,8 +125,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { getCategories, getRecipes, removeFavorite, toggleFavorite } from '@/api/recipe'
 import kitchenBg from '@/assets/home/kitchen-bg.jpg'
 
@@ -139,15 +150,25 @@ interface CategoryItem {
 }
 
 const router = useRouter()
+const route = useRoute()
 const keyword = ref('')
 const activeCategory = ref<number | undefined>(undefined)
+const activeTaste = ref('')
+const activeSort = ref<'latest' | 'hot'>('latest')
 const categories = ref<CategoryItem[]>([])
 const recipes = ref<RecipeListItem[]>([])
 const loading = ref(true)
+let syncingFromRoute = false
 
 const pageVars = computed(() => ({
   '--recipe-bg': `url(${kitchenBg})`,
 }))
+
+const pageTitle = computed(() => {
+  if (activeSort.value === 'hot') return '最热菜谱'
+  if (activeTaste.value) return `${activeTaste.value}菜谱`
+  return '菜谱'
+})
 
 function normalizeList(payload: any) {
   if (Array.isArray(payload)) return payload
@@ -160,6 +181,8 @@ async function fetchRecipes() {
     const res: any = await getRecipes({
       keyword: keyword.value || undefined,
       category_id: activeCategory.value,
+      taste: activeTaste.value || undefined,
+      sort: activeSort.value,
       page: 1,
       page_size: 24,
     })
@@ -181,16 +204,58 @@ async function fetchCategories() {
 }
 
 function handleSearch() {
-  fetchRecipes()
+  syncQueryAndFetch()
 }
 
 function clearSearch() {
   keyword.value = ''
-  fetchRecipes()
+  syncQueryAndFetch()
 }
 
 function selectCategory(categoryId?: number) {
   activeCategory.value = categoryId
+  syncQueryAndFetch()
+}
+
+function selectSort(sort: 'latest' | 'hot') {
+  activeSort.value = sort
+  syncQueryAndFetch()
+}
+
+function clearRouteFilters() {
+  activeTaste.value = ''
+  activeSort.value = 'latest'
+  syncQueryAndFetch()
+}
+
+function firstQueryValue(value: unknown) {
+  return Array.isArray(value) ? String(value[0] || '') : String(value || '')
+}
+
+function applyRouteQuery() {
+  syncingFromRoute = true
+  keyword.value = firstQueryValue(route.query.keyword)
+  activeTaste.value = firstQueryValue(route.query.taste)
+  const sort = firstQueryValue(route.query.sort)
+  activeSort.value = sort === 'hot' ? 'hot' : 'latest'
+  const category = Number(firstQueryValue(route.query.category_id))
+  activeCategory.value = Number.isFinite(category) && category > 0 ? category : undefined
+  syncingFromRoute = false
+}
+
+function buildQuery() {
+  const query: Record<string, string> = {}
+  if (keyword.value) query.keyword = keyword.value
+  if (activeCategory.value) query.category_id = String(activeCategory.value)
+  if (activeTaste.value) query.taste = activeTaste.value
+  if (activeSort.value !== 'latest') query.sort = activeSort.value
+  return query
+}
+
+function syncQueryAndFetch() {
+  if (!syncingFromRoute) {
+    router.replace({ path: '/recipes', query: buildQuery() })
+  }
   fetchRecipes()
 }
 
@@ -238,9 +303,18 @@ function isMediumRecipe(recipe: RecipeListItem) {
 }
 
 onMounted(() => {
+  applyRouteQuery()
   fetchCategories()
   fetchRecipes()
 })
+
+watch(
+  () => route.query,
+  () => {
+    applyRouteQuery()
+    fetchRecipes()
+  }
+)
 </script>
 
 <style scoped>
@@ -286,6 +360,59 @@ onMounted(() => {
 
 .recipe-header {
   margin-bottom: 24px;
+}
+
+.active-filters,
+.sort-tabs {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.active-filters::-webkit-scrollbar,
+.sort-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.active-filters span,
+.active-filters button,
+.sort-tabs button {
+  min-height: 42px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 999px;
+  background: rgba(255, 250, 240, 0.82);
+  color: #3a2a24;
+  box-shadow: 0 10px 20px rgba(98, 68, 42, 0.09);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.active-filters span,
+.active-filters button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+}
+
+.active-filters button,
+.sort-tabs button {
+  cursor: pointer;
+}
+
+.active-filters button {
+  color: var(--coral);
+}
+
+.sort-tabs button {
+  padding: 0 18px;
+}
+
+.sort-tabs button.active {
+  color: #fff;
+  background: linear-gradient(135deg, #ff7568, var(--coral));
 }
 
 .recipe-eyebrow {

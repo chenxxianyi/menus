@@ -6,6 +6,7 @@
       :to="tab.path"
       class="tab"
       :class="{ active: isActive(tab.path) }"
+      :aria-current="isActive(tab.path) ? 'page' : undefined"
     >
       <div class="tab-icon">
         <svg v-if="tab.icon === 'home'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -22,6 +23,11 @@
           <rect x="6" y="3" width="12" height="18" rx="2"/>
           <path d="M9 8h6M9 12h6M9 16h4"/>
           <path d="M8 3V1.8M16 3V1.8"/>
+        </svg>
+        <svg v-else-if="tab.icon === 'cart'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="9" cy="20" r="1"/>
+          <circle cx="18" cy="20" r="1"/>
+          <path d="M3 4h2l2.4 10.4a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L21 8H6"/>
         </svg>
         <svg v-else-if="tab.icon === 'user'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="7.5" r="4"/>
@@ -42,6 +48,7 @@ const tabs = [
   { path: '/', icon: 'home', label: '首页' },
   { path: '/recipes', icon: 'book', label: '菜谱' },
   { path: '/week-menu', icon: 'menu', label: '菜单推荐' },
+  { path: '/shopping-list', icon: 'cart', label: '购物清单' },
   { path: '/user', icon: 'user', label: '我的' },
 ]
 
@@ -76,6 +83,7 @@ function isActive(path: string) {
 .tab {
   flex: 1;
   min-width: 0;
+  min-height: 44px;
   height: 58px;
   display: flex;
   flex-direction: column;
@@ -127,7 +135,7 @@ function isActive(path: string) {
   }
 
   .tab-label {
-    font-size: 11px;
+    font-size: 10px;
   }
 }
 </style>

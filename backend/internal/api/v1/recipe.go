@@ -25,6 +25,7 @@ func (h *RecipeHandler) List(c *gin.Context) {
 	cookTime := c.Query("cook_time")
 	difficulty := c.Query("difficulty")
 	healthTags := c.Query("health_tags")
+	sortBy := c.DefaultQuery("sort", "latest")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 
@@ -35,7 +36,12 @@ func (h *RecipeHandler) List(c *gin.Context) {
 		pageSize = 10
 	}
 
-	recipes, total, err := h.recipeService.ListRecipes(keyword, uint(categoryID), taste, cookTime, difficulty, healthTags, page, pageSize)
+	if sortBy != "latest" && sortBy != "hot" {
+		response.Error(c, errcode.ErrParam, "排序参数错误")
+		return
+	}
+
+	recipes, total, err := h.recipeService.ListRecipes(keyword, uint(categoryID), taste, cookTime, difficulty, healthTags, sortBy, page, pageSize)
 	if err != nil {
 		response.Error(c, errcode.ErrServer, "查询失败")
 		return
@@ -59,4 +65,13 @@ func (h *RecipeHandler) Detail(c *gin.Context) {
 	}
 
 	response.Success(c, recipe)
+}
+
+func (h *RecipeHandler) FilterOptions(c *gin.Context) {
+	options, err := h.recipeService.GetFilterOptions()
+	if err != nil {
+		response.Error(c, errcode.ErrServer, "筛选选项获取失败")
+		return
+	}
+	response.Success(c, options)
 }

@@ -57,6 +57,7 @@ export interface RecipeQuery {
   keyword?: string
   category_id?: number
   taste?: string
+  sort?: 'latest' | 'hot'
   cook_time?: string
   difficulty?: string
   health_tags?: string
