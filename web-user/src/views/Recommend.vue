@@ -257,12 +257,45 @@
         <p>可以减少食材限制，或先在后台补充更多菜谱食材数据。</p>
       </section>
     </main>
+
+    <Teleport to="body">
+      <Transition name="leave-dialog">
+        <div
+          v-if="leaveDialogOpen"
+          class="leave-dialog-backdrop"
+          role="presentation"
+          @click.self="resolveLeaveConfirmation(false)"
+        >
+          <section
+            class="leave-dialog-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="leave-dialog-title"
+            aria-describedby="leave-dialog-description"
+            @keydown.esc="resolveLeaveConfirmation(false)"
+          >
+            <span class="leave-dialog-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3 3 20h18L12 3Z" /><path d="M12 9v5" /><path d="M12 17.5h.01" /></svg>
+            </span>
+            <div>
+              <p>推荐还没保存</p>
+              <h2 id="leave-dialog-title">要退出这次推荐吗？</h2>
+              <span id="leave-dialog-description">退出后，这组 AI 推荐和当前选择将消失，无法恢复。</span>
+            </div>
+            <div class="leave-dialog-actions">
+              <button ref="leaveStayButton" type="button" @click="resolveLeaveConfirmation(false)">继续查看</button>
+              <button type="button" @click="resolveLeaveConfirmation(true)">退出推荐</button>
+            </div>
+          </section>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { createCoupleOrder } from '@/api/couple'
 import { saveUserMenu } from '@/api/menu'
 import { getIngredientOptions, recommendByIngredients, recommendByScene, recommendSceneByAI } from '@/api/recommend'
@@ -303,6 +336,12 @@ let aiProgressTimer: ReturnType<typeof window.setInterval> | null = null
 const error = ref('')
 const message = ref('')
 const hasSubmitted = ref(false)
+const sceneMenuSaved = ref(false)
+const draftRestored = ref(false)
+const leaveDialogOpen = ref(false)
+const leaveStayButton = ref<HTMLButtonElement | null>(null)
+let leaveConfirmationPromise: Promise<boolean> | null = null
+let resolveLeaveDialog: ((confirmed: boolean) => void) | null = null
 const userPreference = ref({
   taste_preference: [] as string[],
   avoid_ingredients: [] as string[],
@@ -320,6 +359,21 @@ const pageVars = computed(() => ({ '--recommend-bg': `url(${kitchenBg})` }))
 const peopleOptions = [1, 2, 3, 4, 5, 6, 8, 10]
 const cookTimeOptions = ['15分钟内', '30分钟内', '45分钟内', '都可以']
 const healthGoalOptions = ['普通', '减脂', '增肌', '控糖', '儿童营养']
+const recommendDraftPrefix = 'recommend-draft:v1:'
+
+interface RecommendDraft {
+  version: 1
+  mode: RecommendMode
+  selectedScene: SceneOption | null
+  sceneResult: any
+  selectedIngredients: string[]
+  results: RecommendRecipeResult[]
+  hasSubmitted: boolean
+  temporaryPreference: typeof temporaryPreference.value
+  message: string
+  menuSaved: boolean
+  scrollY: number
+}
 
 const intentOptions: { mode: RecommendMode; title: string; description: string; path?: string }[] = [
   { mode: 'scene', title: '我不知道吃什么', description: '按快手、聚餐、减脂等场景推荐' },
@@ -421,6 +475,123 @@ const preferenceSummary = computed(() => {
   return parts.join(' · ')
 })
 
+const hasUnsavedSceneResult = computed(() => !!sceneResult.value && !sceneMenuSaved.value)
+
+function recommendDraftKey(value: RecommendMode = mode.value) {
+  return recommendDraftPrefix + value
+}
+
+function persistRecommendationDraft() {
+  if (!sceneResult.value && !results.value.length) return
+  const draft: RecommendDraft = {
+    version: 1,
+    mode: mode.value,
+    selectedScene: selectedScene.value,
+    sceneResult: sceneResult.value,
+    selectedIngredients: selectedIngredients.value,
+    results: results.value,
+    hasSubmitted: hasSubmitted.value,
+    temporaryPreference: temporaryPreference.value,
+    message: message.value,
+    menuSaved: sceneMenuSaved.value,
+    scrollY: window.scrollY,
+  }
+  try {
+    sessionStorage.setItem(recommendDraftKey(), JSON.stringify(draft))
+  } catch {
+    // 存储不可用时仍允许查看详情，当前页离开确认继续生效。
+  }
+}
+
+function clearRecommendationDraft(value: RecommendMode = mode.value) {
+  try {
+    sessionStorage.removeItem(recommendDraftKey(value))
+  } catch {
+    // 忽略浏览器禁用存储时的异常。
+  }
+}
+
+function restoreRecommendationDraft() {
+  try {
+    const raw = sessionStorage.getItem(recommendDraftKey())
+    if (!raw) return false
+    const draft = JSON.parse(raw) as Partial<RecommendDraft>
+    if (draft.version !== 1 || draft.mode !== mode.value || (!draft.sceneResult && !draft.results?.length)) {
+      clearRecommendationDraft()
+      return false
+    }
+
+    selectedScene.value = draft.selectedScene
+      ? scenes.find((scene) => scene.key === draft.selectedScene?.key) || draft.selectedScene
+      : null
+    sceneResult.value = draft.sceneResult || null
+    selectedIngredients.value = Array.isArray(draft.selectedIngredients) ? draft.selectedIngredients : []
+    results.value = Array.isArray(draft.results) ? draft.results : []
+    hasSubmitted.value = !!draft.hasSubmitted
+    temporaryPreference.value = {
+      ...temporaryPreference.value,
+      ...(draft.temporaryPreference || {}),
+    }
+    message.value = String(draft.message || '')
+    sceneMenuSaved.value = !!draft.menuSaved
+    draftRestored.value = true
+
+    nextTick(() => {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          window.scrollTo({ top: Number(draft.scrollY || 0), behavior: 'auto' })
+        })
+      })
+    })
+    return true
+  } catch {
+    clearRecommendationDraft()
+    return false
+  }
+}
+
+function requestLeaveConfirmation() {
+  if (leaveConfirmationPromise) return leaveConfirmationPromise
+  leaveDialogOpen.value = true
+  leaveConfirmationPromise = new Promise<boolean>((resolve) => {
+    resolveLeaveDialog = resolve
+  })
+  nextTick(() => leaveStayButton.value?.focus())
+  return leaveConfirmationPromise
+}
+
+function resolveLeaveConfirmation(confirmed: boolean) {
+  const resolve = resolveLeaveDialog
+  leaveDialogOpen.value = false
+  leaveConfirmationPromise = null
+  resolveLeaveDialog = null
+  resolve?.(confirmed)
+}
+
+function isRecipeDetailVisit(to: { name?: unknown; query?: Record<string, unknown> }) {
+  return to.name === 'RecipeDetail' && to.query?.from === 'recommend'
+}
+
+async function confirmRecommendationDeparture(to: { name?: unknown; query?: Record<string, unknown> }) {
+  if (isRecipeDetailVisit(to)) {
+    persistRecommendationDraft()
+    return true
+  }
+  if (hasUnsavedSceneResult.value) {
+    const confirmed = await requestLeaveConfirmation()
+    if (!confirmed) return false
+  }
+  clearRecommendationDraft()
+  return true
+}
+
+function handleBeforeUnload(event: BeforeUnloadEvent) {
+  if (!hasUnsavedSceneResult.value) return
+  clearRecommendationDraft()
+  event.preventDefault()
+  event.returnValue = ''
+}
+
 function normalizeName(name: string) {
   return name.trim().replace(/\s+/g, '')
 }
@@ -501,10 +672,12 @@ async function loadUserPreference() {
       cook_time_preference: String(pref?.cook_time_preference || '').trim(),
       people_count: Number(pref?.people_count || pref?.default_servings || 2) || 2,
     }
-    temporaryPreference.value = {
-      people_count: userPreference.value.people_count || 2,
-      health_goal: userPreference.value.health_goal,
-      cook_time_preference: userPreference.value.cook_time_preference,
+    if (!draftRestored.value) {
+      temporaryPreference.value = {
+        people_count: userPreference.value.people_count || 2,
+        health_goal: userPreference.value.health_goal,
+        cook_time_preference: userPreference.value.cook_time_preference,
+      }
     }
   } catch {
     // 偏好读取失败时使用默认参数，推荐流程仍可继续。
@@ -556,6 +729,8 @@ function chooseTaste(taste: string) {
 function chooseScene(scene: SceneOption) {
   selectedScene.value = scene
   sceneResult.value = null
+  sceneMenuSaved.value = false
+  clearRecommendationDraft()
   message.value = ''
   error.value = ''
 }
@@ -601,6 +776,8 @@ function stopAIProgress() {
 async function submitScene() {
   if (!selectedScene.value || loading.value || aiSceneLoading.value) return
   loading.value = true
+  sceneMenuSaved.value = false
+  clearRecommendationDraft()
   error.value = ''
   message.value = ''
   try {
@@ -622,6 +799,8 @@ async function submitScene() {
 async function submitAIScene() {
   if (!selectedScene.value || loading.value || aiSceneLoading.value) return
   aiSceneLoading.value = true
+  sceneMenuSaved.value = false
+  clearRecommendationDraft()
   startAIProgress()
   error.value = ''
   message.value = ''
@@ -646,6 +825,8 @@ async function submitAIScene() {
 function clearSceneResult() {
   selectedScene.value = null
   sceneResult.value = null
+  sceneMenuSaved.value = false
+  clearRecommendationDraft()
   error.value = ''
   message.value = ''
 }
@@ -662,7 +843,12 @@ function openRecipe(id?: number) {
       entity_id: id,
       payload: { mode: mode.value },
     })
-    router.push('/recipes/' + id)
+    persistRecommendationDraft()
+    router.push({
+      name: 'RecipeDetail',
+      params: { id },
+      query: { from: 'recommend', recommendMode: mode.value },
+    })
   }
 }
 
@@ -790,6 +976,8 @@ async function saveSceneMenu() {
       payload: { source: sceneResult.value?.source || mode.value, title },
     })
     message.value = '菜单已保存到“我的菜单”。'
+    sceneMenuSaved.value = true
+    persistRecommendationDraft()
   } catch (err) {
     error.value = err instanceof Error ? err.message : '保存菜单失败，请稍后重试。'
   } finally {
@@ -832,10 +1020,12 @@ async function sendDishToCouple(recipeId?: number, name?: string) {
 watch(mode, () => {
   stopAIProgress()
   aiProgressStep.value = 0
+  draftRestored.value = false
   error.value = ''
   message.value = ''
   results.value = []
   sceneResult.value = null
+  sceneMenuSaved.value = false
   hasSubmitted.value = false
   selectedScene.value = null
   if (mode.value === 'fridge') {
@@ -849,10 +1039,25 @@ watch(mode, () => {
   }
 }, { immediate: true })
 
+onBeforeRouteLeave((to) => confirmRecommendationDeparture(to))
+
+onBeforeRouteUpdate((to) => {
+  const nextMode = String(to.params.mode || 'scene')
+  if (to.name === 'Recommend' && nextMode === mode.value) return true
+  return confirmRecommendationDeparture(to)
+})
+
 onMounted(() => {
+  restoreRecommendationDraft()
   loadIngredientOptions()
   loadTasteOptions()
   loadUserPreference()
+  window.addEventListener('beforeunload', handleBeforeUnload)
+})
+
+onBeforeUnmount(() => {
+  stopAIProgress()
+  window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 </script>
 
@@ -869,7 +1074,7 @@ onMounted(() => {
   overflow-x: clip;
   color: var(--text);
   background: linear-gradient(180deg, rgba(255, 246, 231, 0.42), rgba(249, 228, 199, 0.58)), var(--recommend-bg) center top / cover fixed;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: var(--font-body);
 }
 
 .recommend-warm-overlay {
@@ -1496,8 +1701,11 @@ button:disabled {
 
 .scene-summary h2 {
   margin: 8px 0 14px;
+  font-family: var(--font-story);
   font-size: 21px;
-  line-height: 1.3;
+  font-weight: 500;
+  line-height: 1.55;
+  letter-spacing: 0.015em;
 }
 
 .scene-result-actions {
@@ -1588,6 +1796,113 @@ button:disabled {
   margin: 0;
   color: var(--sub);
   line-height: 1.5;
+}
+
+.leave-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(47, 35, 28, 0.42);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.leave-dialog-card {
+  width: min(100%, 354px);
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  border-radius: 26px;
+  color: #342720;
+  background: rgba(255, 250, 241, 0.97);
+  box-shadow: 0 26px 70px rgba(75, 43, 24, 0.28);
+  font-family: var(--font-body);
+  text-align: center;
+}
+
+.leave-dialog-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 14px;
+  border-radius: 18px;
+  color: #e95645;
+  background: #ffe8df;
+}
+
+.leave-dialog-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.leave-dialog-card p {
+  margin: 0 0 5px;
+  color: #d95a48;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.leave-dialog-card h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 850;
+  line-height: 1.3;
+}
+
+.leave-dialog-card div > span {
+  display: block;
+  margin-top: 10px;
+  color: #806f64;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.leave-dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.leave-dialog-actions button {
+  min-height: 46px;
+  border: 0;
+  border-radius: 15px;
+  color: #4a3931;
+  background: #f2e8dd;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.leave-dialog-actions button:last-child {
+  color: #fff;
+  background: linear-gradient(135deg, #ff7469, #e95645);
+  box-shadow: 0 10px 24px rgba(233, 86, 69, 0.22);
+}
+
+.leave-dialog-enter-active,
+.leave-dialog-leave-active {
+  transition: opacity 180ms ease;
+}
+
+.leave-dialog-enter-active .leave-dialog-card,
+.leave-dialog-leave-active .leave-dialog-card {
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), opacity 180ms ease;
+}
+
+.leave-dialog-enter-from,
+.leave-dialog-leave-to {
+  opacity: 0;
+}
+
+.leave-dialog-enter-from .leave-dialog-card,
+.leave-dialog-leave-to .leave-dialog-card {
+  opacity: 0;
+  transform: translateY(10px) scale(0.97);
 }
 
 @keyframes spin {
