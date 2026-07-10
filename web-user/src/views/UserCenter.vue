@@ -11,7 +11,6 @@
 
         <div class="profile-copy">
           <h1>{{ displayName }}</h1>
-          <p>{{ joinText }}</p>
         </div>
 
         <button class="edit-btn" type="button" aria-label="编辑个人资料" @click="handleEditProfile">
@@ -79,7 +78,6 @@
           <header class="edit-header">
             <div>
               <h2>编辑资料</h2>
-              <p>修改后会同步到你的账号信息</p>
             </div>
             <button class="dialog-close" type="button" aria-label="关闭" @click="closeEditDialog">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
@@ -104,7 +102,6 @@
               </span>
               <span class="avatar-upload-copy">
                 <strong>{{ uploadingAvatar ? '上传中...' : '选择头像图片' }}</strong>
-                <small>支持 JPG、PNG、WebP</small>
               </span>
             </label>
           </div>
@@ -195,15 +192,6 @@ const userInitial = computed(() => {
   const name = displayName.value.trim()
   if (!name) return 'U'
   return name.charAt(0).toUpperCase()
-})
-
-const joinText = computed(() => {
-  const createdAt = userStore.userInfo?.created_at
-  if (!createdAt) return '欢迎回来，今天也好好吃饭'
-  const joinedTime = new Date(createdAt).getTime()
-  if (!Number.isFinite(joinedTime)) return '欢迎回来，今天也好好吃饭'
-  const days = Math.max(1, Math.floor((Date.now() - joinedTime) / 86400000) + 1)
-  return `加入食刻推荐第 ${days} 天`
 })
 
 function statValue(key: keyof ProfileStats) {
@@ -521,14 +509,6 @@ const ProfileIcon = defineComponent({
   white-space: nowrap;
 }
 
-.profile-copy p {
-  margin: 11px 0 0;
-  color: var(--sub);
-  font-size: 16px;
-  font-weight: 690;
-  line-height: 1.2;
-}
-
 .edit-btn {
   width: 54px;
   height: 54px;
@@ -616,14 +596,6 @@ const ProfileIcon = defineComponent({
   font-size: 24px;
   font-weight: 900;
   line-height: 1.1;
-}
-
-.edit-header p {
-  margin: 8px 0 0;
-  color: var(--sub);
-  font-size: 14px;
-  font-weight: 620;
-  line-height: 1.4;
 }
 
 .dialog-close {
@@ -744,13 +716,6 @@ const ProfileIcon = defineComponent({
   color: #2e241f;
   font-size: 17px;
   font-weight: 850;
-  line-height: 1;
-}
-
-.avatar-upload-copy small {
-  color: var(--sub);
-  font-size: 13px;
-  font-weight: 620;
   line-height: 1;
 }
 
@@ -1032,10 +997,6 @@ const ProfileIcon = defineComponent({
 
   .profile-copy h1 {
     font-size: 25px;
-  }
-
-  .profile-copy p {
-    font-size: 15px;
   }
 
   .edit-btn {

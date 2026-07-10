@@ -1,18 +1,5 @@
 <template>
   <main class="shopping-shell" :style="pageVars">
-    <div class="status-bar" aria-hidden="true">
-      <span>9:41</span>
-      <div class="status-icons">
-        <span class="cell-bars"><i></i><i></i><i></i><i></i></span>
-        <svg class="wifi" viewBox="0 0 24 18">
-          <path d="M2.8 5.8a14.5 14.5 0 0 1 18.4 0" />
-          <path d="M6.8 9.8a8.6 8.6 0 0 1 10.4 0" />
-          <path d="M10.3 13.5a3 3 0 0 1 3.4 0" />
-        </svg>
-        <span class="battery"></span>
-      </div>
-    </div>
-
     <header class="page-header" aria-label="页面顶部">
       <button class="nav-btn back" type="button" aria-label="返回" @click="router.back()">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -21,7 +8,6 @@
       </button>
       <div>
         <h1 class="page-title">购物清单</h1>
-        <p class="page-subtitle">根据本周菜单生成</p>
       </div>
       <button class="nav-btn share" type="button" aria-label="分享购物清单" @click="shareShoppingList">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -59,8 +45,7 @@
           </svg>
           想吃什么
         </span>
-        <h2>输入菜品，合并采购食材</h2>
-        <p>例如输入“小鸡炖蘑菇”，系统会匹配真实菜谱并把食材合并到当前清单。</p>
+        <h2>按菜品生成食材</h2>
       </div>
       <form class="dish-generator-form" @submit.prevent="generateDishShoppingList">
         <input
@@ -105,7 +90,6 @@
           <path d="M9 7h8v8" />
         </svg>
       </button>
-      <p v-else class="dish-generator-tip">优先使用真实菜谱食材；没有菜谱时可用 AI 编写并保存到菜谱库。</p>
     </section>
 
     <nav class="category-tabs" aria-label="食材分类筛选">
@@ -181,10 +165,7 @@
             </svg>
             <span>{{ areAllFilteredSelected ? '取消全选' : '全选当前分类' }}</span>
           </button>
-          <div class="delete-selection-count">
-            <span>轻触食材进行选择</span>
-            <strong>{{ selectedDeleteCount }} 项已选</strong>
-          </div>
+          <strong class="delete-selection-count">{{ selectedDeleteCount }} 项已选</strong>
         </div>
       </Transition>
 
@@ -267,7 +248,7 @@
           </svg>
         </div>
         <h2>暂无食材</h2>
-        <p>{{ isDeleteMode ? '当前分类没有可以删除的食材' : '可以手动添加需要采购的食材' }}</p>
+        <p>{{ isDeleteMode ? '当前分类为空' : '手动添加需要采购的食材' }}</p>
         <button v-if="!isDeleteMode" class="empty-add" type="button" @click="openAddIngredientDialog">添加食材</button>
       </section>
 
@@ -279,14 +260,6 @@
         <span>手动添加食材</span>
       </button>
     </section>
-
-    <p class="shared-tip">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
-        <path d="m9 12 2 2 4-5" />
-      </svg>
-      <span>绑定后可一起规划菜单，共享购物清单</span>
-    </p>
 
     <div class="toast" :class="{ show: !!toastText }">{{ toastText }}</div>
   </main>
@@ -305,7 +278,6 @@
           role="dialog"
           aria-modal="true"
           aria-labelledby="add-dialog-title"
-          aria-describedby="add-dialog-description"
         >
           <div class="add-dialog-handle" aria-hidden="true"></div>
 
@@ -319,7 +291,6 @@
             </span>
             <div class="add-dialog-copy">
               <h2 id="add-dialog-title">添加食材</h2>
-              <p id="add-dialog-description">记下需要采购的食材，买菜时更省心</p>
             </div>
             <button
               class="add-dialog-close"
@@ -355,10 +326,6 @@
               <span class="ingredient-count" aria-hidden="true">{{ ingredientName.length }}/12</span>
             </div>
 
-            <p class="add-category-tip">
-              <span aria-hidden="true"></span>
-              将添加到“{{ addCategoryLabel }}”分类
-            </p>
             <p v-if="addDialogError" class="add-dialog-error" role="alert">{{ addDialogError }}</p>
 
             <div class="add-dialog-actions">
@@ -562,7 +529,6 @@ const addTargetKey = computed<Exclude<GroupKey, 'all'>>(() => {
   return activeCategory.value
 })
 
-const addCategoryLabel = computed(() => GROUP_META[addTargetKey.value].title)
 const canAddIngredient = computed(() => ingredientName.value.trim().length > 0 && !addingIngredient.value)
 const canGenerateDishList = computed(() => dishName.value.trim().length > 0 && !generatingDishList.value)
 const selectedDeleteCount = computed(() => selectedDeleteIndices.value.size)
@@ -1036,13 +1002,11 @@ onUnmounted(() => {
   -webkit-backdrop-filter: blur(4px) saturate(1.12);
 }
 
-.status-bar,
 .page-header,
 .summary-card,
 .dish-generator-card,
 .category-tabs,
-.list-card,
-.shared-tip {
+.list-card {
   position: relative;
   z-index: 1;
 }
@@ -1060,81 +1024,6 @@ svg {
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-
-.status-bar {
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 4px;
-  color: #1e1713;
-  font-size: 17px;
-  font-weight: 850;
-  line-height: 1;
-}
-
-.status-icons {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.cell-bars {
-  display: inline-flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 18px;
-}
-
-.cell-bars i {
-  width: 4px;
-  border-radius: 999px;
-  background: currentColor;
-}
-
-.cell-bars i:nth-child(1) { height: 7px; }
-.cell-bars i:nth-child(2) { height: 10px; }
-.cell-bars i:nth-child(3) { height: 13px; }
-.cell-bars i:nth-child(4) { height: 16px; }
-
-.wifi {
-  width: 23px;
-  height: 17px;
-}
-
-.wifi path {
-  stroke-width: 2.7;
-}
-
-.battery {
-  position: relative;
-  width: 30px;
-  height: 16px;
-  border: 2px solid currentColor;
-  border-radius: 5px;
-}
-
-.battery::before {
-  content: "";
-  position: absolute;
-  right: -5px;
-  top: 4px;
-  width: 3px;
-  height: 6px;
-  border-radius: 0 2px 2px 0;
-  background: currentColor;
-}
-
-.battery::after {
-  content: "";
-  position: absolute;
-  left: 3px;
-  top: 3px;
-  width: 20px;
-  height: 6px;
-  border-radius: 2px;
-  background: currentColor;
 }
 
 .page-header {
@@ -1179,20 +1068,12 @@ svg {
 }
 
 .page-title {
-  margin: 13px 0 0;
+  margin: 0;
   color: var(--text);
   font-size: 28px;
   font-weight: 950;
   line-height: 1;
   letter-spacing: 0;
-}
-
-.page-subtitle {
-  margin: 14px 0 0;
-  color: #6f5d51;
-  font-size: 16px;
-  font-weight: 650;
-  line-height: 1;
 }
 
 .summary-card {
@@ -1304,18 +1185,10 @@ svg {
   line-height: 1.16;
 }
 
-.dish-generator-copy p,
-.dish-generator-tip,
 .dish-generator-error {
   margin: 0;
   font-size: 13px;
   line-height: 1.48;
-}
-
-.dish-generator-copy p,
-.dish-generator-tip {
-  color: var(--sub);
-  font-weight: 620;
 }
 
 .dish-generator-form {
@@ -1383,7 +1256,6 @@ svg {
   animation: spin 0.72s linear infinite;
 }
 
-.dish-generator-tip,
 .dish-generator-error {
   margin-top: 11px;
 }
@@ -1965,26 +1837,12 @@ svg {
 
 .delete-selection-count {
   min-width: 0;
-  display: grid;
-  gap: 4px;
-  color: var(--sub);
-  white-space: nowrap;
-  text-align: right;
-}
-
-.delete-selection-count strong {
   color: var(--coral);
   font-size: 14px;
   font-weight: 880;
   line-height: 1;
-}
-
-.delete-selection-count span {
-  overflow: hidden;
-  color: var(--sub);
-  font-size: 11px;
-  font-weight: 650;
-  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
 }
 
 .delete-actions-enter-active,
@@ -2254,14 +2112,6 @@ svg {
   line-height: 1.1;
 }
 
-.add-dialog-copy p {
-  margin: 7px 0 0;
-  color: var(--dialog-sub);
-  font-size: 13px;
-  font-weight: 620;
-  line-height: 1.4;
-}
-
 .add-dialog-close {
   width: 44px;
   height: 44px;
@@ -2352,26 +2202,6 @@ svg {
   pointer-events: none;
 }
 
-.add-category-tip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 12px 2px 0;
-  color: var(--dialog-sub);
-  font-size: 13px;
-  font-weight: 650;
-  line-height: 1.4;
-}
-
-.add-category-tip > span {
-  width: 7px;
-  height: 7px;
-  flex: 0 0 7px;
-  border-radius: 50%;
-  background: #7ea36a;
-  box-shadow: 0 0 0 4px rgba(126, 163, 106, 0.12);
-}
-
 .add-dialog-error {
   margin: 10px 2px 0;
   color: #c93f35;
@@ -2451,27 +2281,6 @@ svg {
 .add-dialog-leave-to .delete-dialog {
   opacity: 0;
   transform: translateY(18px) scale(0.98);
-}
-
-.shared-tip {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin: 25px 0 4px;
-  color: var(--sub);
-  font-size: 15px;
-  font-weight: 650;
-  line-height: 1.35;
-  text-align: center;
-}
-
-.shared-tip svg {
-  width: 23px;
-  height: 23px;
-  flex: 0 0 23px;
-  color: var(--sage);
-  stroke-width: 2.2;
 }
 
 .toast {

@@ -57,10 +57,6 @@
             智能周菜单
           </span>
           <h2>{{ weekMenuData.length ? `${activeDayName}这样吃` : '一键安排三餐' }}</h2>
-          <p>
-            {{ weekMenuData.length ? '查看当天三餐、整理采购清单，照着菜谱轻松做饭' : '根据菜谱库智能搭配均衡三餐' }}<br />
-            {{ weekMenuData.length ? '安排省心，吃得更好' : '告别每天纠结，轻松吃得美味又健康' }}
-          </p>
         </div>
         <svg class="leaf-mark" viewBox="0 0 48 32" fill="currentColor" aria-hidden="true">
           <path d="M24 29C19 17 9 18 3 21c3 7 11 11 21 8Z" />
@@ -109,7 +105,6 @@
       <section v-if="loading" class="glass-card state-card">
         <div class="loading-spinner"></div>
         <h2>正在生成周菜单</h2>
-        <p>正在根据菜谱库搭配一周三餐，请稍等一下。</p>
       </section>
 
       <section v-else-if="error" class="glass-card state-card">
@@ -131,7 +126,6 @@
       <section v-else-if="!weekMenuData.length" class="glass-card state-card">
         <EmptyArt />
         <h2>还没有周菜单</h2>
-        <p>点击下方按钮，系统将为你生成一周三餐<br />营养均衡，安排省心，吃得更好</p>
         <button class="primary-btn" type="button" @click="generateWeekMenu">
           生成一周菜单
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
@@ -158,9 +152,7 @@
           </div>
 
           <p v-if="shoppingMessage" class="inline-message">{{ shoppingMessage }}</p>
-          <p v-if="isGeneratedButEmpty" class="data-note">
-            已经生成餐次，但后端菜谱库没有返回菜品。请先确认数据库里有启用状态的菜谱数据。
-          </p>
+          <p v-if="isGeneratedButEmpty" class="data-note">没有返回菜品，可重新生成。</p>
 
           <div class="meal-plan-list">
             <article v-for="meal in normalizedCurrentMeals" :key="meal.type" class="plan-meal-card">
@@ -187,7 +179,7 @@
                 </div>
               </template>
 
-              <p v-else class="meal-empty-text">后端暂未返回{{ mealTypeLabel(meal.type) }}菜品，可以重新生成试试。</p>
+              <p v-else class="meal-empty-text">暂无菜品</p>
             </article>
           </div>
         </section>
@@ -786,7 +778,7 @@ onMounted(() => {
 }
 
 .smart-card {
-  min-height: 248px;
+  min-height: 210px;
   margin-top: 33px;
   padding: 29px 22px 23px;
 }
@@ -839,20 +831,12 @@ onMounted(() => {
 }
 
 .smart-card h2 {
-  margin: 27px 0 17px;
+  margin: 27px 0 0;
   color: #30221d;
   font-size: clamp(35px, 9vw, 43px);
   font-weight: 950;
   line-height: 1.1;
   letter-spacing: 0;
-}
-
-.smart-card p {
-  margin: 0;
-  color: #806c5f;
-  font-size: 16px;
-  font-weight: 560;
-  line-height: 1.72;
 }
 
 .leaf-mark {
@@ -874,7 +858,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 1fr 1px 1fr;
   align-items: center;
-  margin-top: 28px;
+  margin-top: 22px;
   border-radius: 21px;
   background: rgba(255, 250, 240, 0.74);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
@@ -957,7 +941,7 @@ onMounted(() => {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  min-height: 295px;
+  min-height: 240px;
   display: grid;
   place-items: center;
   align-content: center;
@@ -1083,17 +1067,6 @@ onMounted(() => {
   line-height: 1.16;
 }
 
-.state-card p {
-  position: relative;
-  z-index: 2;
-  max-width: 304px;
-  margin: 0;
-  color: #806d62;
-  font-size: 16px;
-  font-weight: 560;
-  line-height: 1.72;
-}
-
 .primary-btn {
   position: relative;
   z-index: 2;
@@ -1102,7 +1075,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 11px;
-  margin-top: 24px;
+  margin-top: 18px;
   padding: 0 35px;
   border: 0;
   border-radius: 999px;

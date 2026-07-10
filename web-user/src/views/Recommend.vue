@@ -8,7 +8,6 @@
           <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" /></svg>
         </button>
         <div>
-          <p>{{ modeMeta.eyebrow }}</p>
           <h1>{{ modeMeta.title }}</h1>
         </div>
       </header>
@@ -19,7 +18,6 @@
           {{ modeMeta.badge }}
         </span>
         <h2>{{ modeMeta.heading }}</h2>
-        <p>{{ modeMeta.description }}</p>
       </section>
 
       <section class="intent-panel" aria-label="推荐入口">
@@ -31,17 +29,15 @@
           @click="goIntent(intent)"
         >
           <strong>{{ intent.title }}</strong>
-          <span>{{ intent.description }}</span>
         </button>
       </section>
 
       <section class="preference-panel" aria-label="本次推荐偏好">
         <div class="panel-title">
           <div>
-            <span>本次偏好</span>
             <h2>{{ preferenceSummary }}</h2>
           </div>
-          <button type="button" @click="router.push('/user/preferences')">长期修改</button>
+          <button type="button" @click="router.push('/user/preferences')">偏好</button>
         </div>
         <div class="preference-controls">
           <label>
@@ -69,7 +65,6 @@
           <span v-for="taste in userPreference.taste_preference.slice(0, 4)" :key="'taste-' + taste">{{ taste }}</span>
           <span v-for="avoid in userPreference.avoid_ingredients.slice(0, 3)" :key="'avoid-' + avoid">不吃{{ avoid }}</span>
         </div>
-        <p v-else class="preference-empty">还没有长期偏好，可先用本次调整生成，再去完善偏好。</p>
       </section>
 
       <section v-if="isIngredientMode" class="panel">
@@ -100,7 +95,7 @@
             {{ name }}
             <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" /></svg>
           </button>
-          <span v-if="!selectedIngredients.length" class="hint-chip">至少添加 1 项，最多 20 项</span>
+          <span v-if="!selectedIngredients.length" class="hint-chip">添加食材</span>
         </div>
 
         <div class="option-grid">
@@ -135,7 +130,6 @@
         <div v-if="tasteOptions.length" class="taste-grid">
           <button v-for="taste in tasteOptions" :key="taste" type="button" @click="chooseTaste(taste)">
             <strong>{{ taste }}</strong>
-            <span>查看数据库中标记为“{{ taste }}”的菜谱</span>
           </button>
         </div>
         <p v-else class="data-empty">数据库暂无口味选项，请先在后台维护菜谱口味字段。</p>
@@ -155,7 +149,6 @@
             @click="chooseScene(scene)"
           >
             <strong>{{ scene.title }}</strong>
-            <span>{{ scene.description }}</span>
           </button>
         </div>
         <div class="scene-actions">
@@ -177,14 +170,12 @@
             {{ step }}
           </span>
         </div>
-        <p class="scene-ai-hint">AI 会读取你的偏好设置，生成没吃过也适合你的新菜，并同步到菜谱库。</p>
       </section>
 
       <section v-else class="panel shortcut-panel">
         <div class="panel-title">
           <h2>{{ modeMeta.title }}</h2>
         </div>
-        <p>{{ modeMeta.description }}</p>
         <button class="submit-btn" type="button" @click="runShortcutMode">{{ mode === 'week' ? '去安排本周菜单' : '去情侣点餐' }}</button>
       </section>
 
@@ -202,7 +193,6 @@
               <h2>{{ recipeTitle(item.recipe) }}</h2>
               <span>{{ Math.round(item.match_rate * 100) }}%</span>
             </div>
-            <p>{{ item.reason || '根据食材匹配推荐' }}</p>
             <div class="match-row">
               <strong>已匹配</strong>
               <span>{{ item.matched_ingredients.join('、') || '暂无' }}</span>
@@ -245,7 +235,6 @@
           <div>
             <strong>{{ dish.name || '未命名菜谱' }}</strong>
             <p>{{ dish.type || '推荐菜' }} · {{ dish.cook_time ? dish.cook_time + '分钟' : '时间待补充' }} · {{ dish.difficulty || '难度待补充' }}</p>
-            <small>{{ dish.steps_summary || dish.reason || '符合当前场景和偏好' }}</small>
           </div>
           <button class="couple-dish-btn" type="button" :disabled="coupleLoading" @click.stop="sendDishToCouple(dish.recipe_id, dish.name)">和 TA 吃</button>
           <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></svg>
@@ -375,13 +364,13 @@ interface RecommendDraft {
   scrollY: number
 }
 
-const intentOptions: { mode: RecommendMode; title: string; description: string; path?: string }[] = [
-  { mode: 'scene', title: '我不知道吃什么', description: '按快手、聚餐、减脂等场景推荐' },
-  { mode: 'ingredients', title: '用现有食材做饭', description: '录入手头食材，看看能做什么' },
-  { mode: 'taste', title: '按口味找菜', description: '今天想吃清淡、香辣还是家常' },
-  { mode: 'week', title: '安排本周菜单', description: '提前规划一周三餐', path: '/week-menu' },
-  { mode: 'new', title: '换点没吃过的新菜', description: 'AI 按偏好生成并保存菜谱' },
-  { mode: 'couple', title: '我和 TA 一起决定', description: '同步想吃的菜，生成合意菜单', path: '/couple' },
+const intentOptions: { mode: RecommendMode; title: string; path?: string }[] = [
+  { mode: 'scene', title: '不知道吃什么' },
+  { mode: 'ingredients', title: '现有食材' },
+  { mode: 'taste', title: '按口味找' },
+  { mode: 'week', title: '本周菜单', path: '/week-menu' },
+  { mode: 'new', title: '新菜灵感' },
+  { mode: 'couple', title: '和 TA 吃', path: '/couple' },
 ]
 
 const aiProgressSteps = ['读取偏好', '生成菜谱', '校验食材', '保存菜谱库']
@@ -402,49 +391,42 @@ const modeMeta = computed(() => {
       title: '用现有食材做饭',
       badge: '食材匹配',
       heading: '把手头食材变成一顿饭',
-      description: '选择已有食材，系统会按匹配度展示菜谱，并告诉你还缺什么。',
     },
     taste: {
       eyebrow: 'Taste finder',
       title: '按口味找菜',
       badge: '口味筛选',
       heading: '今天想吃什么味道？',
-      description: '选择一个口味后进入菜谱列表，刷新和返回都会保留筛选条件。',
     },
     scene: {
       eyebrow: 'Meal decision',
       title: '我不知道吃什么',
       badge: '场景搭配',
       heading: '让场景替你做选择',
-      description: '快手、聚餐、减脂、宴客、夜宵，不同场景用不同推荐规则。',
     },
     fridge: {
       eyebrow: 'Fridge rescue',
       title: '冰箱库存',
       badge: '剩菜拯救',
       heading: '先消耗冰箱里的库存',
-      description: '录入现有食材，优先推荐能直接做或只差少量食材的菜谱。',
     },
     new: {
       eyebrow: 'AI new dish',
       title: '换点没吃过的新菜',
       badge: 'AI 生成',
       heading: '按你的偏好生成新菜',
-      description: '选择一个生活场景，AI 会生成适合你的新菜并同步到菜谱库。',
     },
     week: {
       eyebrow: 'Weekly plan',
       title: '安排本周菜单',
       badge: '周菜单',
       heading: '提前安排一周怎么吃',
-      description: '生成一周菜单，并继续生成整周采购清单。',
     },
     couple: {
       eyebrow: 'Together',
       title: '我和 TA 一起决定',
       badge: '情侣点餐',
       heading: '两个人一起选菜',
-      description: '同步双方想吃的菜，生成合意菜单和采购清单。',
     },
   }
   return map[mode.value]
@@ -1103,13 +1085,6 @@ onBeforeUnmount(() => {
   gap: 14px;
 }
 
-.recommend-topbar p {
-  margin: 0 0 5px;
-  color: #c26d3d;
-  font-size: 14px;
-  font-weight: 850;
-}
-
 .recommend-topbar h1 {
   margin: 0;
   font-size: 29px;
@@ -1160,7 +1135,7 @@ svg {
 
 .hero-card {
   margin-top: 24px;
-  padding: 24px;
+  padding: 20px;
 }
 
 .hero-badge {
@@ -1183,29 +1158,22 @@ svg {
 }
 
 .hero-card h2 {
-  margin: 17px 0 10px;
-  font-size: 27px;
+  margin: 15px 0 0;
+  font-size: 25px;
   font-weight: 950;
   line-height: 1.12;
 }
 
-.hero-card p {
-  margin: 0;
-  color: var(--sub);
-  font-size: 15px;
-  line-height: 1.6;
-}
-
 .intent-panel {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
   margin-top: 14px;
 }
 
 .intent-panel button {
-  min-height: 82px;
-  padding: 13px;
+  min-height: 58px;
+  padding: 10px;
   border: 1px solid rgba(255, 255, 255, 0.68);
   border-radius: 18px;
   background: rgba(255, 250, 240, 0.78);
@@ -1223,18 +1191,9 @@ svg {
 
 .intent-panel strong {
   display: block;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 950;
-  line-height: 1.15;
-}
-
-.intent-panel span {
-  display: block;
-  margin-top: 6px;
-  color: var(--sub);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.36;
+  line-height: 1.2;
 }
 
 .panel {
@@ -1243,8 +1202,8 @@ svg {
 }
 
 .preference-panel {
-  margin-top: 14px;
-  padding: 18px;
+  margin-top: 12px;
+  padding: 15px;
 }
 
 .panel-title {
@@ -1257,7 +1216,7 @@ svg {
 
 .panel-title h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 950;
 }
 
@@ -1328,14 +1287,6 @@ svg {
   background: rgba(226, 235, 203, 0.72);
   font-size: 12px;
   font-weight: 850;
-}
-
-.preference-empty {
-  margin: 12px 0 0;
-  color: #8a7162;
-  font-size: 13px;
-  font-weight: 720;
-  line-height: 1.5;
 }
 
 .ingredient-input {
@@ -1468,14 +1419,6 @@ button:disabled {
   border-top-color: var(--coral);
 }
 
-.scene-ai-hint {
-  margin: 12px 2px 0;
-  color: #8a7162;
-  font-size: 13px;
-  font-weight: 750;
-  line-height: 1.5;
-}
-
 .ai-progress {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1532,8 +1475,8 @@ button:disabled {
 
 .taste-grid button,
 .scene-list button {
-  min-height: 82px;
-  padding: 16px;
+  min-height: 58px;
+  padding: 14px;
   border: 1px solid rgba(255, 255, 255, 0.66);
   border-radius: 20px;
   text-align: left;
@@ -1545,17 +1488,8 @@ button:disabled {
 .taste-grid strong,
 .scene-list strong {
   display: block;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 950;
-}
-
-.taste-grid span,
-.scene-list span {
-  display: block;
-  margin-top: 7px;
-  color: var(--sub);
-  font-size: 13px;
-  line-height: 1.42;
 }
 
 .scene-list button.active {
@@ -1771,7 +1705,7 @@ button:disabled {
 }
 
 .dish-card small {
-  display: block;
+  display: none;
   margin-top: 5px;
   color: #8a7162;
   font-size: 12px;
@@ -1923,11 +1857,14 @@ button:disabled {
   }
 
   .taste-grid,
-  .intent-panel,
   .preference-controls,
   .result-actions,
   .scene-result-actions {
     grid-template-columns: 1fr;
+  }
+
+  .intent-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .ai-progress {

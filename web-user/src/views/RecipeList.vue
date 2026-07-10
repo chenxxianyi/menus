@@ -4,7 +4,6 @@
 
     <main class="recipe-phone">
       <header class="recipe-header">
-        <p class="recipe-eyebrow">Recipe library</p>
         <h1 class="recipe-title">{{ pageTitle }}</h1>
 
         <form class="recipe-search" role="search" @submit.prevent="handleSearch">
@@ -95,7 +94,6 @@
 
           <div class="recipe-card-body">
             <h2>{{ recipeTitle(recipe) }}</h2>
-            <p>{{ recipeDescription(recipe) }}</p>
             <div class="recipe-meta">
               <span>
                 <svg class="clock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -118,7 +116,6 @@
 
       <section v-else class="recipe-empty">
         <h2>没有找到符合条件的菜谱</h2>
-        <p>{{ keyword ? '可以让 AI 先写一份菜谱并保存到菜谱库。' : '可以换个关键词，或在后台维护更多菜谱数据。' }}</p>
         <button
           v-if="keyword"
           class="empty-ai-btn"
@@ -318,10 +315,6 @@ function recipeTitle(recipe: RecipeListItem) {
   return recipe.title || '未命名菜谱'
 }
 
-function recipeDescription(recipe: RecipeListItem) {
-  return recipe.description || recipe.category_name || recipe.taste || '后端暂无描述'
-}
-
 function recipeTime(recipe: RecipeListItem) {
   return recipe.cook_time ? `${recipe.cook_time} 分钟` : '时间待补充'
 }
@@ -392,7 +385,7 @@ watch(
 }
 
 .recipe-header {
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
 .active-filters,
@@ -448,15 +441,6 @@ watch(
   background: linear-gradient(135deg, #ff7568, var(--coral));
 }
 
-.recipe-eyebrow {
-  margin: 0 0 8px;
-  color: var(--orange);
-  font-size: 17px;
-  font-weight: 800;
-  line-height: 1.2;
-  letter-spacing: 0;
-}
-
 .recipe-title {
   margin: 0;
   color: #30221d;
@@ -471,7 +455,7 @@ watch(
   display: flex;
   align-items: center;
   gap: 15px;
-  margin-top: 27px;
+  margin-top: 22px;
   padding: 0 18px 0 22px;
   border: 1px solid rgba(255, 255, 255, 0.7);
   border-radius: 999px;
@@ -530,7 +514,7 @@ watch(
 .recipe-chips {
   display: flex;
   gap: 14px;
-  margin: 32px -21px 0;
+  margin: 24px -21px 0;
   padding: 0 21px 3px;
   overflow-x: auto;
   scrollbar-width: none;
@@ -668,7 +652,7 @@ watch(
 }
 
 .recipe-card-body {
-  min-height: 126px;
+  min-height: 86px;
   display: flex;
   flex-direction: column;
   padding: 14px 16px 16px;
@@ -684,25 +668,12 @@ watch(
   letter-spacing: 0;
 }
 
-.recipe-card p {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  min-height: 43px;
-  margin: 9px 0 12px;
-  color: var(--sub);
-  font-size: 15px;
-  font-weight: 560;
-  line-height: 1.42;
-}
-
 .recipe-meta {
   display: grid;
   grid-template-columns: 1fr 1px 1fr;
   align-items: center;
   gap: 11px;
-  margin-top: auto;
+  margin-top: 12px;
   color: #554238;
   font-size: 14.5px;
   font-weight: 760;
@@ -768,13 +739,6 @@ watch(
   color: #33241e;
   font-size: 21px;
   font-weight: 900;
-}
-
-.recipe-empty p {
-  margin: 0;
-  color: #7a6a5f;
-  font-size: 14px;
-  line-height: 1.5;
 }
 
 .empty-ai-btn {

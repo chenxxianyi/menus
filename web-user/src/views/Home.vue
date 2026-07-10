@@ -7,7 +7,7 @@
         <div class="greeting">
           <div class="greeting-copy">
             <h1>早安，今天吃什么？</h1>
-            <p>用心规划每一餐，好好吃饭，好好生活</p>
+            <p>今天也好好吃饭</p>
           </div>
         </div>
         <button class="calendar-btn" type="button" aria-label="打开一周菜单" @click="router.push('/week-menu')">
@@ -23,7 +23,6 @@
       <section class="glass-card decision-panel" aria-labelledby="decision-title">
         <div class="section-title decision-title">
           <div>
-            <span>Meal decision</span>
             <h2 id="decision-title">今天怎么吃</h2>
           </div>
           <button type="button" @click="router.push('/recommend/scene')">更多</button>
@@ -52,14 +51,14 @@
         <div class="chef-copy">
           <span class="chef-kicker"><svg viewBox="0 0 24 24"><path d="M6 16h12M8 16v2.5a2.5 2.5 0 0 0 2.5 2.5h3a2.5 2.5 0 0 0 2.5-2.5V16"/><path d="M8 12a4 4 0 0 1 8 0M7 13h10"/></svg>今日主厨建议</span>
           <h2>{{ todayRecipe ? recipeTitle(todayRecipe) : '暂无今日推荐' }}</h2>
-          <p>{{ todayRecipe ? recipeDescription(todayRecipe) : emptyText }}</p>
+          <p v-if="todayRecipe && recipeDescription(todayRecipe)">{{ recipeDescription(todayRecipe) }}</p>
           <span v-if="todayRecipe" class="sage-badge"><i></i>{{ activeMeal }} · {{ recipeDifficulty(todayRecipe) }}</span>
           <div v-if="todayRecipe" class="chef-actions">
-            <button type="button" @click.stop="goToRecipe(todayRecipe)">查看做法</button>
-            <button type="button" @click.stop="router.push('/recommend/scene')">换一组</button>
-            <button type="button" :disabled="shoppingActionLoading" @click.stop="addRecipeToShopping(todayRecipe)">
+            <button class="chef-action-primary" type="button" :disabled="shoppingActionLoading" @click.stop="addRecipeToShopping(todayRecipe)">
               {{ shoppingActionLoading ? '加入中...' : '加入清单' }}
             </button>
+            <button class="chef-action-secondary" type="button" @click.stop="goToRecipe(todayRecipe)">查看做法</button>
+            <button class="chef-action-secondary" type="button" @click.stop="router.push('/recommend/scene')">换一组</button>
           </div>
         </div>
       </section>
@@ -83,13 +82,12 @@
             <span><svg viewBox="0 0 24 24"><path d="M4 20V9M10 20V4M16 20v-8M22 20H2"/></svg>{{ recipeDifficulty(menuRecipe) }}</span>
             <span><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>{{ recipePeople(menuRecipe) }}</span>
           </div>
-          <p>{{ recipeDescription(menuRecipe) }}</p>
           <button class="primary-pill note-btn" type="button" @click.stop="goToRecipe(menuRecipe)">查看做法 <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
         </div>
       </section>
 
       <section v-else class="glass-card empty-card">
-        <h2>今日推荐菜单</h2>
+        <h2>今日菜单</h2>
         <p>{{ loading ? '正在读取后端推荐...' : emptyText }}</p>
       </section>
 
@@ -112,7 +110,6 @@
         <div class="couple-mask" aria-hidden="true"></div>
         <div class="couple-copy">
           <h2>和 TA 一起决定</h2>
-          <p>同步想吃的菜<br />生成合意菜单和采购清单</p>
           <button class="primary-pill" type="button" @click.stop="router.push('/couple')">去选菜 <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
         </div>
       </section>
@@ -185,7 +182,7 @@ const todayRecommend = ref<HomeRecipe | null>(null)
 const hotRecipes = ref<HomeRecipe[]>([])
 
 const mealTabs = ['早餐', '午餐', '晚餐', '夜宵']
-const emptyText = '后端暂无推荐菜谱，请先在后台维护菜谱数据。'
+const emptyText = '暂无推荐菜谱'
 
 const homeVars = computed(() => ({
   '--home-bg': 'url(' + kitchenBg + ')',
@@ -197,9 +194,9 @@ const menuRecipe = computed(() => hotRecipes.value[0] || todayRecommend.value ||
 const popularRecipes = computed(() => hotRecipes.value.slice(0, 2))
 
 const mainActions: QuickAction[] = [
-  { label: '快速推荐', description: '不知道吃什么', icon: 'scene', tone: 'sage', path: '/recommend/scene' },
-  { label: '用现有食材', description: '看看家里能做什么', icon: 'ingredients', tone: 'tomato', path: '/recommend/ingredients' },
-  { label: '安排本周', description: '生成一周菜单', icon: 'week', tone: 'wheat', path: '/week-menu' },
+  { label: '快速推荐', description: '马上决定', icon: 'scene', tone: 'sage', path: '/recommend/scene' },
+  { label: '现有食材', description: '冰箱优先', icon: 'ingredients', tone: 'tomato', path: '/recommend/ingredients' },
+  { label: '本周菜单', description: '三餐安排', icon: 'week', tone: 'wheat', path: '/week-menu' },
 ]
 
 const secondaryActions: QuickAction[] = [
@@ -222,7 +219,7 @@ function recipeTitle(recipe: HomeRecipe) {
 }
 
 function recipeDescription(recipe: HomeRecipe) {
-  return recipe.description || '后端暂无描述，点击查看详细做法。'
+  return recipe.description || recipe.category_name || recipe.taste || ''
 }
 
 function recipeTime(recipe: HomeRecipe) {
@@ -585,7 +582,12 @@ svg {
 .couple-copy {
   position: relative;
   z-index: 1;
-  padding: 25px 0 0 29px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 25px 0 24px 29px;
+  box-sizing: border-box;
 }
 
 .couple-copy h2 {
@@ -602,11 +604,8 @@ svg {
   font-weight: 500;
 }
 
-.couple-copy p {
-  margin: 9px 0 10px;
-  color: #735f53;
-  font-size: 15px;
-  line-height: 1.38;
+.couple-copy .primary-pill {
+  margin-top: auto;
 }
 
 .primary-pill {
@@ -688,8 +687,9 @@ svg {
 .chef-copy {
   position: relative;
   z-index: 2;
+  min-height: 260px;
   max-width: 58%;
-  padding: 24px 0 0 27px;
+  padding: 24px 0 72px 27px;
 }
 
 .chef-kicker {
@@ -727,10 +727,16 @@ svg {
 }
 
 .chef-actions {
-  display: flex;
-  flex-wrap: wrap;
+  position: absolute;
+  left: 27px;
+  right: -128px;
+  bottom: 22px;
+  display: grid;
+  grid-template-columns: minmax(92px, auto) auto auto;
+  align-items: center;
+  justify-content: start;
   gap: 8px;
-  margin-top: 14px;
+  margin: 0;
 }
 
 .chef-actions button {
@@ -745,10 +751,15 @@ svg {
   cursor: pointer;
 }
 
-.chef-actions button:last-child {
+.chef-actions .chef-action-primary {
+  min-width: 96px;
   color: #fff;
   background: linear-gradient(135deg, var(--coral), var(--coral-2));
   box-shadow: 0 9px 18px rgba(218, 64, 50, 0.2);
+}
+
+.chef-actions .chef-action-secondary {
+  min-width: 72px;
 }
 
 .chef-actions button:disabled {
@@ -878,7 +889,11 @@ svg {
 
 .note-copy {
   position: relative;
+  min-height: 134px;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   padding: 1px 0 0;
 }
 
@@ -936,9 +951,10 @@ svg {
 }
 
 .note-btn {
-  min-height: 38px;
-  float: right;
-  padding: 0 18px;
+  min-height: 44px;
+  align-self: flex-end;
+  margin-top: auto;
+  padding: 0 19px;
   font-size: 14px;
 }
 
@@ -1158,6 +1174,13 @@ svg {
   .chef-copy {
     max-width: 61%;
     padding-left: 22px;
+  }
+
+  .chef-actions {
+    left: 22px;
+    right: -112px;
+    grid-template-columns: minmax(88px, auto) auto auto;
+    gap: 7px;
   }
 
   .chef-copy h2 {
