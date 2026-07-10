@@ -16,10 +16,12 @@ withDefaults(defineProps<{
 
 <style scoped>
 .glass-card {
-  border: 1px solid var(--color-rule);
-  border-radius: var(--r-lg);
-  background: var(--color-surface);
-  box-shadow: 0 8px 28px var(--color-shadow);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-surface);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
 }
 
 .glass-card--green { background: var(--color-green-soft); border-color: var(--color-green-soft); }
@@ -28,5 +30,5 @@ withDefaults(defineProps<{
 .glass-card--blue { background: var(--color-blue-soft); border-color: var(--color-blue-soft); }
 .glass-card--yellow { background: var(--color-yellow-soft); border-color: var(--color-yellow-soft); }
 .glass-card--red { background: var(--color-red-soft); border-color: var(--color-red-soft); }
-.glass-card--sm { padding: var(--sp-4); border-radius: var(--r-md); }
+.glass-card--sm { padding: var(--sp-4); border-radius: var(--card-radius-inner); }
 </style>

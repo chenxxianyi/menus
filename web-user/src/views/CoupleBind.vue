@@ -492,16 +492,12 @@ svg {
   min-height: 560px;
   margin-top: 28px;
   padding: 34px 24px 28px;
-  border: 1px solid var(--border);
-  border-radius: 34px;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.76), transparent 36%),
-    rgba(255, 250, 240, 0.78);
-  box-shadow:
-    0 22px 50px rgba(80, 50, 30, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.86);
-  backdrop-filter: blur(22px) saturate(1.1);
-  -webkit-backdrop-filter: blur(22px) saturate(1.1);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius-feature);
+  background: var(--card-surface);
+  box-shadow: var(--card-shadow-feature);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
 }
 
 .heart-art {
@@ -929,9 +925,9 @@ svg {
   width: min(100%, 320px);
   padding: 22px 22px 24px;
   border: 1px solid rgba(255, 255, 255, 0.66);
-  border-radius: 28px;
-  background: rgba(255, 250, 240, 0.88);
-  box-shadow: 0 22px 48px rgba(80, 50, 30, 0.2);
+  border-radius: var(--card-radius-feature);
+  background: var(--card-surface-strong);
+  box-shadow: var(--card-shadow-dialog);
   text-align: center;
 }
 
@@ -1005,7 +1001,7 @@ svg {
 
   .bind-card {
     padding: 30px 18px 26px;
-    border-radius: 30px;
+    border-radius: var(--card-radius-feature);
   }
 
   .tab-btn {

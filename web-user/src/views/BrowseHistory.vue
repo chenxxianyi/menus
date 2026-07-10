@@ -438,16 +438,12 @@ svg {
 .group-card {
   overflow: hidden;
   padding: 22px 20px;
-  border: 1px solid rgba(255, 255, 255, 0.62);
-  border-radius: 32px;
-  background:
-    radial-gradient(circle at 10% 0%, rgba(255, 255, 255, 0.48), transparent 42%),
-    rgba(255, 250, 240, 0.82);
-  box-shadow:
-    var(--shadow),
-    inset 0 1px 0 rgba(255, 255, 255, 0.86);
-  backdrop-filter: blur(22px) saturate(1.1);
-  -webkit-backdrop-filter: blur(22px) saturate(1.1);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-surface);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
 }
 
 .group-title-row {
@@ -624,14 +620,12 @@ svg {
   margin: 26px auto 0;
   padding: 14px 24px;
   border: 1px solid rgba(255, 255, 255, 0.62);
-  border-radius: 28px;
+  border-radius: var(--card-radius);
   color: var(--coral);
   background:
     radial-gradient(circle at 10% 0%, rgba(255, 255, 255, 0.45), transparent 42%),
     rgba(255, 250, 240, 0.82);
-  box-shadow:
-    0 18px 42px rgba(80, 50, 30, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.84);
+  box-shadow: var(--card-shadow);
   backdrop-filter: blur(20px) saturate(1.08);
   -webkit-backdrop-filter: blur(20px) saturate(1.08);
   transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
@@ -692,12 +686,10 @@ svg {
 .empty-card {
   margin-top: 8px;
   padding: 44px 24px 34px;
-  border: 1px solid rgba(255, 255, 255, 0.62);
-  border-radius: 32px;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.5), transparent 42%),
-    rgba(255, 250, 240, 0.84);
-  box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.84);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-surface);
+  box-shadow: var(--card-shadow);
   text-align: center;
   backdrop-filter: blur(22px) saturate(1.1);
   -webkit-backdrop-filter: blur(22px) saturate(1.1);
@@ -825,7 +817,7 @@ svg {
 
   .group-card {
     padding: 21px 18px;
-    border-radius: 30px;
+    border-radius: var(--card-radius);
   }
 
   .recipe-row {

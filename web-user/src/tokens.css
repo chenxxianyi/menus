@@ -91,6 +91,19 @@
   --r-xl:  20px;
   --r-full: 9999px;
 
+  /* ── App card hierarchy ── */
+  --card-radius-inner: 14px;
+  --card-radius: 20px;
+  --card-radius-feature: 24px;
+  --card-surface: rgba(255, 252, 246, 0.9);
+  --card-surface-strong: rgba(255, 253, 249, 0.97);
+  --card-surface-muted: rgba(255, 255, 255, 0.46);
+  --card-border: rgba(112, 79, 56, 0.12);
+  --card-shadow: 0 10px 30px rgba(84, 55, 35, 0.1);
+  --card-shadow-feature: 0 14px 34px rgba(84, 55, 35, 0.13);
+  --card-shadow-dialog: 0 24px 60px rgba(64, 42, 28, 0.22);
+  --card-blur: 16px;
+
   /* ── Motion ── */
   --ease:     cubic-bezier(0.25, 0.1, 0.25, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -106,7 +119,7 @@
   --max-w:       480px;
 
   /* ── Shadow ── */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-sm: 0 2px 8px rgba(84, 55, 35, 0.04);
+  --shadow-md: 0 6px 18px rgba(84, 55, 35, 0.08);
+  --shadow-lg: var(--card-shadow);
 }

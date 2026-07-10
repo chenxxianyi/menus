@@ -453,14 +453,10 @@ svg {
   gap: 16px;
   padding: 12px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.62);
-  border-radius: 30px;
-  background:
-    radial-gradient(circle at 5% 0%, rgba(255, 255, 255, 0.42), transparent 42%),
-    rgba(255, 250, 240, 0.8);
-  box-shadow:
-    0 18px 42px rgba(80, 50, 30, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-surface);
+  box-shadow: var(--card-shadow);
   cursor: pointer;
   backdrop-filter: blur(20px) saturate(1.08);
   -webkit-backdrop-filter: blur(20px) saturate(1.08);
@@ -618,12 +614,10 @@ svg {
 .empty-card {
   margin-top: 24px;
   padding: 42px 24px 34px;
-  border: 1px solid rgba(255, 255, 255, 0.62);
-  border-radius: 30px;
-  background: rgba(255, 250, 240, 0.82);
-  box-shadow:
-    0 18px 42px rgba(80, 50, 30, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-surface);
+  box-shadow: var(--card-shadow);
   text-align: center;
   backdrop-filter: blur(20px) saturate(1.08);
   -webkit-backdrop-filter: blur(20px) saturate(1.08);

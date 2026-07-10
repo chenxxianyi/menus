@@ -633,18 +633,17 @@ svg {
 .glass-card,
 .tips-card,
 .state-card {
-  border: 1px solid rgba(255, 255, 255, 0.68);
-  background: var(--cream);
-  box-shadow:
-    0 18px 42px rgba(80, 50, 28, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(20px) saturate(1.08);
-  -webkit-backdrop-filter: blur(20px) saturate(1.08);
+  border: 1px solid var(--card-border);
+  background: var(--card-surface);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
 }
 
 .hero-card {
   overflow: hidden;
-  border-radius: 34px;
+  border-radius: var(--card-radius-feature);
+  box-shadow: var(--card-shadow-feature);
 }
 
 .hero-media {
@@ -734,7 +733,7 @@ svg {
   font-size: clamp(34px, 9vw, 44px);
   font-weight: 950;
   line-height: 1.02;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
 }
 
 .hero-copy p {
@@ -750,7 +749,7 @@ svg {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   overflow: hidden;
   margin-top: 17px;
-  border-radius: 28px;
+  border-radius: var(--card-radius);
 }
 
 .stats-card > div {
@@ -796,7 +795,7 @@ svg {
   gap: 9px;
   margin-top: 17px;
   padding: 15px;
-  border-radius: 24px;
+  border-radius: var(--card-radius);
 }
 
 .tag-card span {
@@ -810,7 +809,7 @@ svg {
 .state-card {
   margin-top: 17px;
   padding: 22px;
-  border-radius: 30px;
+  border-radius: var(--card-radius);
 }
 
 .feedback-card {

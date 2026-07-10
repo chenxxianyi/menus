@@ -423,7 +423,7 @@ const ProfileIcon = defineComponent({
   --coral: #e95645;
   --line: rgba(120, 100, 80, 0.14);
   --border: rgba(255, 255, 255, 0.62);
-  --shadow: 0 18px 40px rgba(80, 50, 30, 0.15);
+  --shadow: var(--card-shadow);
   position: relative;
   min-height: 100vh;
   min-height: 100dvh;
@@ -534,12 +534,12 @@ const ProfileIcon = defineComponent({
 }
 
 .glass-card {
-  border: 1px solid var(--border);
-  border-radius: 30px;
-  background: var(--cream);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-surface);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(20px) saturate(1.08);
-  -webkit-backdrop-filter: blur(20px) saturate(1.08);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
 }
 
 .edit-mask {
@@ -564,13 +564,9 @@ const ProfileIcon = defineComponent({
   justify-self: center;
   overflow-y: auto;
   padding: 10px 22px 24px;
-  border-radius: 30px;
-  background:
-    radial-gradient(circle at 15% 0%, rgba(255, 255, 255, 0.54), transparent 42%),
-    rgba(255, 250, 240, 0.94);
-  box-shadow:
-    0 24px 70px rgba(80, 50, 30, 0.24),
-    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  border-radius: var(--card-radius-feature);
+  background: var(--card-surface-strong);
+  box-shadow: var(--card-shadow-dialog);
   overscroll-behavior: contain;
 }
 
@@ -656,13 +652,11 @@ const ProfileIcon = defineComponent({
   gap: 16px;
   padding: 14px 16px;
   border: 1px dashed rgba(160, 120, 90, 0.28);
-  border-radius: 20px;
+  border-radius: var(--card-radius-inner);
   color: var(--text);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.56), rgba(255, 250, 242, 0.42));
-  box-shadow:
-    0 10px 24px rgba(80, 50, 30, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  box-shadow: none;
   cursor: pointer;
   transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, opacity 180ms ease;
 }

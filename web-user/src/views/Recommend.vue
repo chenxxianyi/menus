@@ -1125,17 +1125,19 @@ svg {
 .result-card,
 .scene-result,
 .empty-panel {
-  border: 1px solid rgba(255, 255, 255, 0.66);
-  border-radius: 28px;
-  background: var(--cream);
-  box-shadow: 0 18px 40px rgba(80, 50, 30, 0.15);
-  backdrop-filter: blur(20px) saturate(1.08);
-  -webkit-backdrop-filter: blur(20px) saturate(1.08);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-surface);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
 }
 
 .hero-card {
   margin-top: 24px;
   padding: 20px;
+  border-radius: var(--card-radius-feature);
+  box-shadow: var(--card-shadow-feature);
 }
 
 .hero-badge {
@@ -1174,19 +1176,18 @@ svg {
 .intent-panel button {
   min-height: 58px;
   padding: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.68);
-  border-radius: 18px;
-  background: rgba(255, 250, 240, 0.78);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius-inner);
+  background: var(--card-surface-muted);
   color: #3b2b24;
-  box-shadow: 0 10px 22px rgba(80, 50, 30, 0.1);
   text-align: left;
   cursor: pointer;
 }
 
 .intent-panel button.active {
   border-color: rgba(233, 86, 69, 0.42);
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: inset 0 0 0 2px rgba(233, 86, 69, 0.18), 0 12px 24px rgba(80, 50, 30, 0.12);
+  background: var(--card-surface-strong);
+  box-shadow: inset 0 0 0 2px rgba(233, 86, 69, 0.16);
 }
 
 .intent-panel strong {
@@ -1261,7 +1262,7 @@ svg {
   min-width: 0;
   padding: 0 9px;
   border: 1px solid rgba(143, 111, 86, 0.14);
-  border-radius: 14px;
+  border-radius: var(--card-radius-inner);
   color: #3b2b24;
   background: rgba(255, 255, 255, 0.66);
   font: inherit;
@@ -1300,7 +1301,7 @@ svg {
 .submit-btn {
   min-height: 48px;
   border: 0;
-  border-radius: 16px;
+  border-radius: var(--card-radius-inner);
   font-size: 16px;
 }
 
@@ -1477,8 +1478,8 @@ button:disabled {
 .scene-list button {
   min-height: 58px;
   padding: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.66);
-  border-radius: 20px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius-inner);
   text-align: left;
   color: #33241e;
   background: rgba(255, 255, 255, 0.58);
@@ -1615,7 +1616,7 @@ button:disabled {
 .result-actions button {
   min-height: 44px;
   border: 0;
-  border-radius: 15px;
+  border-radius: var(--card-radius-inner);
   color: #3a2a24;
   background: rgba(255, 255, 255, 0.7);
   font-weight: 900;
@@ -1652,7 +1653,7 @@ button:disabled {
 .scene-result-actions button {
   min-height: 42px;
   border: 0;
-  border-radius: 15px;
+  border-radius: var(--card-radius-inner);
   color: #3a2a24;
   background: rgba(255, 255, 255, 0.72);
   font-weight: 900;
@@ -1748,10 +1749,10 @@ button:disabled {
   width: min(100%, 354px);
   padding: 24px;
   border: 1px solid rgba(255, 255, 255, 0.88);
-  border-radius: 26px;
+  border-radius: var(--card-radius-feature);
   color: #342720;
   background: rgba(255, 250, 241, 0.97);
-  box-shadow: 0 26px 70px rgba(75, 43, 24, 0.28);
+  box-shadow: var(--card-shadow-dialog);
   font-family: var(--font-body);
   text-align: center;
 }
@@ -1804,7 +1805,7 @@ button:disabled {
 .leave-dialog-actions button {
   min-height: 46px;
   border: 0;
-  border-radius: 15px;
+  border-radius: var(--card-radius-inner);
   color: #4a3931;
   background: #f2e8dd;
   font-size: 14px;

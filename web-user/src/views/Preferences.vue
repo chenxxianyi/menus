@@ -356,7 +356,7 @@ onUnmounted(() => {
   --brown-soft: #ffebd2;
   --sage: #8fa783;
   --border: rgba(255, 255, 255, 0.62);
-  --shadow: 0 18px 42px rgba(80, 50, 30, 0.15);
+  --shadow: var(--card-shadow);
   position: relative;
   width: min(100%, 430px);
   min-height: calc(100vh + var(--tab-h, 64px) + var(--safe-bottom, 34px) + 160px);
@@ -554,16 +554,12 @@ svg {
   margin-top: 22px;
   padding: 24px 22px;
   overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 30px;
-  background:
-    radial-gradient(circle at 12% 0%, rgba(255, 255, 255, 0.54), transparent 42%),
-    rgba(255, 250, 240, 0.8);
-  box-shadow:
-    var(--shadow),
-    inset 0 1px 0 rgba(255, 255, 255, 0.84);
-  backdrop-filter: blur(20px) saturate(1.08);
-  -webkit-backdrop-filter: blur(20px) saturate(1.08);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-surface);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
 }
 
 .card-title-row {
@@ -622,7 +618,7 @@ svg {
 .taste-chip {
   min-width: 0;
   height: 58px;
-  border-radius: 17px;
+  border-radius: var(--card-radius-inner);
   font-size: 18px;
 }
 
@@ -649,7 +645,7 @@ svg {
   height: 54px;
   flex: 0 0 auto;
   padding: 0 20px;
-  border-radius: 17px;
+  border-radius: var(--card-radius-inner);
   font-size: 17px;
 }
 
@@ -668,7 +664,7 @@ svg {
   margin-top: 22px;
   padding: 0 16px 0 18px;
   border: 1px solid rgba(120, 90, 65, 0.16);
-  border-radius: 18px;
+  border-radius: var(--card-radius-inner);
   background: rgba(255, 255, 255, 0.4);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
@@ -753,7 +749,7 @@ svg {
   margin-top: 24px;
   padding: 0 22px;
   border: 1px solid rgba(120, 90, 65, 0.14);
-  border-radius: 999px;
+  border-radius: var(--card-radius-inner);
   background: rgba(255, 255, 255, 0.34);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.52);
 }
@@ -809,7 +805,7 @@ svg {
   min-height: 54px;
   margin-top: 18px;
   border: 1px solid rgba(120, 90, 65, 0.16);
-  border-radius: 18px;
+  border-radius: var(--card-radius-inner);
   color: #6b5142;
   background: rgba(255, 250, 240, 0.72);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
@@ -875,7 +871,7 @@ svg {
 
   .settings-card {
     padding: 23px 18px;
-    border-radius: 28px;
+    border-radius: var(--card-radius);
   }
 
   .taste-grid {

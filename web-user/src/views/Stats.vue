@@ -109,10 +109,10 @@ const router = useRouter()
   gap: 18px;
   margin-top: 28px;
   padding: 36px 28px;
-  border: 1px solid rgba(255, 255, 255, 0.68);
-  border-radius: 32px;
-  background: rgba(255, 250, 240, 0.78);
-  box-shadow: 0 22px 46px rgba(80, 50, 30, 0.15);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-surface);
+  box-shadow: var(--card-shadow);
   text-align: center;
   backdrop-filter: blur(20px) saturate(1.08);
   -webkit-backdrop-filter: blur(20px) saturate(1.08);
@@ -123,7 +123,7 @@ const router = useRouter()
   height: 96px;
   display: grid;
   place-items: center;
-  border-radius: 30px;
+  border-radius: var(--card-radius-feature);
   color: #6f8b65;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(241, 233, 208, 0.66)),

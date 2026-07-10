@@ -40,13 +40,14 @@ defineEmits<{
   overflow: hidden;
   cursor: pointer;
   border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  background: var(--color-surface);
-  transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+  border-radius: var(--card-radius-inner);
+  background: var(--card-surface-strong);
+  transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
 
 .recipe-card:hover {
   border-color: var(--color-border-med);
+  box-shadow: var(--shadow-sm);
 }
 
 .recipe-card:active { transform: translateY(1px); }

@@ -407,11 +407,10 @@ watch(
 .sort-tabs button {
   min-height: 42px;
   flex: 0 0 auto;
-  border: 1px solid rgba(255, 255, 255, 0.62);
+  border: 1px solid var(--card-border);
   border-radius: 999px;
-  background: rgba(255, 250, 240, 0.82);
+  background: var(--card-surface);
   color: #3a2a24;
-  box-shadow: 0 10px 20px rgba(98, 68, 42, 0.09);
   font-size: 14px;
   font-weight: 850;
 }
@@ -457,14 +456,12 @@ watch(
   gap: 15px;
   margin-top: 22px;
   padding: 0 18px 0 22px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 999px;
-  background: rgba(255, 251, 242, 0.77);
-  box-shadow:
-    0 14px 30px rgba(90, 60, 35, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(20px) saturate(1.1);
-  -webkit-backdrop-filter: blur(20px) saturate(1.1);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-surface);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
 }
 
 .recipe-search > svg {
@@ -529,13 +526,10 @@ watch(
   flex: 0 0 auto;
   height: 48px;
   padding: 0 24px;
-  border: 1px solid rgba(255, 255, 255, 0.58);
+  border: 1px solid var(--card-border);
   border-radius: 999px;
   color: #3a2a24;
-  background: rgba(255, 250, 240, 0.82);
-  box-shadow:
-    0 12px 24px rgba(98, 68, 42, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  background: var(--card-surface);
   font-size: 17px;
   font-weight: 850;
   cursor: pointer;
@@ -560,10 +554,10 @@ watch(
 .recipe-card {
   min-width: 0;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 24px;
-  background: var(--cream);
-  box-shadow: 0 18px 36px rgba(80, 50, 28, 0.15);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-surface);
+  box-shadow: var(--card-shadow);
   cursor: pointer;
   backdrop-filter: blur(18px) saturate(1.08);
   -webkit-backdrop-filter: blur(18px) saturate(1.08);
@@ -625,10 +619,10 @@ watch(
   display: grid;
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.74);
-  border-radius: 15px;
+  border-radius: var(--card-radius-inner);
   color: #8b7b70;
   background: rgba(255, 250, 240, 0.88);
-  box-shadow: 0 10px 20px rgba(71, 48, 31, 0.12);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -656,7 +650,7 @@ watch(
   display: flex;
   flex-direction: column;
   padding: 14px 16px 16px;
-  background: linear-gradient(180deg, rgba(255, 250, 239, 0.78), rgba(255, 249, 237, 0.9));
+  background: rgba(255, 253, 249, 0.72);
 }
 
 .recipe-card h2 {
@@ -721,12 +715,12 @@ watch(
   place-items: center;
   margin-top: 29px;
   padding: 26px;
-  border: 1px solid rgba(255, 255, 255, 0.62);
-  border-radius: 26px;
-  background: rgba(255, 250, 240, 0.78);
-  box-shadow: 0 18px 36px rgba(80, 50, 28, 0.12);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-surface);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
 }
 
 .recipe-empty {
@@ -813,7 +807,7 @@ watch(
 @media (hover: hover) {
   .recipe-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 22px 42px rgba(80, 50, 28, 0.18);
+    box-shadow: var(--card-shadow-feature);
   }
 
   .recipe-chip:hover,

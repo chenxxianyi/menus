@@ -71,7 +71,6 @@
       </nav>
 
       <section v-if="menuRecipe" class="glass-card recipe-note" @click="goToRecipe(menuRecipe)">
-        <div class="binder" aria-hidden="true"><span v-for="n in 6" :key="n"></span></div>
         <div v-if="menuRecipe.cover" class="note-photo" :style="coverStyle(menuRecipe.cover)" aria-hidden="true"></div>
         <div v-else class="note-photo no-cover" aria-hidden="true"><span>暂无图片</span></div>
         <div class="note-copy">
@@ -91,18 +90,23 @@
         <p>{{ loading ? '正在读取后端推荐...' : emptyText }}</p>
       </section>
 
-      <section class="glass-card quick-grid" aria-label="更多用餐入口">
-        <button v-for="item in secondaryActions" :key="item.label" class="quick-item" type="button" @click="goQuickAction(item)">
-          <span class="quick-icon" :class="item.tone" aria-hidden="true">
-            <svg v-if="item.icon === 'ingredients'" viewBox="0 0 48 48"><path d="M25 22c-4-9-13-8-18-6 1 8 8 13 18 10"/><path d="M26 21c1-8 7-13 15-13-1 9-6 14-15 14"/><circle cx="27" cy="30" r="8"/></svg>
-            <svg v-else-if="item.icon === 'taste'" viewBox="0 0 48 48"><path d="M24 40c9-6 12-17 8-29-4 6-11 7-14 12-4 7-1 13 6 17Z"/><path d="M28 14c2-2 5-3 8-3"/></svg>
-            <svg v-else-if="item.icon === 'scene'" viewBox="0 0 48 48"><path d="M8 38 24 13l16 25"/><path d="M16 38V27l8-14 8 14v11M24 13v25"/></svg>
-            <svg v-else-if="item.icon === 'week'" viewBox="0 0 48 48"><rect x="11" y="12" width="26" height="28" rx="5"/><path d="M17 8v8M31 8v8M16 22h16M16 29h10"/></svg>
-            <svg v-else-if="item.icon === 'fridge'" viewBox="0 0 48 48"><rect x="13" y="7" width="22" height="34" rx="4"/><path d="M13 21h22M19 14h3M19 28h3"/></svg>
-            <svg v-else viewBox="0 0 48 48"><path d="M24 41c8-4 13-11 13-19 0-7-4-12-9-16-1 8-8 10-11 15-4 7-1 15 7 20Z"/><path d="M24 41c-3-5-1-9 4-13"/></svg>
-          </span>
-          <span>{{ item.label }}</span>
-        </button>
+      <section class="glass-card quick-panel" aria-labelledby="quick-title">
+        <div class="section-title quick-title">
+          <h2 id="quick-title">更多选择</h2>
+        </div>
+        <div class="quick-grid" aria-label="更多用餐入口">
+          <button v-for="item in secondaryActions" :key="item.label" class="quick-item" type="button" @click="goQuickAction(item)">
+            <span class="quick-icon" :class="item.tone" aria-hidden="true">
+              <svg v-if="item.icon === 'ingredients'" viewBox="0 0 48 48"><path d="M25 22c-4-9-13-8-18-6 1 8 8 13 18 10"/><path d="M26 21c1-8 7-13 15-13-1 9-6 14-15 14"/><circle cx="27" cy="30" r="8"/></svg>
+              <svg v-else-if="item.icon === 'taste'" viewBox="0 0 48 48"><path d="M24 40c9-6 12-17 8-29-4 6-11 7-14 12-4 7-1 13 6 17Z"/><path d="M28 14c2-2 5-3 8-3"/></svg>
+              <svg v-else-if="item.icon === 'scene'" viewBox="0 0 48 48"><path d="M8 38 24 13l16 25"/><path d="M16 38V27l8-14 8 14v11M24 13v25"/></svg>
+              <svg v-else-if="item.icon === 'week'" viewBox="0 0 48 48"><rect x="11" y="12" width="26" height="28" rx="5"/><path d="M17 8v8M31 8v8M16 22h16M16 29h10"/></svg>
+              <svg v-else-if="item.icon === 'fridge'" viewBox="0 0 48 48"><rect x="13" y="7" width="22" height="34" rx="4"/><path d="M13 21h22M19 14h3M19 28h3"/></svg>
+              <svg v-else viewBox="0 0 48 48"><path d="M24 41c8-4 13-11 13-19 0-7-4-12-9-16-1 8-8 10-11 15-4 7-1 15 7 20Z"/><path d="M24 41c-3-5-1-9 4-13"/></svg>
+            </span>
+            <span>{{ item.label }}</span>
+          </button>
+        </div>
       </section>
 
       <section class="glass-card couple-card" role="button" tabindex="0" @click="router.push('/couple')">
@@ -327,6 +331,11 @@ onMounted(async () => {
   --sub: #7a6a5f;
   --coral: #e84f3f;
   --coral-2: #e95645;
+  --surface: var(--card-surface);
+  --surface-strong: var(--card-surface-strong);
+  --surface-border: var(--card-border);
+  --surface-shadow: var(--card-shadow);
+  --surface-radius: var(--card-radius);
   position: relative;
   min-height: 100vh;
   min-height: 100dvh;
@@ -340,7 +349,7 @@ onMounted(async () => {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(circle at 16% 9%, rgba(255, 255, 255, 0.46), transparent 30%), linear-gradient(180deg, rgba(255, 247, 235, 0.2), rgba(96, 61, 31, 0.08));
+  background: linear-gradient(180deg, rgba(255, 250, 242, 0.38), rgba(117, 78, 46, 0.08));
   z-index: 0;
 }
 
@@ -394,21 +403,21 @@ onMounted(async () => {
 .heart-btn {
   display: inline-grid;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  background: rgba(255, 250, 241, 0.88);
+  border: 1px solid var(--surface-border);
+  background: var(--surface-strong);
   color: #593a2e;
-  box-shadow: 0 12px 24px rgba(91, 59, 31, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  box-shadow: var(--surface-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   cursor: pointer;
   transition: transform 180ms ease, opacity 180ms ease, box-shadow 180ms ease;
 }
 
 .calendar-btn {
-  width: 56px;
-  height: 56px;
-  flex: 0 0 56px;
-  border-radius: 19px;
+  width: 50px;
+  height: 50px;
+  flex: 0 0 50px;
+  border-radius: 16px;
 }
 
 svg {
@@ -428,18 +437,18 @@ svg {
 
 .search-box {
   position: relative;
-  height: 56px;
+  height: 52px;
   display: flex;
   align-items: center;
   gap: 14px;
-  margin-top: 26px;
-  padding: 0 20px;
-  border: 1px solid rgba(255, 255, 255, 0.66);
-  border-radius: 28px;
-  background: rgba(255, 250, 241, 0.78);
-  box-shadow: 0 18px 36px rgba(98, 68, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.86);
-  backdrop-filter: blur(18px) saturate(1.08);
-  -webkit-backdrop-filter: blur(18px) saturate(1.08);
+  margin-top: 22px;
+  padding: 0 17px;
+  border: 1px solid var(--surface-border);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--surface-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .search-box svg {
@@ -470,63 +479,65 @@ svg {
   z-index: 1;
 }
 
+.search-box:focus-within {
+  border-color: rgba(232, 79, 63, 0.38);
+  box-shadow: 0 0 0 3px rgba(232, 79, 63, 0.1), var(--surface-shadow);
+}
+
 .glass-card {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.64);
-  border-radius: 28px;
-  background: rgba(255, 250, 240, 0.76);
-  box-shadow: 0 18px 40px rgba(98, 68, 42, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(18px) saturate(1.1);
-  -webkit-backdrop-filter: blur(18px) saturate(1.1);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--surface-radius);
+  background: var(--surface);
+  box-shadow: var(--surface-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: transform 170ms ease, box-shadow 170ms ease;
 }
 
 .couple-card {
   height: 166px;
-  margin-top: 26px;
+  margin-top: 16px;
   cursor: pointer;
 }
 
 .decision-panel {
-  margin-top: 20px;
-  padding: 16px;
+  margin-top: 18px;
+  padding: 18px 16px 12px;
 }
 
 .decision-title {
   margin-bottom: 14px;
 }
 
-.decision-title span {
-  display: block;
-  margin-bottom: 4px;
-  color: #c26d3d;
-  font-size: 12px;
-  font-weight: 850;
-}
-
 .main-actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 0;
 }
 
 .main-action {
   min-width: 0;
-  min-height: 128px;
+  min-height: 112px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 14px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.74);
-  border-radius: 20px;
-  background: rgba(255, 253, 247, 0.82);
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 12px 10px;
+  border: 0;
+  border-left: 1px solid var(--surface-border);
+  border-radius: 0;
+  background: transparent;
   color: #3d2d25;
-  box-shadow: 0 10px 24px rgba(98, 68, 42, 0.1);
-  text-align: left;
+  text-align: center;
   cursor: pointer;
-  transition: transform 170ms ease, background 170ms ease, box-shadow 170ms ease;
+  transition: transform 170ms ease, background 170ms ease;
+}
+
+.main-action:first-child {
+  border-left: 0;
 }
 
 .main-action strong {
@@ -547,8 +558,8 @@ svg {
 
 .main-icon,
 .main-icon svg {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
 }
 
 .main-icon svg {
@@ -613,13 +624,13 @@ svg {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 38px;
-  padding: 0 22px;
+  min-height: 44px;
+  padding: 0 20px;
   border: 0;
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--coral), var(--coral-2));
+  border-radius: 14px;
+  background: var(--coral);
   color: #fff;
-  box-shadow: 0 12px 22px rgba(218, 64, 50, 0.28);
+  box-shadow: 0 8px 18px rgba(218, 64, 50, 0.2);
   font-size: 15px;
   font-weight: 800;
   cursor: pointer;
@@ -633,8 +644,8 @@ svg {
 }
 
 .chef-card {
-  min-height: 260px;
-  margin-top: 14px;
+  min-height: 250px;
+  margin-top: 16px;
   cursor: pointer;
 }
 
@@ -653,7 +664,7 @@ svg {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(255, 250, 240, 0.95) 0%, rgba(255, 250, 240, 0.82) 43%, rgba(255, 250, 240, 0.16) 75%), linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(246, 225, 198, 0.12));
+  background: linear-gradient(90deg, rgba(255, 252, 246, 0.97) 0%, rgba(255, 252, 246, 0.84) 44%, rgba(255, 252, 246, 0.14) 78%);
   z-index: 1;
 }
 
@@ -676,8 +687,8 @@ svg {
   top: 20px;
   right: 18px;
   z-index: 2;
-  width: 36px;
-  height: 46px;
+  width: 44px;
+  height: 44px;
   border-color: transparent;
   background: transparent;
   color: var(--coral);
@@ -687,7 +698,7 @@ svg {
 .chef-copy {
   position: relative;
   z-index: 2;
-  min-height: 260px;
+  min-height: 250px;
   max-width: 58%;
   padding: 24px 0 72px 27px;
 }
@@ -740,11 +751,11 @@ svg {
 }
 
 .chef-actions button {
-  min-height: 34px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
+  min-height: 44px;
+  padding: 0 13px;
+  border: 1px solid rgba(92, 63, 45, 0.12);
+  border-radius: 13px;
+  background: rgba(255, 253, 249, 0.9);
   color: #4b352c;
   font-size: 12px;
   font-weight: 850;
@@ -754,8 +765,9 @@ svg {
 .chef-actions .chef-action-primary {
   min-width: 96px;
   color: #fff;
-  background: linear-gradient(135deg, var(--coral), var(--coral-2));
-  box-shadow: 0 9px 18px rgba(218, 64, 50, 0.2);
+  border-color: transparent;
+  background: var(--coral);
+  box-shadow: 0 8px 16px rgba(218, 64, 50, 0.18);
 }
 
 .chef-actions .chef-action-secondary {
@@ -771,7 +783,7 @@ svg {
 .home-error {
   margin: 12px 2px 0;
   padding: 11px 13px;
-  border-radius: 16px;
+  border-radius: 14px;
   font-size: 13px;
   font-weight: 800;
   line-height: 1.45;
@@ -793,7 +805,7 @@ svg {
   gap: 7px;
   margin-top: 18px;
   padding: 6px 12px;
-  border-radius: 999px;
+  border-radius: 10px;
   background: rgba(213, 227, 190, 0.74);
   color: #4e7048;
   font-size: 13px;
@@ -809,25 +821,25 @@ svg {
 }
 
 .meal-tabs {
-  height: 62px;
+  height: 56px;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   align-items: center;
   gap: 4px;
-  margin-top: 14px;
-  padding: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  border-radius: 28px;
-  background: rgba(255, 249, 239, 0.78);
-  box-shadow: 0 16px 34px rgba(96, 66, 40, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.86);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  margin-top: 16px;
+  padding: 5px;
+  border: 1px solid var(--surface-border);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--surface-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .meal-tabs button {
-  height: 48px;
+  height: 44px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 13px;
   background: transparent;
   color: #4a352b;
   font-size: 17px;
@@ -837,49 +849,28 @@ svg {
 }
 
 .meal-tabs button.active {
-  background: rgba(255, 252, 246, 0.96);
+  background: var(--surface-strong);
   color: var(--coral);
-  box-shadow: 0 10px 24px rgba(91, 60, 33, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  box-shadow: 0 4px 12px rgba(91, 60, 33, 0.1);
 }
 
 .recipe-note {
-  min-height: 164px;
+  min-height: 158px;
   display: grid;
-  grid-template-columns: 43% 1fr;
-  gap: 16px;
-  margin-top: 14px;
-  padding: 15px 16px 15px 30px;
-  background: repeating-linear-gradient(0deg, rgba(169, 122, 83, 0.12) 0 1px, transparent 1px 28px), rgba(255, 248, 235, 0.9);
+  grid-template-columns: 40% 1fr;
+  gap: 15px;
+  margin-top: 16px;
+  padding: 14px;
   cursor: pointer;
 }
 
-.binder {
-  position: absolute;
-  left: -5px;
-  top: 16px;
-  bottom: 16px;
-  width: 24px;
-  display: grid;
-  align-content: space-around;
-  z-index: 3;
-}
-
-.binder span {
-  width: 24px;
-  height: 7px;
-  border: 2px solid rgba(169, 132, 95, 0.82);
-  border-left: 0;
-  border-radius: 0 999px 999px 0;
-  background: rgba(255, 255, 255, 0.62);
-}
-
 .note-photo {
-  min-height: 134px;
-  border-radius: 18px;
+  min-height: 130px;
+  border-radius: 14px;
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center;
-  box-shadow: 0 12px 26px rgba(80, 48, 24, 0.16);
+  box-shadow: none;
 }
 
 .no-cover span {
@@ -889,7 +880,7 @@ svg {
 
 .note-copy {
   position: relative;
-  min-height: 134px;
+  min-height: 130px;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -899,10 +890,10 @@ svg {
 
 .heart-btn {
   position: absolute;
-  top: -5px;
-  right: -4px;
-  width: 34px;
-  height: 34px;
+  top: -6px;
+  right: -7px;
+  width: 44px;
+  height: 44px;
   border: 0;
   background: transparent;
   color: #df6a42;
@@ -910,7 +901,7 @@ svg {
 }
 
 .note-copy h2 {
-  margin: 0 28px 10px 0;
+  margin: 0 34px 10px 0;
   color: #3b2a22;
   font-size: 20px;
   font-weight: 900;
@@ -954,12 +945,12 @@ svg {
   min-height: 44px;
   align-self: flex-end;
   margin-top: auto;
-  padding: 0 19px;
+  padding: 0 16px;
   font-size: 14px;
 }
 
 .empty-card {
-  margin-top: 14px;
+  margin-top: 16px;
   padding: 22px;
 }
 
@@ -978,36 +969,55 @@ svg {
   line-height: 1.55;
 }
 
+.quick-panel {
+  margin-top: 16px;
+  padding: 16px;
+}
+
+.quick-title {
+  margin-bottom: 6px;
+}
+
 .quick-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 13px;
-  margin-top: 14px;
-  padding: 15px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .quick-item {
-  min-height: 90px;
+  min-width: 0;
+  min-height: 76px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  border-radius: 20px;
-  background: rgba(255, 253, 247, 0.78);
-  box-shadow: 0 10px 22px rgba(98, 68, 42, 0.1);
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 10px 8px;
+  border: 0;
+  border-left: 1px solid var(--surface-border);
+  border-top: 1px solid var(--surface-border);
+  border-radius: 0;
+  background: transparent;
   color: #49372f;
   font-size: 13px;
   font-weight: 800;
+  text-align: left;
   cursor: pointer;
-  transition: transform 170ms ease, background 170ms ease, box-shadow 170ms ease;
+  transition: transform 170ms ease, background 170ms ease;
+}
+
+.quick-item:nth-child(odd) {
+  border-left: 0;
+}
+
+.quick-item:nth-child(-n + 2) {
+  border-top: 0;
 }
 
 .quick-icon,
 .quick-icon svg {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
 }
 
 .quick-icon svg {
@@ -1022,8 +1032,8 @@ svg {
 .quick-icon.coral { color: #e84f3f; }
 
 .popular-panel {
-  margin-top: 14px;
-  padding: 15px 15px 16px;
+  margin-top: 16px;
+  padding: 16px;
 }
 
 .section-title {
@@ -1041,9 +1051,13 @@ svg {
 }
 
 .section-title button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 2px 0 10px;
   border: 0;
   background: transparent;
-  color: #a29387;
+  color: #74645a;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
@@ -1058,23 +1072,33 @@ svg {
 
 .popular-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 11px;
+  grid-template-columns: 1fr;
 }
 
 .popular-card {
   display: grid;
-  grid-template-columns: 52% 1fr;
-  min-height: 98px;
+  grid-template-columns: 92px minmax(0, 1fr);
+  min-height: 92px;
   overflow: hidden;
-  border-radius: 18px;
-  background: rgba(255, 252, 246, 0.82);
-  box-shadow: 0 10px 22px rgba(91, 61, 38, 0.11);
+  padding: 12px 0;
+  border-top: 1px solid var(--surface-border);
+  background: transparent;
   cursor: pointer;
+  transition: transform 170ms ease, background 170ms ease;
+}
+
+.popular-card:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.popular-card:last-child {
+  padding-bottom: 0;
 }
 
 .popular-photo {
-  min-height: 98px;
+  min-height: 92px;
+  border-radius: 13px;
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center;
@@ -1082,13 +1106,13 @@ svg {
 
 .popular-copy {
   min-width: 0;
-  padding: 11px 8px 9px 10px;
+  padding: 4px 4px 3px 13px;
 }
 
 .popular-copy h3 {
   margin: 0;
   color: #3b2a22;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.1;
   white-space: nowrap;
@@ -1105,7 +1129,7 @@ svg {
   border-radius: 999px;
   background: rgba(243, 196, 126, 0.44);
   color: #a85f23;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1114,7 +1138,7 @@ svg {
 .popular-copy p {
   margin: 7px 0 0;
   color: #806f64;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -1133,9 +1157,17 @@ svg {
 .calendar-btn:active,
 .main-action:active,
 .quick-item:active,
-.glass-card:active,
+.chef-card:active,
+.recipe-note:active,
+.couple-card:active,
 .popular-card:active {
   transform: scale(0.98);
+}
+
+.home-shell button:focus-visible,
+.couple-card:focus-visible {
+  outline: 3px solid rgba(232, 79, 63, 0.3);
+  outline-offset: 2px;
 }
 
 @media (hover: hover) {
@@ -1148,8 +1180,17 @@ svg {
 
   .main-action:hover,
   .quick-item:hover {
-    background: rgba(255, 255, 255, 0.86);
-    box-shadow: 0 14px 28px rgba(91, 61, 38, 0.13);
+    background: rgba(232, 79, 63, 0.05);
+  }
+
+  .popular-card:hover {
+    background: rgba(232, 79, 63, 0.035);
+  }
+
+  .chef-card:hover,
+  .recipe-note:hover,
+  .couple-card:hover {
+    box-shadow: var(--card-shadow-feature);
   }
 }
 
@@ -1188,37 +1229,19 @@ svg {
   }
 
   .recipe-note {
-    grid-template-columns: 41% 1fr;
-    padding-right: 13px;
-  }
-
-  .quick-grid {
-    gap: 10px;
-  }
-
-  .main-actions {
-    grid-template-columns: 1fr;
-  }
-
-  .main-action {
-    min-height: 88px;
-    display: grid;
-    grid-template-columns: 44px 1fr;
-    align-items: center;
-  }
-
-  .main-action small {
-    grid-column: 2;
+    grid-template-columns: 38% 1fr;
+    gap: 12px;
+    padding: 12px;
   }
 }
 
 @media (max-width: 360px) {
   .popular-card {
-    grid-template-columns: 1fr;
+    grid-template-columns: 84px minmax(0, 1fr);
   }
 
   .popular-photo {
-    min-height: 86px;
+    min-height: 84px;
   }
 }
 

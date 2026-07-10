@@ -1084,16 +1084,12 @@ svg {
   gap: 18px;
   margin-top: 18px;
   padding: 22px 24px;
-  border: 1px solid rgba(255, 255, 255, 0.64);
-  border-radius: 30px;
-  background:
-    radial-gradient(circle at 8% 0%, rgba(255, 255, 255, 0.56), transparent 42%),
-    rgba(255, 250, 240, 0.82);
-  box-shadow:
-    0 18px 42px rgba(80, 50, 30, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.86);
-  backdrop-filter: blur(20px) saturate(1.08);
-  -webkit-backdrop-filter: blur(20px) saturate(1.08);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius-feature);
+  background: var(--card-surface);
+  box-shadow: var(--card-shadow-feature);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
 }
 
 .summary-label {
@@ -1140,16 +1136,12 @@ svg {
 .dish-generator-card {
   margin-top: 16px;
   padding: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.64);
-  border-radius: 28px;
-  background:
-    radial-gradient(circle at 8% 0%, rgba(255, 255, 255, 0.62), transparent 42%),
-    linear-gradient(135deg, rgba(255, 250, 240, 0.9), rgba(255, 240, 224, 0.82));
-  box-shadow:
-    0 18px 38px rgba(80, 50, 30, 0.13),
-    inset 0 1px 0 rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(20px) saturate(1.08);
-  -webkit-backdrop-filter: blur(20px) saturate(1.08);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-surface);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
 }
 
 .dish-generator-copy {
@@ -1203,7 +1195,7 @@ svg {
   height: 52px;
   padding: 0 15px;
   border: 1px solid rgba(143, 111, 86, 0.16);
-  border-radius: 17px;
+  border-radius: var(--card-radius-inner);
   outline: 0;
   color: var(--text);
   background: rgba(255, 255, 255, 0.7);
@@ -1232,7 +1224,7 @@ svg {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  border-radius: 17px;
+  border-radius: var(--card-radius-inner);
   color: #fff;
   background: linear-gradient(135deg, #f06152, #e9473a);
   box-shadow: 0 12px 24px rgba(233, 86, 69, 0.24);
@@ -1279,12 +1271,10 @@ svg {
   gap: 8px;
   margin-top: 10px;
   border: 1px solid rgba(233, 86, 69, 0.18);
-  border-radius: 16px;
+  border-radius: var(--card-radius-inner);
   color: var(--coral);
   background: rgba(255, 255, 255, 0.62);
-  box-shadow:
-    0 10px 20px rgba(80, 50, 30, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  box-shadow: none;
   font-size: 15px;
   font-weight: 860;
   transition: transform 180ms ease, opacity 180ms ease, background 180ms ease;
@@ -1337,13 +1327,10 @@ svg {
   justify-content: center;
   gap: 7px;
   padding: 0 20px;
-  border: 1px solid rgba(255, 255, 255, 0.58);
+  border: 1px solid var(--card-border);
   border-radius: 999px;
   color: #6b5142;
-  background: rgba(255, 250, 240, 0.78);
-  box-shadow:
-    0 14px 26px rgba(80, 50, 30, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  background: var(--card-surface);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   font-size: 16px;
@@ -1373,16 +1360,12 @@ svg {
   margin-top: 20px;
   padding: 21px 16px 24px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.64);
-  border-radius: 32px;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.48), transparent 39%),
-    rgba(255, 250, 240, 0.84);
-  box-shadow:
-    0 22px 50px rgba(80, 50, 30, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.86);
-  backdrop-filter: blur(22px) saturate(1.1);
-  -webkit-backdrop-filter: blur(22px) saturate(1.1);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-surface);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
 }
 
 .list-toolbar {
@@ -1572,11 +1555,9 @@ svg {
   gap: 12px;
   padding: 8px 13px;
   border: 1px solid rgba(255, 255, 255, 0.42);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.34);
-  box-shadow:
-    0 8px 16px rgba(80, 50, 30, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.42);
+  border-radius: var(--card-radius-inner);
+  background: var(--card-surface-muted);
+  box-shadow: none;
   transition: opacity 180ms ease, transform 180ms ease, background 180ms ease;
 }
 
@@ -1930,14 +1911,10 @@ svg {
   overflow-y: auto;
   padding: 10px 22px 22px;
   border: 1px solid rgba(255, 255, 255, 0.74);
-  border-radius: 30px;
+  border-radius: var(--card-radius-feature);
   color: var(--dialog-text);
-  background:
-    radial-gradient(circle at 10% 0%, rgba(255, 255, 255, 0.78), transparent 42%),
-    linear-gradient(155deg, rgba(255, 253, 247, 0.97), rgba(255, 244, 228, 0.95));
-  box-shadow:
-    0 28px 72px rgba(64, 38, 23, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  background: var(--card-surface-strong);
+  box-shadow: var(--card-shadow-dialog);
   overscroll-behavior: contain;
 }
 
@@ -1947,14 +1924,10 @@ svg {
   overflow-y: auto;
   padding: 10px 24px 24px;
   border: 1px solid rgba(255, 255, 255, 0.76);
-  border-radius: 30px;
+  border-radius: var(--card-radius-feature);
   color: var(--dialog-text);
-  background:
-    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.82), transparent 44%),
-    linear-gradient(155deg, rgba(255, 253, 247, 0.98), rgba(255, 240, 224, 0.96));
-  box-shadow:
-    0 28px 72px rgba(64, 38, 23, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  background: var(--card-surface-strong);
+  box-shadow: var(--card-shadow-dialog);
   text-align: center;
   overscroll-behavior: contain;
 }
@@ -2441,7 +2414,7 @@ svg {
   .add-dialog {
     padding-right: 18px;
     padding-left: 18px;
-    border-radius: 26px;
+    border-radius: var(--card-radius-feature);
   }
 
   .add-dialog-header {
@@ -2470,7 +2443,7 @@ svg {
   .delete-dialog {
     padding-right: 18px;
     padding-left: 18px;
-    border-radius: 26px;
+    border-radius: var(--card-radius-feature);
   }
 
   .delete-dialog-actions {

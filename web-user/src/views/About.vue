@@ -440,15 +440,11 @@ svg {
 }
 
 .glass-card {
-  border: 1px solid var(--border);
-  background:
-    radial-gradient(circle at 10% 0%, rgba(255, 255, 255, 0.48), transparent 42%),
-    var(--cream);
-  box-shadow:
-    var(--shadow),
-    inset 0 1px 0 rgba(255, 255, 255, 0.86);
-  backdrop-filter: blur(22px) saturate(1.1);
-  -webkit-backdrop-filter: blur(22px) saturate(1.1);
+  border: 1px solid var(--card-border);
+  background: var(--card-surface);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
 }
 
 .brand-card {
@@ -457,7 +453,8 @@ svg {
   align-items: center;
   gap: 22px;
   padding: 28px;
-  border-radius: 32px;
+  border-radius: var(--card-radius-feature);
+  box-shadow: var(--card-shadow-feature);
 }
 
 .app-icon {
@@ -577,7 +574,7 @@ svg {
 .feature-card {
   margin-top: 22px;
   padding: 20px 24px;
-  border-radius: 32px;
+  border-radius: var(--card-radius);
 }
 
 .feature-row {
@@ -629,13 +626,9 @@ svg {
 .list-card {
   margin-top: 22px;
   overflow: hidden;
-  border-radius: 30px;
-  background:
-    radial-gradient(circle at 10% 0%, rgba(255, 255, 255, 0.48), transparent 42%),
-    var(--cream);
-  box-shadow:
-    0 18px 42px rgba(80, 50, 30, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  border-radius: var(--card-radius);
+  background: var(--card-surface);
+  box-shadow: var(--card-shadow);
 }
 
 .info-row {

@@ -769,18 +769,20 @@ onMounted(() => {
 .glass-card {
   position: relative;
   overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 30px;
-  background: var(--cream);
-  box-shadow: 0 18px 40px rgba(80, 50, 30, 0.16);
-  backdrop-filter: blur(20px) saturate(1.08);
-  -webkit-backdrop-filter: blur(20px) saturate(1.08);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-surface);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
 }
 
 .smart-card {
   min-height: 210px;
   margin-top: 33px;
   padding: 29px 22px 23px;
+  border-radius: var(--card-radius-feature);
+  box-shadow: var(--card-shadow-feature);
 }
 
 .smart-card::before {
@@ -859,9 +861,9 @@ onMounted(() => {
   grid-template-columns: 1fr 1px 1fr;
   align-items: center;
   margin-top: 22px;
-  border-radius: 21px;
-  background: rgba(255, 250, 240, 0.74);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius-inner);
+  background: var(--card-surface-muted);
 }
 
 .week-shopping-btn {
@@ -1143,7 +1145,7 @@ onMounted(() => {
 .data-note {
   margin: 0 0 12px;
   padding: 10px 12px;
-  border-radius: 16px;
+  border-radius: var(--card-radius-inner);
   background: rgba(255, 255, 255, 0.56);
   color: #8a5b3d;
   font-size: 13px;
@@ -1163,10 +1165,9 @@ onMounted(() => {
 
 .plan-meal-card {
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.54);
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.48);
-  box-shadow: 0 10px 22px rgba(80, 50, 30, 0.08);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius-inner);
+  background: var(--card-surface-muted);
 }
 
 .plan-meal-card header {
@@ -1303,7 +1304,6 @@ onMounted(() => {
 
 .nav-btn:active,
 .day:active,
-.glass-card:active,
 .primary-btn:active,
 .shopping-btn:active,
 .week-shopping-btn:active,
