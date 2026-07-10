@@ -75,6 +75,28 @@ func (s *RecipeService) GetRandomRecipes(limit int) ([]model.Recipe, error) {
 	return s.recipeRepo.FindRandom(limit)
 }
 
+// GetMealRecommendations keeps the homepage meal selector meaningful even
+// before dedicated breakfast/lunch/dinner tags are maintained in the catalog.
+// It applies conservative cooking-time preferences and still falls back to a
+// random published recipe when the catalog is small.
+func (s *RecipeService) GetMealRecommendations(mealType string, limit int) ([]model.Recipe, error) {
+	maxCookTime := 0
+	switch strings.TrimSpace(mealType) {
+	case "早餐", "breakfast":
+		maxCookTime = 30
+	case "夜宵", "late_night":
+		maxCookTime = 20
+	case "午餐", "lunch", "晚餐", "dinner":
+		maxCookTime = 60
+	}
+	if maxCookTime > 0 {
+		if recipes, err := s.recipeRepo.FindRandomByMaxCookTime(limit, maxCookTime); err == nil && len(recipes) > 0 {
+			return recipes, nil
+		}
+	}
+	return s.recipeRepo.FindRandom(limit)
+}
+
 func (s *RecipeService) GetFilterOptions() (map[string]interface{}, error) {
 	tastes, err := s.recipeRepo.DistinctTastes()
 	if err != nil {

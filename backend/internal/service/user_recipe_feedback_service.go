@@ -11,10 +11,14 @@ import (
 var ErrInvalidRecipeFeedbackType = errors.New("invalid recipe feedback type")
 
 var allowedRecipeFeedbackTypes = map[string]bool{
-	"cooked":  true,
-	"like":    true,
-	"dislike": true,
-	"block":   true,
+	"cooked":      true,
+	"like":        true,
+	"dislike":     true,
+	"block":       true,
+	"normal":      true,
+	"too_complex": true,
+	"too_long":    true,
+	"hard_to_buy": true,
 }
 
 type UserRecipeFeedbackService struct {
@@ -64,10 +68,14 @@ func (s *UserRecipeFeedbackService) List(userID uint) ([]model.UserRecipeFeedbac
 
 func FeedbackStatusMap(items []model.UserRecipeFeedback) map[string]bool {
 	status := map[string]bool{
-		"cooked":  false,
-		"like":    false,
-		"dislike": false,
-		"block":   false,
+		"cooked":      false,
+		"like":        false,
+		"dislike":     false,
+		"block":       false,
+		"normal":      false,
+		"too_complex": false,
+		"too_long":    false,
+		"hard_to_buy": false,
 	}
 	for _, item := range items {
 		if _, ok := status[item.FeedbackType]; ok {

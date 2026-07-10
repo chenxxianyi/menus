@@ -1,9 +1,5 @@
 import api, { AI_GENERATION_TIMEOUT } from './index'
-import type {
-  IngredientOption,
-  RecommendByIngredientsRequest,
-  RecommendResultPayload,
-} from '@/types/recommend'
+import type { IngredientOption, RecommendByIngredientsRequest, RecommendResultPayload } from '@/types/recommend'
 
 export function getIngredientOptions(params?: { keyword?: string; category?: string }) {
   return api.get('/ingredients/options', { params }) as Promise<{ list: IngredientOption[] }>

@@ -1,0 +1,47 @@
+name: Quality checks
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web-user/package-lock.json
+      - name: Test backend
+        working-directory: backend
+        run: go test ./...
+      - name: Install frontend dependencies
+        working-directory: web-user
+        run: npm ci
+      - name: Check frontend formatting
+        working-directory: web-user
+        run: npm run format:check
+      - name: Lint frontend
+        working-directory: web-user
+        run: npm run lint
+      - name: Type check frontend
+        working-directory: web-user
+        run: npm run type-check
+      - name: Unit test frontend
+        working-directory: web-user
+        run: npm run test
+      - name: Build frontend
+        working-directory: web-user
+        run: npm run build
+      - name: Install Playwright browser
+        working-directory: web-user
+        run: npx playwright install --with-deps chromium
+      - name: Test core browser flow
+        working-directory: web-user
+        run: npm run test:e2e

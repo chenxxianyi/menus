@@ -1,7 +1,7 @@
 import api from './index'
 
-export function getHomeData() {
-  return api.get('/home')
+export function getHomeData(mealType?: string) {
+  return api.get('/home', { params: mealType ? { meal_type: mealType } : undefined })
 }
 
 export function getBanners() {

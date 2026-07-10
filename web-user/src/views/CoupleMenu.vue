@@ -109,11 +109,12 @@ import { useRouter } from 'vue-router'
 import { useCoupleStore } from '@/stores/couple'
 import { generateShoppingList } from '@/api/couple'
 import type { CoupleMenuDish, GenerateShoppingListResult, ShoppingListItem } from '@/types/couple'
+import { formatLocalDate } from '@/utils/date'
 
 const router = useRouter()
 const coupleStore = useCoupleStore()
 
-const today = new Date().toISOString().split('T')[0]
+const today = formatLocalDate()
 const mealDate = ref(today)
 const mealType = ref('')
 const loading = ref(false)

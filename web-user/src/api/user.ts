@@ -35,6 +35,34 @@ export function getUserStats() {
   return api.get('/user/stats')
 }
 
+export interface FoodStats {
+  period: 'week' | 'month'
+  start_date: string
+  end_date: string
+  cooked_count: number
+  cooked_days: number
+  current_streak: number
+  nutrition: {
+    calories: number
+    protein: number
+    fat: number
+    carbs: number
+    fiber: number
+  }
+  nutrition_recorded_recipes: number
+  nutrition_completeness: number
+  daily: Array<{
+    date: string
+    cooked_count: number
+    nutrition: { calories: number; protein: number; fat: number; carbs: number; fiber: number }
+  }>
+  recent_cooked_recipes: Array<{ recipe_id: number; title: string; cooked_at: string }>
+}
+
+export function getFoodStats(period: 'week' | 'month') {
+  return api.get('/user/food-stats', { params: { period } }) as Promise<FoodStats>
+}
+
 export function getUserFavorites(page = 1, pageSize = 10) {
   return api.get('/user/favorites', { params: { page, page_size: pageSize } })
 }

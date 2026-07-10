@@ -19,17 +19,19 @@ export const useShoppingStore = defineStore('shopping', () => {
   const allItems = computed(() => currentList.value?.items ?? [])
 
   const totalPrice = computed(() =>
-    allItems.value.reduce((sum, item) => sum + (normalizeItemStatus(item) === 'pending' ? item.price : 0), 0)
+    allItems.value.reduce((sum, item) => sum + (normalizeItemStatus(item) === 'pending' ? item.price : 0), 0),
   )
 
   async function fetchLists() {
     try {
       const res: any = await getShoppingLists()
-      lists.value = Array.isArray(res) ? res.map((l: any) => ({
-        id: l.id,
-        name: l.name,
-        items: Array.isArray(l.items_json) ? normalizeItems(l.items_json) : [],
-      })) : []
+      lists.value = Array.isArray(res)
+        ? res.map((l: any) => ({
+            id: l.id,
+            name: l.name,
+            items: Array.isArray(l.items_json) ? normalizeItems(l.items_json) : [],
+          }))
+        : []
       if (lists.value.length > 0 && !currentList.value) {
         currentList.value = lists.value[0]
       }
@@ -81,7 +83,9 @@ export const useShoppingStore = defineStore('shopping', () => {
   }
 
   function normalizeItemName(name: string) {
-    const value = String(name || '').trim().replace(/\s+/g, '')
+    const value = String(name || '')
+      .trim()
+      .replace(/\s+/g, '')
     if (value === '番茄') return '西红柿'
     if (value === '蛋') return '鸡蛋'
     if (value === '马铃薯' || value === '洋芋') return '土豆'
@@ -215,7 +219,7 @@ export const useShoppingStore = defineStore('shopping', () => {
   async function removeList(id: number) {
     try {
       await deleteShoppingList(id)
-      lists.value = lists.value.filter(l => l.id !== id)
+      lists.value = lists.value.filter((l) => l.id !== id)
       if (currentList.value?.id === id) {
         currentList.value = lists.value[0] ?? null
       }

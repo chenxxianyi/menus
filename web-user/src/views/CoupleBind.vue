@@ -134,6 +134,7 @@ import { useRouter } from 'vue-router'
 import { getInviteCode, bindCouple, getCoupleInfo } from '@/api/couple'
 import { useCoupleStore } from '@/stores/couple'
 import kitchenBg from '@/assets/home/kitchen-bg.jpg'
+import { copyText } from '@/utils/clipboard'
 
 type BindMode = 'share' | 'join'
 
@@ -212,8 +213,11 @@ async function copyCode() {
     return
   }
   try {
-    await navigator.clipboard.writeText(inviteCode.value)
-    showToast('已复制邀请码')
+    if (await copyText(inviteCode.value)) {
+      showToast('已复制邀请码')
+    } else {
+      showToast('邀请码：' + inviteCode.value)
+    }
   } catch {
     showToast('邀请码：' + inviteCode.value)
   }
@@ -239,16 +243,18 @@ async function shareToWechat() {
       showToast('分享成功')
       return
     }
-    await navigator.clipboard.writeText(shareText)
-    showToast('已复制邀请码，可发送给对方')
+    if (await copyText(shareText)) {
+      showToast('已复制邀请码，可发送给对方')
+      return
+    }
+    showToast('请复制下方邀请码后发送给对方：' + inviteCode.value)
   } catch {
-    showToast('分享未完成')
+    showToast('分享已取消或未完成')
   }
 }
 
 function askInviteCode() {
-  console.log('ask partner invite code')
-  showToast('已生成索要邀请码提示')
+  showToast('请让对方在“情侣绑定”页面生成邀请码后发送给你。')
 }
 
 function normalizeInput() {

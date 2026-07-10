@@ -39,9 +39,7 @@ api.interceptors.response.use(
     }
     if (axios.isAxiosError(error)) {
       const isTimeout =
-        error.code === 'ECONNABORTED' ||
-        error.code === 'ETIMEDOUT' ||
-        error.message.toLowerCase().includes('timeout')
+        error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT' || error.message.toLowerCase().includes('timeout')
       if (isTimeout) {
         return Promise.reject(new Error('请求等待时间较长，请稍后重试；如果是 AI 生成，请检查 AI 服务响应速度。'))
       }
@@ -54,7 +52,7 @@ api.interceptors.response.use(
       }
     }
     return Promise.reject(new Error(toFriendlyError(error?.message || '操作失败，请稍后重试。')))
-  }
+  },
 )
 
 function toFriendlyError(message: unknown) {

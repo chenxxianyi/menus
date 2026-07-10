@@ -235,6 +235,7 @@
           <div>
             <strong>{{ dish.name || '未命名菜谱' }}</strong>
             <p>{{ dish.type || '推荐菜' }} · {{ dish.cook_time ? dish.cook_time + '分钟' : '时间待补充' }} · {{ dish.difficulty || '难度待补充' }}</p>
+            <small v-if="dish.reason || dish.steps_summary">推荐理由：{{ dish.reason || dish.steps_summary }}</small>
           </div>
           <button class="couple-dish-btn" type="button" :disabled="coupleLoading" @click.stop="sendDishToCouple(dish.recipe_id, dish.name)">和 TA 吃</button>
           <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></svg>
@@ -286,6 +287,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { createCoupleOrder } from '@/api/couple'
+import { formatLocalDate } from '@/utils/date'
 import { saveUserMenu } from '@/api/menu'
 import { getIngredientOptions, recommendByIngredients, recommendByScene, recommendSceneByAI } from '@/api/recommend'
 import { getRecipeFilterOptions } from '@/api/recipe'
@@ -978,7 +980,7 @@ async function sendDishToCouple(recipeId?: number, name?: string) {
       dish_name: title,
       recipe_id: recipeId,
       meal_type: 'dinner',
-      meal_date: new Date().toISOString().split('T')[0],
+      meal_date: formatLocalDate(),
       note: '从推荐结果加入情侣点餐',
     })
     trackEvent({

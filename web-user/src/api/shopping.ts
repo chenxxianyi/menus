@@ -74,14 +74,25 @@ export function deleteShoppingList(id: number) {
 }
 
 export function generateShoppingListByDish(dishName: string, preview = false): Promise<GenerateShoppingByDishResult> {
-  return api.post('/shopping-list/generate-by-dish', { dish_name: dishName, preview }) as unknown as Promise<GenerateShoppingByDishResult>
+  return api.post('/shopping-list/generate-by-dish', {
+    dish_name: dishName,
+    preview,
+  }) as unknown as Promise<GenerateShoppingByDishResult>
 }
 
 export function generateShoppingListByRecipe(recipeId: number, preview = false): Promise<GenerateShoppingByDishResult> {
-  return api.post('/shopping-list/generate-by-recipe', { recipe_id: recipeId, preview, merge_current: true }) as unknown as Promise<GenerateShoppingByDishResult>
+  return api.post('/shopping-list/generate-by-recipe', {
+    recipe_id: recipeId,
+    preview,
+    merge_current: true,
+  }) as unknown as Promise<GenerateShoppingByDishResult>
 }
 
-export function generateShoppingListByRecipes(recipeIds: number[], name: string, preview = false): Promise<GenerateShoppingByRecipesResult> {
+export function generateShoppingListByRecipes(
+  recipeIds: number[],
+  name: string,
+  preview = false,
+): Promise<GenerateShoppingByRecipesResult> {
   return api.post('/shopping-list/generate-by-recipes', {
     recipe_ids: recipeIds,
     name,
@@ -90,6 +101,13 @@ export function generateShoppingListByRecipes(recipeIds: number[], name: string,
   }) as unknown as Promise<GenerateShoppingByRecipesResult>
 }
 
-export function generateShoppingListByAI(dishName: string, preview = false): Promise<GenerateShoppingByDishResult & { source: 'ai' }> {
-  return api.post('/shopping-list/generate-by-ai', { dish_name: dishName, preview }, { timeout: AI_GENERATION_TIMEOUT }) as unknown as Promise<GenerateShoppingByDishResult & { source: 'ai' }>
+export function generateShoppingListByAI(
+  dishName: string,
+  preview = false,
+): Promise<GenerateShoppingByDishResult & { source: 'ai' }> {
+  return api.post(
+    '/shopping-list/generate-by-ai',
+    { dish_name: dishName, preview },
+    { timeout: AI_GENERATION_TIMEOUT },
+  ) as unknown as Promise<GenerateShoppingByDishResult & { source: 'ai' }>
 }

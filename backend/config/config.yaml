@@ -1,6 +1,7 @@
 app:
   name: "菜单推荐"
   version: "1.0.0"
+  environment: "development"
   debug: true
 
 server:
@@ -11,8 +12,8 @@ database:
   host: "127.0.0.1"
   port: 3306
   user: "root"
-  password: "123456"
-  dbname: "ai_workbench"
+  password: ""
+  dbname: "menu_recommend"
   charset: "utf8mb4"
   loc: "UTC"
   max_idle_conns: 10
@@ -29,6 +30,17 @@ redis:
 jwt:
   secret_key: "your-secret-key-change-in-production"
   expire_hours: 24
+
+rate_limit:
+  enabled: true
+  window_seconds: 60
+  auth_per_window: 10
+  invite_per_window: 10
+  ai_requests_per_window: 5
+  upload_per_window: 12
+  feedback_per_window: 20
+  events_per_window: 120
+  ai_concurrent: 4
 
 cors:
   origins:

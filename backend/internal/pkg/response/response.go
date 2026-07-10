@@ -42,3 +42,7 @@ func Unauthorized(c *gin.Context) {
 func Forbidden(c *gin.Context) {
 	c.JSON(http.StatusForbidden, Response{Code: 403, Message: "Forbidden", Data: nil})
 }
+
+func TooManyRequests(c *gin.Context, message string) {
+	c.JSON(http.StatusTooManyRequests, Response{Code: 10007, Message: message, Data: nil})
+}

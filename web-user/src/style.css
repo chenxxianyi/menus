@@ -48,6 +48,11 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-accent) 48%, transparent);
+    outline-offset: 3px;
+  }
+
   input, textarea, select {
     font-family: inherit;
     -webkit-tap-highlight-color: transparent;
@@ -58,6 +63,15 @@
   ::-webkit-scrollbar-thumb {
     background: var(--color-border-med);
     border-radius: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

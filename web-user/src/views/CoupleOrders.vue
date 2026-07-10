@@ -65,6 +65,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCoupleStore } from '@/stores/couple'
 import { updateCoupleOrderStatus, deleteCoupleOrder } from '@/api/couple'
+import { formatLocalDate } from '@/utils/date'
 
 const router = useRouter()
 const coupleStore = useCoupleStore()
@@ -77,7 +78,7 @@ const dateOptions = computed(() => {
   for (let i = 0; i < 7; i++) {
     const d = new Date(today)
     d.setDate(d.getDate() + i)
-    const dateStr = d.toISOString().split('T')[0]
+    const dateStr = formatLocalDate(d)
     const label = i === 0 ? '今天' : i === 1 ? '明天' : `${d.getMonth() + 1}/${d.getDate()}`
     opts.push({ value: dateStr, label })
   }

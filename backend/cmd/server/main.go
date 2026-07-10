@@ -1,8 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -20,6 +25,9 @@ func main() {
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatalf("load config: %v", err)
+	}
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("invalid configuration: %v", err)
 	}
 
 	// Logger
@@ -77,16 +85,42 @@ func main() {
 		Password: cfg.Redis.Password,
 		DB:       cfg.Redis.DB,
 	})
-	_ = rdb
+	if err := rdb.Ping(context.Background()).Err(); err != nil {
+		if cfg.App.IsProduction() {
+			logger.Fatal("connect redis failed", zap.Error(err))
+		}
+		logger.Warn("redis is unavailable; readiness checks will report it", zap.Error(err))
+	}
 
 	// Router
-	r := router.Setup(cfg, db, logger)
+	r := router.Setup(cfg, db, logger, rdb)
 
-	// Start
+	// Start and gracefully stop accepting new traffic on deployment signals.
 	addr := cfg.Server.Addr()
 	logger.Info("server starting", zap.String("addr", addr))
-	if err := r.Run(addr); err != nil {
-		logger.Fatal("server failed", zap.Error(err))
+	server := &http.Server{Addr: addr, Handler: r, ReadHeaderTimeout: 10 * time.Second}
+	serverErrors := make(chan error, 1)
+	go func() {
+		serverErrors <- server.ListenAndServe()
+	}()
+
+	signalContext, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	select {
+	case err := <-serverErrors:
+		if err != nil && err != http.ErrServerClosed {
+			logger.Fatal("server failed", zap.Error(err))
+		}
+	case <-signalContext.Done():
+		shutdownContext, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		if err := server.Shutdown(shutdownContext); err != nil {
+			logger.Error("graceful shutdown failed", zap.Error(err))
+		}
 	}
-	fmt.Printf("Server running on %s\n", addr)
+	if sqlDB, err := db.DB(); err == nil {
+		_ = sqlDB.Close()
+	}
+	_ = rdb.Close()
+	fmt.Printf("Server stopped on %s\n", addr)
 }

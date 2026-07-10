@@ -216,6 +216,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createCoupleOrder } from '@/api/couple'
+import { formatLocalDate } from '@/utils/date'
 import kitchenBg from '@/assets/home/kitchen-bg.jpg'
 import { deleteRecipeFeedback, getRecipeDetail, removeFavorite, setRecipeFeedback, toggleFavorite } from '@/api/recipe'
 import { useShoppingStore } from '@/stores/shopping'
@@ -250,12 +251,20 @@ const defaultFeedbackStatus: RecipeFeedbackStatus = {
   like: false,
   dislike: false,
   block: false,
+  normal: false,
+  too_complex: false,
+  too_long: false,
+  hard_to_buy: false,
 }
 const feedbackStatus = ref<RecipeFeedbackStatus>({ ...defaultFeedbackStatus })
 const feedbackActions: { type: keyof RecipeFeedbackStatus; label: string }[] = [
   { type: 'cooked', label: '做过了' },
   { type: 'like', label: '喜欢' },
   { type: 'dislike', label: '不喜欢' },
+  { type: 'normal', label: '一般' },
+  { type: 'too_complex', label: '太复杂' },
+  { type: 'too_long', label: '用时过长' },
+  { type: 'hard_to_buy', label: '食材难买' },
   { type: 'block', label: '不再推荐' },
 ]
 
@@ -353,7 +362,7 @@ async function handleFavorite() {
       await toggleFavorite(recipe.value.id)
     }
     trackEvent({
-      event_name: 'favorite',
+      event_name: 'recipe_favorited',
       entity_type: 'recipe',
       entity_id: recipe.value.id,
       payload: { active: !wasFavorited, source: 'detail' },
@@ -382,12 +391,12 @@ async function addRecipeToShopping() {
         checked: false,
         status: 'owned',
       }))
-    const result = await shoppingStore.generateByRecipe(recipe.value.id, recipe.value.title || '菜谱')
+    await shoppingStore.generateByRecipe(recipe.value.id, recipe.value.title || '菜谱')
     if (ownedItems.length) {
       await shoppingStore.appendItemsToCurrentList((recipe.value.title || '菜谱') + '已有食材', ownedItems)
     }
     trackEvent({
-      event_name: 'add_shopping_list',
+      event_name: 'shopping_list_generated',
       entity_type: 'recipe',
       entity_id: recipe.value.id,
       payload: { source: 'detail', title: recipe.value.title, owned_count: ownedItems.length },
@@ -416,7 +425,7 @@ async function sendToCouple() {
       dish_name: recipe.value.title || '想吃的菜',
       recipe_id: recipe.value.id,
       meal_type: 'dinner',
-      meal_date: new Date().toISOString().split('T')[0],
+      meal_date: formatLocalDate(),
       note: '从菜谱详情发给 TA',
     })
     trackEvent({
@@ -443,6 +452,10 @@ function normalizeFeedbackStatus(value: any): RecipeFeedbackStatus {
     like: value?.like === true,
     dislike: value?.dislike === true,
     block: value?.block === true,
+    normal: value?.normal === true,
+    too_complex: value?.too_complex === true,
+    too_long: value?.too_long === true,
+    hard_to_buy: value?.hard_to_buy === true,
   }
 }
 
@@ -463,7 +476,7 @@ async function toggleRecipeFeedback(type: keyof RecipeFeedbackStatus) {
       : await setRecipeFeedback(recipe.value.id, type, 'detail')
     feedbackStatus.value = normalizeFeedbackStatus(res.feedback)
     trackEvent({
-      event_name: 'recipe_feedback',
+      event_name: 'recipe_feedback_submitted',
       entity_type: 'recipe',
       entity_id: recipe.value.id,
       payload: { type, active: !wasActive, source: 'detail' },
@@ -482,6 +495,10 @@ function feedbackCopy(type: keyof RecipeFeedbackStatus) {
     like: '已记录喜欢，后续会多推荐相似口味。',
     dislike: '已记录不喜欢，后续会降低推荐权重。',
     block: '已记录不再推荐，后续会避开这道菜。',
+    normal: '已记录“一般”，后续会继续探索更合适的菜谱。',
+    too_complex: '已记录“太复杂”，后续会优先推荐更易上手的菜谱。',
+    too_long: '已记录“用时过长”，后续会优先推荐更快完成的菜谱。',
+    hard_to_buy: '已记录“食材难买”，后续会降低相似菜谱的推荐权重。',
   }
   return map[type]
 }

@@ -96,7 +96,7 @@
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { login as loginApi, register as registerApi } from '@/api/auth'
+import { register as registerApi } from '@/api/auth'
 import { getPreferenceStatus } from '@/api/user'
 import loginKitchenReference from '@/assets/login-kitchen-reference.png'
 

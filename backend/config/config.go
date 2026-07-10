@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -11,20 +12,26 @@ import (
 )
 
 type Config struct {
-	App      AppConfig      `mapstructure:"app"`
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-	CORS     CORSConfig     `mapstructure:"cors"`
-	Upload   UploadConfig   `mapstructure:"upload"`
-	AI       AIConfig       `mapstructure:"ai"`
+	App       AppConfig       `mapstructure:"app"`
+	Server    ServerConfig    `mapstructure:"server"`
+	Database  DatabaseConfig  `mapstructure:"database"`
+	Redis     RedisConfig     `mapstructure:"redis"`
+	JWT       JWTConfig       `mapstructure:"jwt"`
+	CORS      CORSConfig      `mapstructure:"cors"`
+	Upload    UploadConfig    `mapstructure:"upload"`
+	AI        AIConfig        `mapstructure:"ai"`
+	RateLimit RateLimitConfig `mapstructure:"rate_limit"`
 }
 
 type AppConfig struct {
-	Name    string `mapstructure:"name"`
-	Version string `mapstructure:"version"`
-	Debug   bool   `mapstructure:"debug"`
+	Name        string `mapstructure:"name"`
+	Version     string `mapstructure:"version"`
+	Environment string `mapstructure:"environment"`
+	Debug       bool   `mapstructure:"debug"`
+}
+
+func (a AppConfig) IsProduction() bool {
+	return strings.EqualFold(strings.TrimSpace(a.Environment), "production")
 }
 
 type ServerConfig struct {
@@ -96,6 +103,25 @@ type AIConfig struct {
 	Temperature float64 `mapstructure:"temperature"`
 }
 
+type RateLimitConfig struct {
+	Enabled             bool `mapstructure:"enabled"`
+	WindowSeconds       int  `mapstructure:"window_seconds"`
+	AuthPerWindow       int  `mapstructure:"auth_per_window"`
+	InvitePerWindow     int  `mapstructure:"invite_per_window"`
+	AIRequestsPerWindow int  `mapstructure:"ai_requests_per_window"`
+	UploadPerWindow     int  `mapstructure:"upload_per_window"`
+	FeedbackPerWindow   int  `mapstructure:"feedback_per_window"`
+	EventsPerWindow     int  `mapstructure:"events_per_window"`
+	AIConcurrent        int  `mapstructure:"ai_concurrent"`
+}
+
+func (r RateLimitConfig) WindowDuration() time.Duration {
+	if r.WindowSeconds <= 0 {
+		return time.Minute
+	}
+	return time.Duration(r.WindowSeconds) * time.Second
+}
+
 func LoadConfig() (*Config, error) {
 	_ = gotenv.Load(".env")
 
@@ -116,6 +142,7 @@ func LoadConfig() (*Config, error) {
 	if v := os.Getenv("DB_PASSWORD"); v != "" {
 		cfg.Database.Password = v
 	}
+	applyAppEnv(&cfg.App)
 	applyDatabaseEnv(&cfg.Database)
 	if v := os.Getenv("JWT_SECRET_KEY"); v != "" {
 		cfg.JWT.SecretKey = v
@@ -124,8 +151,40 @@ func LoadConfig() (*Config, error) {
 		cfg.Redis.Password = v
 	}
 	applyAIEnv(&cfg.AI)
+	applyRateLimitEnv(&cfg.RateLimit)
 
 	return &cfg, nil
+}
+
+func (c *Config) Validate() error {
+	if !c.App.IsProduction() {
+		return nil
+	}
+	if c.App.Debug {
+		return fmt.Errorf("production environment must set app.debug to false")
+	}
+	secret := strings.TrimSpace(c.JWT.SecretKey)
+	if len(secret) < 32 || strings.Contains(strings.ToLower(secret), "your-secret") || strings.Contains(strings.ToLower(secret), "change-in-production") {
+		return fmt.Errorf("production JWT secret must be a non-default value with at least 32 characters")
+	}
+	if strings.TrimSpace(c.Database.Password) == "" {
+		return fmt.Errorf("production database password must be configured through DATABASE_PASSWORD or DB_PASSWORD")
+	}
+	if c.Database.AutoMigrate {
+		return fmt.Errorf("production database auto_migrate must be disabled; use reviewed migrations")
+	}
+	return nil
+}
+
+func applyAppEnv(cfg *AppConfig) {
+	if v := os.Getenv("APP_ENV"); v != "" {
+		cfg.Environment = v
+	}
+	if v := os.Getenv("APP_DEBUG"); v != "" {
+		if debug, err := strconv.ParseBool(v); err == nil {
+			cfg.Debug = debug
+		}
+	}
 }
 
 func applyAIEnv(cfg *AIConfig) {
@@ -192,6 +251,30 @@ func applyDatabaseEnv(cfg *DatabaseConfig) {
 	if v := os.Getenv("DB_AUTO_MIGRATE"); v != "" {
 		if autoMigrate, err := strconv.ParseBool(v); err == nil {
 			cfg.AutoMigrate = autoMigrate
+		}
+	}
+}
+
+func applyRateLimitEnv(cfg *RateLimitConfig) {
+	if v := os.Getenv("RATE_LIMIT_ENABLED"); v != "" {
+		if enabled, err := strconv.ParseBool(v); err == nil {
+			cfg.Enabled = enabled
+		}
+	}
+	applyIntEnv("RATE_LIMIT_WINDOW_SECONDS", &cfg.WindowSeconds)
+	applyIntEnv("RATE_LIMIT_AUTH_PER_WINDOW", &cfg.AuthPerWindow)
+	applyIntEnv("RATE_LIMIT_INVITE_PER_WINDOW", &cfg.InvitePerWindow)
+	applyIntEnv("RATE_LIMIT_AI_PER_WINDOW", &cfg.AIRequestsPerWindow)
+	applyIntEnv("RATE_LIMIT_UPLOAD_PER_WINDOW", &cfg.UploadPerWindow)
+	applyIntEnv("RATE_LIMIT_FEEDBACK_PER_WINDOW", &cfg.FeedbackPerWindow)
+	applyIntEnv("RATE_LIMIT_EVENTS_PER_WINDOW", &cfg.EventsPerWindow)
+	applyIntEnv("AI_MAX_CONCURRENT", &cfg.AIConcurrent)
+}
+
+func applyIntEnv(key string, target *int) {
+	if v := os.Getenv(key); v != "" {
+		if value, err := strconv.Atoi(v); err == nil {
+			*target = value
 		}
 	}
 }

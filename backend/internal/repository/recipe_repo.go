@@ -80,6 +80,13 @@ func (r *RecipeRepo) FindRandom(limit int) ([]model.Recipe, error) {
 	return recipes, err
 }
 
+func (r *RecipeRepo) FindRandomByMaxCookTime(limit, maxCookTime int) ([]model.Recipe, error) {
+	var recipes []model.Recipe
+	err := r.db.Where("status = 1 AND cook_time > 0 AND cook_time <= ?", maxCookTime).
+		Order("RAND()").Limit(limit).Find(&recipes).Error
+	return recipes, err
+}
+
 func (r *RecipeRepo) FindHot(limit int) ([]model.Recipe, error) {
 	var recipes []model.Recipe
 	err := r.db.Where("status = 1").Order("favorite_count DESC, view_count DESC").Limit(limit).Find(&recipes).Error

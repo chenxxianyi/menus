@@ -95,6 +95,7 @@ import { computed, defineComponent, h, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getAboutInfo, type AboutInfo } from '@/api/app'
 import kitchenBg from '@/assets/home/kitchen-bg.jpg'
+import { copyText } from '@/utils/clipboard'
 
 type IconName = 'book' | 'calendar' | 'basket' | 'mail' | 'message' | 'info' | 'file' | 'shield'
 type InfoAction = 'contact' | 'wechat' | 'version'
@@ -189,13 +190,11 @@ function showToast(message: string) {
 }
 
 async function copyEmail() {
-  try {
-    await navigator.clipboard.writeText(brandInfo.value.email)
+  if (await copyText(brandInfo.value.email)) {
     showToast('邮箱已复制')
-  } catch {
-    console.log('contact email', brandInfo.value.email)
-    showToast(`邮箱：${brandInfo.value.email}`)
+    return
   }
+  showToast(`邮箱：${brandInfo.value.email}`)
 }
 
 function handleInfoAction(action: InfoAction) {
@@ -204,11 +203,9 @@ function handleInfoAction(action: InfoAction) {
     return
   }
   if (action === 'wechat') {
-    console.log('wechat official account', brandInfo.value.wechat)
     showToast(`微信公众号：${brandInfo.value.wechat}`)
     return
   }
-  console.log('version', brandInfo.value.version)
   showToast(`当前版本 ${brandInfo.value.version}`)
 }
 

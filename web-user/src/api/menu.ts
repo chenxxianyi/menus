@@ -43,5 +43,9 @@ export function deleteUserMenu(id: number) {
 }
 
 export function reuseUserMenu(id: number): Promise<{ menu: UserMenu; recipe_ids: number[]; recipes: any[] }> {
-  return api.post(`/user/menus/${id}/reuse`) as unknown as Promise<{ menu: UserMenu; recipe_ids: number[]; recipes: any[] }>
+  return api.post(`/user/menus/${id}/reuse`) as unknown as Promise<{
+    menu: UserMenu
+    recipe_ids: number[]
+    recipes: any[]
+  }>
 }

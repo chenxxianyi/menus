@@ -12,6 +12,7 @@ func LoggerMiddleware(logger *zap.Logger) gin.HandlerFunc {
 		start := time.Now()
 		c.Next()
 		logger.Info("request",
+			zap.String("request_id", requestID(c)),
 			zap.String("method", c.Request.Method),
 			zap.String("path", c.Request.URL.Path),
 			zap.Int("status", c.Writer.Status()),
@@ -19,4 +20,13 @@ func LoggerMiddleware(logger *zap.Logger) gin.HandlerFunc {
 			zap.String("client_ip", c.ClientIP()),
 		)
 	}
+}
+
+func requestID(c *gin.Context) string {
+	if value, ok := c.Get(RequestIDKey); ok {
+		if requestID, ok := value.(string); ok {
+			return requestID
+		}
+	}
+	return ""
 }

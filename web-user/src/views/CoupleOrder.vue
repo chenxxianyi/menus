@@ -99,6 +99,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { createCoupleOrder } from '@/api/couple'
 import { getRecipes } from '@/api/recipe'
+import { formatLocalDate } from '@/utils/date'
 
 const router = useRouter()
 
@@ -109,7 +110,7 @@ const mealTypes = [
   { value: 'snack', label: '夜宵' },
 ]
 
-const today = new Date().toISOString().split('T')[0]
+const today = formatLocalDate()
 
 const form = reactive({
   dish_name: '',

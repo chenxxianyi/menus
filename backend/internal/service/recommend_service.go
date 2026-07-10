@@ -56,6 +56,7 @@ type DishResult struct {
 	RecipeID     uint     `json:"recipe_id"`
 	Name         string   `json:"name"`
 	Type         string   `json:"type"`
+	Reason       string   `json:"reason,omitempty"`
 	CookTime     int      `json:"cook_time"`
 	Difficulty   string   `json:"difficulty"`
 	Ingredients  []string `json:"ingredients"`
@@ -63,11 +64,12 @@ type DishResult struct {
 }
 
 type RecommendResult struct {
-	MenuName     string       `json:"menu_name"`
-	Reason       string       `json:"reason"`
-	Dishes       []DishResult `json:"dishes"`
-	ShoppingList []string     `json:"shopping_list"`
-	Source       string       `json:"source,omitempty"`
+	MenuName        string       `json:"menu_name"`
+	Reason          string       `json:"reason"`
+	Dishes          []DishResult `json:"dishes"`
+	ShoppingList    []string     `json:"shopping_list"`
+	Source          string       `json:"source,omitempty"`
+	StrategyVersion string       `json:"strategy_version"`
 }
 
 type scoredRecipe struct {
@@ -79,6 +81,7 @@ type recipeFeedbackContext struct {
 	byRecipe       map[uint]map[string]bool
 	likedTastes    map[string]bool
 	likedHealthTag map[string]bool
+	recentlyCooked map[uint]time.Time
 }
 
 type IngredientRecommendResult struct {
@@ -185,6 +188,7 @@ func (s *RecommendService) feedbackContext(userID uint, recipes []model.Recipe) 
 		byRecipe:       make(map[uint]map[string]bool),
 		likedTastes:    make(map[string]bool),
 		likedHealthTag: make(map[string]bool),
+		recentlyCooked: make(map[uint]time.Time),
 	}
 	if s.feedbackRepo == nil || userID == 0 {
 		return ctx
@@ -205,6 +209,9 @@ func (s *RecommendService) feedbackContext(userID uint, recipes []model.Recipe) 
 			ctx.byRecipe[item.RecipeID] = make(map[string]bool)
 		}
 		ctx.byRecipe[item.RecipeID][item.FeedbackType] = true
+		if item.FeedbackType == "cooked" {
+			ctx.recentlyCooked[item.RecipeID] = item.UpdatedAt
+		}
 		if item.FeedbackType != "like" {
 			continue
 		}
@@ -237,11 +244,20 @@ func (ctx recipeFeedbackContext) scoreDelta(recipeID uint) float64 {
 	if feedback["like"] {
 		delta += 18
 	}
-	if feedback["cooked"] {
-		delta -= 10
-	}
 	if feedback["dislike"] {
 		delta -= 35
+	}
+	if feedback["too_complex"] || feedback["too_long"] || feedback["hard_to_buy"] {
+		delta -= 22
+	}
+	if cookedAt, ok := ctx.recentlyCooked[recipeID]; ok {
+		if time.Since(cookedAt) <= 14*24*time.Hour {
+			delta -= 45
+		} else {
+			delta -= 10
+		}
+	} else if feedback["cooked"] {
+		delta -= 10
 	}
 	return delta
 }
@@ -332,6 +348,7 @@ func dishFromRecipe(recipe *model.Recipe, dishType string, reason string) DishRe
 		RecipeID:     recipe.ID,
 		Name:         recipe.Title,
 		Type:         normalizeSceneDishType(dishType),
+		Reason:       strings.TrimSpace(reason),
 		CookTime:     recipe.CookTime,
 		Difficulty:   recipe.Difficulty,
 		Ingredients:  ingredients,
@@ -383,9 +400,10 @@ func (s *RecommendService) RecommendSceneByAI(ctx context.Context, userID uint, 
 	}
 
 	result = &RecommendResult{
-		MenuName: draft.MenuName,
-		Reason:   draft.Reason + " 已同步到菜谱库，可点击查看完整做法。",
-		Source:   "ai",
+		MenuName:        draft.MenuName,
+		Reason:          draft.Reason + " 已同步到菜谱库，可点击查看完整做法。",
+		Source:          "ai",
+		StrategyVersion: "v2-feedback-aware",
 	}
 	shoppingSet := make(map[string]bool)
 	for _, item := range draft.Dishes {
@@ -457,8 +475,9 @@ func (s *RecommendService) RecommendMenu(params *RecommendParams) (*RecommendRes
 	})
 
 	result := &RecommendResult{
-		MenuName: params.MealType + "推荐菜单",
-		Reason:   "根据您的口味偏好和饮食目标智能推荐",
+		MenuName:        params.MealType + "推荐菜单",
+		Reason:          "根据您的口味偏好和饮食目标智能推荐",
+		StrategyVersion: "v2-feedback-aware",
 	}
 
 	dishTypes := []string{"主菜", "配菜", "汤"}
@@ -484,6 +503,7 @@ func (s *RecommendService) RecommendMenu(params *RecommendParams) (*RecommendRes
 				RecipeID:    sr.recipe.ID,
 				Name:        sr.recipe.Title,
 				Type:        dishType,
+				Reason:      recommendationReason(*sr.recipe, params, feedbackCtx),
 				CookTime:    sr.recipe.CookTime,
 				Difficulty:  sr.recipe.Difficulty,
 				Ingredients: ingredients,
@@ -497,6 +517,33 @@ func (s *RecommendService) RecommendMenu(params *RecommendParams) (*RecommendRes
 	}
 
 	return result, nil
+}
+
+func recommendationReason(recipe model.Recipe, params *RecommendParams, feedbackCtx recipeFeedbackContext) string {
+	if params == nil {
+		return "近期受欢迎的菜谱"
+	}
+	if params.Scene == "quick_meal" && recipe.CookTime > 0 && recipe.CookTime <= 30 {
+		return "适合快速完成这一餐"
+	}
+	if len(params.ExistingIngredients) > 0 {
+		return "可优先利用你现有的食材"
+	}
+	for _, taste := range params.TastePreference {
+		if strings.TrimSpace(taste) != "" && strings.TrimSpace(taste) == strings.TrimSpace(recipe.Taste) {
+			return "符合你的口味偏好"
+		}
+	}
+	if params.HealthGoal != "" && strings.Contains(string(recipe.HealthTags), params.HealthGoal) {
+		return "符合你的饮食目标"
+	}
+	if params.CookTimePreference != "" && recipe.CookTime > 0 {
+		return "符合你偏好的烹饪时长"
+	}
+	if feedbackCtx.likedTastes[strings.TrimSpace(recipe.Taste)] {
+		return "与你喜欢过的菜谱口味相近"
+	}
+	return "近期没有做过，适合换换口味"
 }
 
 func (s *RecommendService) calcScore(r model.Recipe, params *RecommendParams, feedbackCtx recipeFeedbackContext) float64 {

@@ -9,4 +9,5 @@ const (
 	ErrServer       = 50000
 	ErrInvalidToken = 10005
 	ErrPassword     = 10006
+	ErrRateLimited  = 10007
 )

@@ -1,11 +1,15 @@
 package v1
 
 import (
+	"bytes"
 	"fmt"
+	"image"
+	_ "image/jpeg"
+	_ "image/png"
 	"mime/multipart"
+	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -23,6 +27,9 @@ func NewUploadHandler(cfg *config.UploadConfig) *UploadHandler {
 }
 
 func (h *UploadHandler) Avatar(c *gin.Context) {
+	if h.cfg.MaxSize > 0 {
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, h.cfg.MaxSize+1024)
+	}
 	file, err := c.FormFile("file")
 	if err != nil {
 		response.Error(c, errcode.ErrParam, "请选择图片")
@@ -32,7 +39,8 @@ func (h *UploadHandler) Avatar(c *gin.Context) {
 		response.Error(c, errcode.ErrParam, "图片过大")
 		return
 	}
-	if !isAllowedImage(file) {
+	imageType, err := inspectImage(file)
+	if err != nil {
 		response.Error(c, errcode.ErrParam, "仅支持 jpg、png、webp 图片")
 		return
 	}
@@ -43,8 +51,7 @@ func (h *UploadHandler) Avatar(c *gin.Context) {
 		return
 	}
 
-	ext := strings.ToLower(filepath.Ext(file.Filename))
-	name := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
+	name := fmt.Sprintf("%d%s", time.Now().UnixNano(), imageType.extension)
 	dst := filepath.Join(dir, name)
 	if err := c.SaveUploadedFile(file, dst); err != nil {
 		response.Error(c, errcode.ErrServer, "上传失败")
@@ -56,17 +63,47 @@ func (h *UploadHandler) Avatar(c *gin.Context) {
 	})
 }
 
-func isAllowedImage(file *multipart.FileHeader) bool {
-	ext := strings.ToLower(filepath.Ext(file.Filename))
-	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".webp" {
-		return false
+type verifiedImageType struct {
+	extension string
+}
+
+const maxImagePixels = 20_000_000
+
+func inspectImage(file *multipart.FileHeader) (verifiedImageType, error) {
+	if file == nil {
+		return verifiedImageType{}, fmt.Errorf("file is nil")
+	}
+	source, err := file.Open()
+	if err != nil {
+		return verifiedImageType{}, err
+	}
+	defer source.Close()
+
+	data := make([]byte, 512)
+	read, err := source.Read(data)
+	if err != nil && read == 0 {
+		return verifiedImageType{}, err
+	}
+	data = data[:read]
+	contentType := http.DetectContentType(data)
+	if contentType == "image/jpeg" || contentType == "image/png" {
+		if _, err := source.Seek(0, 0); err != nil {
+			return verifiedImageType{}, err
+		}
+		config, _, err := image.DecodeConfig(source)
+		if err != nil || config.Width <= 0 || config.Height <= 0 || config.Width*config.Height > maxImagePixels {
+			return verifiedImageType{}, fmt.Errorf("invalid image content")
+		}
+		if contentType == "image/jpeg" {
+			return verifiedImageType{extension: ".jpg"}, nil
+		}
+		return verifiedImageType{extension: ".png"}, nil
 	}
 
-	contentType := strings.ToLower(file.Header.Get("Content-Type"))
-	if contentType == "" {
-		return true
+	// WebP does not have a standard-library decoder. Validate its RIFF/WebP
+	// signature and use a server-generated extension instead of the user name.
+	if len(data) >= 12 && bytes.Equal(data[:4], []byte("RIFF")) && bytes.Equal(data[8:12], []byte("WEBP")) {
+		return verifiedImageType{extension: ".webp"}, nil
 	}
-	return contentType == "image/jpeg" ||
-		contentType == "image/png" ||
-		contentType == "image/webp"
+	return verifiedImageType{}, fmt.Errorf("unsupported image content")
 }

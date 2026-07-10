@@ -40,12 +40,29 @@
         </div>
       </section>
 
-      <section class="glass-card chef-card" :class="{ empty: !todayRecipe }" @click="todayRecipe ? goToRecipe(todayRecipe) : goToRecipes()">
+      <section
+        class="glass-card chef-card"
+        :class="{ empty: !todayRecipe }"
+        role="link"
+        tabindex="0"
+        :aria-label="todayRecipe ? `查看${recipeTitle(todayRecipe)}做法` : '浏览菜谱'"
+        @click="todayRecipe ? goToRecipe(todayRecipe) : goToRecipes()"
+        @keydown.enter="todayRecipe ? goToRecipe(todayRecipe) : goToRecipes()"
+        @keydown.space.prevent="todayRecipe ? goToRecipe(todayRecipe) : goToRecipes()"
+      >
         <div v-if="todayRecipe?.cover" class="chef-photo" :style="coverStyle(todayRecipe.cover)" aria-hidden="true"></div>
         <div v-else class="chef-photo placeholder-photo" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M6 16h12M8 16v2.5a2.5 2.5 0 0 0 2.5 2.5h3a2.5 2.5 0 0 0 2.5-2.5V16"/><path d="M8 12a4 4 0 0 1 8 0M7 13h10"/></svg>
         </div>
-        <button v-if="todayRecipe" class="save-btn" type="button" aria-label="收藏菜谱" @click.stop>
+        <button
+          v-if="todayRecipe"
+          class="save-btn"
+          type="button"
+          :aria-label="todayRecipe.is_favorited ? '取消收藏菜谱' : '收藏菜谱'"
+          :aria-pressed="todayRecipe.is_favorited === true"
+          :disabled="favoriteActionID === todayRecipe.id"
+          @click.stop="toggleHomeFavorite(todayRecipe)"
+        >
           <svg viewBox="0 0 24 24"><path d="M6 4h12v17l-6-4-6 4V4Z"/></svg>
         </button>
         <div class="chef-copy">
@@ -67,14 +84,30 @@
       <p v-if="homeError" class="home-error" role="alert">{{ homeError }}</p>
 
       <nav class="meal-tabs" aria-label="餐段切换">
-        <button v-for="tab in mealTabs" :key="tab" :class="{ active: activeMeal === tab }" type="button" @click="activeMeal = tab">{{ tab }}</button>
+        <button v-for="tab in mealTabs" :key="tab" :class="{ active: activeMeal === tab }" type="button" :aria-pressed="activeMeal === tab" @click="activeMeal = tab">{{ tab }}</button>
       </nav>
 
-      <section v-if="menuRecipe" class="glass-card recipe-note" @click="goToRecipe(menuRecipe)">
+      <section
+        v-if="menuRecipe"
+        class="glass-card recipe-note"
+        role="link"
+        tabindex="0"
+        :aria-label="`查看${recipeTitle(menuRecipe)}做法`"
+        @click="goToRecipe(menuRecipe)"
+        @keydown.enter="goToRecipe(menuRecipe)"
+        @keydown.space.prevent="goToRecipe(menuRecipe)"
+      >
         <div v-if="menuRecipe.cover" class="note-photo" :style="coverStyle(menuRecipe.cover)" aria-hidden="true"></div>
         <div v-else class="note-photo no-cover" aria-hidden="true"><span>暂无图片</span></div>
         <div class="note-copy">
-          <button class="heart-btn" type="button" aria-label="收藏菜谱" @click.stop><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.4 5.4 0 0 0-7.6 0L12 5.8l-1.2-1.2a5.4 5.4 0 1 0-7.6 7.6L12 21l8.8-8.8a5.4 5.4 0 0 0 0-7.6Z"/></svg></button>
+          <button
+            class="heart-btn"
+            type="button"
+            :aria-label="menuRecipe.is_favorited ? '取消收藏菜谱' : '收藏菜谱'"
+            :aria-pressed="menuRecipe.is_favorited === true"
+            :disabled="favoriteActionID === menuRecipe.id"
+            @click.stop="toggleHomeFavorite(menuRecipe)"
+          ><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.4 5.4 0 0 0-7.6 0L12 5.8l-1.2-1.2a5.4 5.4 0 1 0-7.6 7.6L12 21l8.8-8.8a5.4 5.4 0 0 0 0-7.6Z"/></svg></button>
           <h2>{{ recipeTitle(menuRecipe) }}</h2>
           <div class="note-meta">
             <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>{{ recipeTime(menuRecipe) }}</span>
@@ -109,7 +142,7 @@
         </div>
       </section>
 
-      <section class="glass-card couple-card" role="button" tabindex="0" @click="router.push('/couple')">
+      <section class="glass-card couple-card" role="link" tabindex="0" aria-label="进入情侣点餐" @click="router.push('/couple')" @keydown.enter="router.push('/couple')" @keydown.space.prevent="router.push('/couple')">
         <div class="couple-photo" aria-hidden="true"></div>
         <div class="couple-mask" aria-hidden="true"></div>
         <div class="couple-copy">
@@ -124,7 +157,7 @@
           <button type="button" @click="goHotRecipes">查看更多</button>
         </div>
         <div v-if="popularRecipes.length" class="popular-list">
-          <article v-for="recipe in popularRecipes" :key="recipeKey(recipe)" class="popular-card" @click="goToRecipe(recipe)">
+          <article v-for="(recipe, index) in popularRecipes" :key="recipeKey(recipe, index)" class="popular-card" role="link" tabindex="0" :aria-label="`查看${recipeTitle(recipe)}做法`" @click="goToRecipe(recipe)" @keydown.enter="goToRecipe(recipe)" @keydown.space.prevent="goToRecipe(recipe)">
             <div v-if="recipe.cover" class="popular-photo" :style="coverStyle(recipe.cover)" aria-hidden="true"></div>
             <div v-else class="popular-photo no-cover" aria-hidden="true"><span>暂无图片</span></div>
             <div class="popular-copy">
@@ -142,9 +175,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getHomeData } from '@/api/home'
+import { removeFavorite, toggleFavorite } from '@/api/recipe'
 import { useShoppingStore } from '@/stores/shopping'
 import { trackEvent } from '@/utils/event'
 import kitchenBg from '@/assets/home/kitchen-bg.jpg'
@@ -162,6 +196,7 @@ type HomeRecipe = {
   servings?: number
   favorite_count?: number
   category_name?: string
+  is_favorited?: boolean
 }
 
 type QuickAction = {
@@ -180,6 +215,7 @@ const keyword = ref('')
 const activeMeal = ref('晚餐')
 const loading = ref(true)
 const shoppingActionLoading = ref(false)
+const favoriteActionID = ref<number | null>(null)
 const homeMessage = ref('')
 const homeError = ref('')
 const todayRecommend = ref<HomeRecipe | null>(null)
@@ -214,8 +250,8 @@ function coverStyle(cover: string) {
   return { backgroundImage: 'url(' + cover + ')' }
 }
 
-function recipeKey(recipe: HomeRecipe) {
-  return String(recipe.id || recipe.title || Math.random())
+function recipeKey(recipe: HomeRecipe, index: number) {
+  return String(recipe.id || `${recipe.title || 'recipe'}-${index}`)
 }
 
 function recipeTitle(recipe: HomeRecipe) {
@@ -310,19 +346,68 @@ async function addRecipeToShopping(recipe: HomeRecipe | null) {
   }
 }
 
-onMounted(async () => {
-  loading.value = true
+function syncFavoriteState(recipeID: number, isFavorited: boolean) {
+  const apply = (recipe: HomeRecipe | null) => {
+    if (!recipe || recipe.id !== recipeID) return
+    recipe.is_favorited = isFavorited
+    const count = Number(recipe.favorite_count || 0)
+    recipe.favorite_count = isFavorited ? count + 1 : Math.max(0, count - 1)
+  }
+  apply(todayRecommend.value)
+  hotRecipes.value.forEach((recipe) => apply(recipe))
+}
+
+async function toggleHomeFavorite(recipe: HomeRecipe | null) {
+  if (!recipe?.id || favoriteActionID.value === recipe.id) return
+  const wasFavorited = recipe.is_favorited === true
+  favoriteActionID.value = recipe.id
+  homeMessage.value = ''
+  homeError.value = ''
   try {
-    const res: any = await getHomeData()
+    if (wasFavorited) {
+      await removeFavorite(recipe.id)
+    } else {
+      await toggleFavorite(recipe.id)
+    }
+    syncFavoriteState(recipe.id, !wasFavorited)
+    trackEvent({
+      event_name: 'recipe_favorited',
+      entity_type: 'recipe',
+      entity_id: recipe.id,
+      payload: { source: 'home', result: wasFavorited ? 'removed' : 'added' },
+    })
+    homeMessage.value = wasFavorited ? '已取消收藏。' : '已收藏，稍后可在“我的收藏”查看。'
+  } catch (error) {
+    homeError.value = error instanceof Error ? error.message : '收藏操作失败，请稍后重试'
+  } finally {
+    favoriteActionID.value = null
+  }
+}
+
+async function loadHome() {
+  loading.value = true
+  homeError.value = ''
+  try {
+    const res: any = await getHomeData(activeMeal.value)
     todayRecommend.value = res?.today_recommend || null
     hotRecipes.value = Array.isArray(res?.hot_recipes) ? res.hot_recipes : []
-  } catch {
+    if (!todayRecommend.value) {
+      homeMessage.value = `${activeMeal.value}暂时没有匹配的推荐，可以换个餐次或浏览全部菜谱。`
+    }
+  } catch (error) {
     todayRecommend.value = null
     hotRecipes.value = []
+    homeError.value = error instanceof Error ? error.message : '首页内容加载失败，请稍后重试。'
   } finally {
     loading.value = false
   }
+}
+
+watch(activeMeal, () => {
+  loadHome()
 })
+
+onMounted(loadHome)
 </script>
 
 <style scoped>

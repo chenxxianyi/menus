@@ -25,6 +25,10 @@ export interface RecipeFeedbackStatus {
   like: boolean
   dislike: boolean
   block: boolean
+  normal: boolean
+  too_complex: boolean
+  too_long: boolean
+  hard_to_buy: boolean
 }
 
 export interface Ingredient {

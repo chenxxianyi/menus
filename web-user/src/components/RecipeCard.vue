@@ -1,5 +1,5 @@
 <template>
-  <div class="recipe-card" @click="$emit('click')">
+  <button class="recipe-card" type="button" :aria-label="`查看${title}做法`" @click="$emit('click')">
     <div class="recipe-card-cover">
       <img :src="cover" :alt="title" />
       <span class="recipe-card-time">{{ cookTime }}分钟</span>
@@ -16,7 +16,7 @@
         </span>
       </div>
     </div>
-  </div>
+  </button>
 </template>
 
 <script setup lang="ts">
@@ -36,13 +36,22 @@ defineEmits<{
 
 <style scoped>
 .recipe-card {
+  width: 100%;
+  display: block;
   padding: 0;
+  text-align: left;
+  font: inherit;
   overflow: hidden;
   cursor: pointer;
   border: 1px solid var(--color-border);
   border-radius: var(--card-radius-inner);
   background: var(--card-surface-strong);
   transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+
+.recipe-card:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
+  outline-offset: 3px;
 }
 
 .recipe-card:hover {

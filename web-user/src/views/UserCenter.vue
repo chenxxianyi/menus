@@ -149,7 +149,6 @@ interface MenuItem {
   color: string
   bg: string
   path?: string
-  action?: 'history' | 'about'
 }
 
 interface ProfileStats {
@@ -304,9 +303,7 @@ function goPath(path?: string) {
 function handleSettingAction(item: MenuItem) {
   if (item.path) {
     router.push(item.path)
-    return
   }
-  console.log('profile action:', item.action || item.label)
 }
 
 function handleLogout() {

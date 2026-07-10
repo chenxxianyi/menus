@@ -410,6 +410,7 @@ import { useRouter } from 'vue-router'
 import kitchenBg from '@/assets/home/kitchen-bg.jpg'
 import { deleteShoppingItems, updateShoppingList, type ShoppingItem } from '@/api/shopping'
 import { useShoppingStore } from '@/stores/shopping'
+import { copyText } from '@/utils/clipboard'
 
 type GroupKey = 'all' | 'vegetables' | 'protein' | 'staple' | 'seasoning' | 'ingredients' | 'other'
 type GroupIconType = 'leaf' | 'egg' | 'bottle' | 'basket'
@@ -787,13 +788,11 @@ function statusLabel(status: NonNullable<ShoppingItem['status']>) {
 
 async function copyShoppingList() {
   const text = formatShoppingListText()
-  try {
-    await navigator.clipboard.writeText(text)
+  if (await copyText(text)) {
     showToast('已复制购物清单')
-  } catch {
-    console.log(text)
-    showToast('购物清单已生成，可在控制台查看')
+    return
   }
+  showToast('无法自动复制，请长按清单内容后手动复制')
 }
 
 async function shareShoppingList() {
@@ -807,10 +806,13 @@ async function shareShoppingList() {
       showToast('分享成功')
       return
     }
-    await navigator.clipboard.writeText(text)
-    showToast('已复制购物清单，可直接发送')
+    if (await copyText(text)) {
+      showToast('已复制购物清单，可直接发送')
+      return
+    }
+    showToast('无法自动分享，请使用“一键复制”后手动发送')
   } catch {
-    showToast('分享未完成')
+    showToast('分享已取消或未完成')
   }
 }
 

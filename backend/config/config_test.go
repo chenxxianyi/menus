@@ -2,6 +2,23 @@ package config
 
 import "testing"
 
+func TestValidateProductionRejectsUnsafeSettings(t *testing.T) {
+	cfg := &Config{
+		App:      AppConfig{Environment: "production", Debug: false},
+		Database: DatabaseConfig{Password: "database-password", AutoMigrate: false},
+		JWT:      JWTConfig{SecretKey: "your-secret-key-change-in-production"},
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("Validate() accepted a default production JWT secret")
+	}
+
+	cfg.JWT.SecretKey = "a-very-long-random-production-secret-that-is-not-a-default"
+	cfg.Database.AutoMigrate = true
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("Validate() accepted production auto_migrate")
+	}
+}
+
 func TestLoadConfigOverridesDatabaseFromEnvironment(t *testing.T) {
 	t.Setenv("DATABASE_HOST", "127.0.0.1")
 	t.Setenv("DATABASE_PORT", "3306")

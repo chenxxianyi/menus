@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
@@ -13,12 +14,19 @@ import (
 	"menu-recommend/internal/service"
 )
 
-func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
+func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger, rdb *redis.Client) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
+	r.Use(middleware.RequestIDMiddleware())
 	r.Use(middleware.LoggerMiddleware(logger))
 	r.Use(middleware.CORSMiddleware(cfg.CORS.Origins))
+	if cfg.Upload.MaxSize > 0 {
+		r.MaxMultipartMemory = cfg.Upload.MaxSize
+	}
 	r.Static("/uploads", cfg.Upload.Dir)
+
+	requestLimiter := middleware.NewFixedWindowLimiter(cfg.RateLimit.WindowDuration())
+	aiLimiter := middleware.NewConcurrencyLimiter(cfg.RateLimit.AIConcurrent)
 
 	// Repositories
 	userRepo := repository.NewUserRepo(db)
@@ -71,7 +79,8 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 	authHandler := v1.NewAuthHandler(authService)
 	userHandler := v1.NewUserHandler(userService)
 	userStatsHandler := v1.NewUserStatsHandler(favRepo, menuRepo, shoppingRepo)
-	homeHandler := v1.NewHomeHandler(recipeService, bannerService, categoryService)
+	foodStatsHandler := v1.NewFoodStatsHandler(service.NewFoodStatsService(recipeFeedbackRepo, recipeRepo))
+	homeHandler := v1.NewHomeHandler(recipeService, bannerService, categoryService, favRepo)
 	recipeHandler := v1.NewRecipeHandler(recipeService)
 	recipeHandler.SetRecipeFeedbackService(recipeFeedbackService)
 	historyHandler := v1.NewBrowseHistoryHandler(historyService)
@@ -87,6 +96,20 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 	uploadHandler := v1.NewUploadHandler(&cfg.Upload)
 	eventHandler := v1.NewUserEventHandler(eventService)
 	menuHandler := v1.NewMenuHandler(menuService)
+	healthHandler := v1.NewHealthHandler(db, rdb)
+
+	limitIP := func(scope string, limit int) gin.HandlerFunc {
+		if !cfg.RateLimit.Enabled {
+			return func(c *gin.Context) { c.Next() }
+		}
+		return middleware.RateLimitByIP(requestLimiter, scope, limit)
+	}
+	limitUser := func(scope string, limit int) gin.HandlerFunc {
+		if !cfg.RateLimit.Enabled {
+			return func(c *gin.Context) { c.Next() }
+		}
+		return middleware.RateLimitByUserOrIP(requestLimiter, scope, limit)
+	}
 
 	// Handlers - admin
 	adminAuthHandler := admin.NewAuthHandler(authService, db)
@@ -102,9 +125,9 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 	api := r.Group("/api")
 	{
 		// Public
-		api.POST("/auth/register", authHandler.Register)
-		api.POST("/auth/login", authHandler.Login)
-		api.GET("/home", homeHandler.GetHome)
+		api.POST("/auth/register", limitIP("auth", cfg.RateLimit.AuthPerWindow), authHandler.Register)
+		api.POST("/auth/login", limitIP("auth", cfg.RateLimit.AuthPerWindow), authHandler.Login)
+		api.GET("/home", middleware.OptionalAuth(authService), homeHandler.GetHome)
 		api.GET("/about", appConfigHandler.About)
 		api.GET("/banners", bannerHandler.List)
 		api.GET("/recipes/filter-options", recipeHandler.FilterOptions)
@@ -119,8 +142,9 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 		{
 			auth.GET("/user/info", userHandler.GetInfo)
 			auth.GET("/user/stats", userStatsHandler.Get)
+			auth.GET("/user/food-stats", foodStatsHandler.Get)
 			auth.PUT("/user/profile", userHandler.UpdateProfile)
-			auth.POST("/upload/avatar", uploadHandler.Avatar)
+			auth.POST("/upload/avatar", limitUser("upload", cfg.RateLimit.UploadPerWindow), uploadHandler.Avatar)
 			auth.GET("/user/preferences", userHandler.GetPreferences)
 			auth.GET("/user/preferences/status", userHandler.GetPreferenceStatus)
 			auth.PUT("/user/preferences", userHandler.UpdatePreferences)
@@ -128,7 +152,7 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 			auth.DELETE("/recipes/:id/favorite", favoriteHandler.Remove)
 			auth.POST("/recipes/:id/feedback", recipeHandler.SetFeedback)
 			auth.DELETE("/recipes/:id/feedback/:type", recipeHandler.DeleteFeedback)
-			auth.POST("/recipes/generate-by-ai", recipeHandler.GenerateByAI)
+			auth.POST("/recipes/generate-by-ai", limitUser("ai", cfg.RateLimit.AIRequestsPerWindow), middleware.LimitConcurrency(aiLimiter), recipeHandler.GenerateByAI)
 			auth.GET("/user/favorites", favoriteHandler.List)
 			auth.GET("/user/recipe-feedback", recipeHandler.GetUserRecipeFeedback)
 			auth.GET("/user/favorites/count", favoriteHandler.Count)
@@ -139,16 +163,16 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 			auth.POST("/shopping-list/generate-by-dish", shoppingHandler.GenerateByDish)
 			auth.POST("/shopping-list/generate-by-recipe", shoppingHandler.GenerateByRecipe)
 			auth.POST("/shopping-list/generate-by-recipes", shoppingHandler.GenerateByRecipes)
-			auth.POST("/shopping-list/generate-by-ai", shoppingHandler.GenerateByAI)
+			auth.POST("/shopping-list/generate-by-ai", limitUser("ai", cfg.RateLimit.AIRequestsPerWindow), middleware.LimitConcurrency(aiLimiter), shoppingHandler.GenerateByAI)
 			auth.PUT("/shopping-list/:id", shoppingHandler.Update)
 			auth.DELETE("/shopping-list/:id/items", shoppingHandler.DeleteItems)
 			auth.DELETE("/shopping-list/:id", shoppingHandler.Delete)
 			auth.POST("/recommend/menu", recommendHandler.Menu)
-			auth.POST("/recommend/menu-ai", recommendHandler.MenuAI)
+			auth.POST("/recommend/menu-ai", limitUser("ai", cfg.RateLimit.AIRequestsPerWindow), middleware.LimitConcurrency(aiLimiter), recommendHandler.MenuAI)
 			auth.POST("/recommend/by-ingredients", recommendHandler.ByIngredients)
 			auth.POST("/recommend/week-menu", recommendHandler.WeekMenu)
-			auth.POST("/feedback", feedbackHandler.Create)
-			auth.POST("/user/events", eventHandler.Track)
+			auth.POST("/feedback", limitUser("feedback", cfg.RateLimit.FeedbackPerWindow), feedbackHandler.Create)
+			auth.POST("/user/events", limitUser("events", cfg.RateLimit.EventsPerWindow), eventHandler.Track)
 			auth.GET("/user/menus", menuHandler.List)
 			auth.POST("/user/menus", menuHandler.Create)
 			auth.GET("/user/menus/:id", menuHandler.Detail)
@@ -156,8 +180,8 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 			auth.POST("/user/menus/:id/reuse", menuHandler.Reuse)
 
 			// Couple
-			auth.GET("/couple/invite-code", coupleHandler.GetInviteCode)
-			auth.POST("/couple/bind", coupleHandler.Bind)
+			auth.GET("/couple/invite-code", limitUser("invite", cfg.RateLimit.InvitePerWindow), coupleHandler.GetInviteCode)
+			auth.POST("/couple/bind", limitUser("invite", cfg.RateLimit.InvitePerWindow), coupleHandler.Bind)
 			auth.GET("/couple/info", coupleHandler.GetInfo)
 			auth.POST("/couple/unbind", coupleHandler.Unbind)
 			auth.PUT("/couple/name", coupleHandler.SetCoupleName)
@@ -168,6 +192,9 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *gin.Engine {
 			auth.POST("/couple/orders/generate-shopping-list", coupleHandler.GenerateShoppingList)
 		}
 	}
+
+	r.GET("/healthz", healthHandler.Live)
+	r.GET("/readyz", healthHandler.Ready)
 
 	// Admin routes
 	adminGroup := r.Group("/api/admin")
